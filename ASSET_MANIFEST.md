@@ -17,6 +17,23 @@
 | `nativebuffer-test-pattern.png` | 图片 | AVC420 NativeBuffer 阶段 | import 成功还需 EGLImage/OES 日志 |
 | `rgba-renderer-test-pattern.png` | 图片 | RGBA retained 输出阶段 | dirty rect 还需 rect 外像素断言 |
 
+## Anthropic 方法论配图
+
+以下图片位于 `harmonyos-sdd-workshop-media/anthropic/`，均来自 Anthropic 官方工程文章。它们用于解释方法，不作为 HarmonyOS 项目事实或产品验收证据。
+
+| 文件 | 对应页面 | 课堂用途 | 官方来源 |
+|---|---|---|---|
+| `autonomous-agent-loop.png` | 第 3 页 | Human / Agent / Environment / Stop | [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) |
+| `coding-agent-flow.png` | 第 13 页 | 澄清、上下文、搜索、修改与测试时序 | [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) |
+| `prompt-vs-context-engineering.png` | 第 17 页 | 从单轮 Prompt 转向动态上下文筛选 | [Effective Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) |
+| `augmented-llm.png` | 第 25 页 | Retrieval / Tools / Memory 的职责边界 | [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) |
+| `evaluator-optimizer.png` | 第 27 页 | 实现与独立评估的反馈闭环 | [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) |
+| `eval-quality-layers.png` | 第 39 页 | 多层验证共同拦截漏检 | [Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) |
+| `agent-evaluation-components.png` | 附录 I4 | Task / Trial / Trajectory / Outcome / Grader | [Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) |
+| `orchestrator-workers.png` | 附录 J4 | 解释什么时候适合动态拆分和并行协同 | [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) |
+
+版权归原作者 / Anthropic 所有。当前仓库仅按内部教学参考保存；公开发布、再分发或商业课件使用前，应重新确认授权、品牌与版权要求。详细记录见 `THIRD_PARTY_ASSETS.md`。
+
 ## 未上传资源
 
 本地 V3 使用的原始场景图和完整连接联系表已同步到 Private 仓库，同时保留 `gpu-e2e-interaction-public.jpg` 供脱敏投屏。原始图片不应转入公开仓库；其他本地长录屏若包含私网地址、用户名或私人窗口，也不应在未审查时上传。

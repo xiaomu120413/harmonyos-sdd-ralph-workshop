@@ -47,6 +47,7 @@
 - 白帧 readiness gate 复盘；
 - worker queue、EndFrame、LC readiness 与 Surface 生命周期；
 - 人—AI—MCP—Reviewer 协同脚本；
+- 8 张 Anthropic 官方方法论配图及逐图中文讲解；
 - 28、45、60–75 分钟三种讲授模式。
 
 ## 目录
@@ -56,10 +57,12 @@
 ├── README.md
 ├── harmonyos-sdd-ralph-workshop.md
 ├── ASSET_MANIFEST.md
+├── THIRD_PARTY_ASSETS.md
 ├── archive/
 │   ├── harmonyos-sdd-ralph-workshop-original.md
 │   └── harmonyos-sdd-ralph-workshop-rich-v2.md
 └── harmonyos-sdd-workshop-media/
+    ├── anthropic/*.png
     ├── *.jpeg / *.jpg / *.png
     └── *.mp4
 ```

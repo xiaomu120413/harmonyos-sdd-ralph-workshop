@@ -215,6 +215,12 @@ flowchart TD
     F -- 是 --> G[提交结果]
 ```
 
+**可选对照图（PPT 制作时与上方 Mermaid 二选一）**
+
+![Autonomous Agent：Human、LLM、Environment、Feedback 与 Stop](harmonyos-sdd-workshop-media/anthropic/autonomous-agent-loop.png)
+
+<sub>讲师读图：Agent 不是“连续生成代码”，而是在环境反馈中行动，并在检查点接受人类判断或满足停止条件。图源：Anthropic《Building Effective Agents》。</sub>
+
 每轮写入 `progress.md`：
 
 `假设 / RED 命令与输出 / 修改文件 / GREEN 输出 / 新事实 / 剩余风险 / Stop 或 Next`
@@ -683,6 +689,10 @@ progress: 任务
 
 `入口 / 事实源 / 副作用 / commit point / 现有测试 / 相关提交 / Spec Gap`
 
+![Coding Agent 高层时序：先澄清，再携带上下文搜索、修改与测试](harmonyos-sdd-workshop-media/anthropic/coding-agent-flow.png)
+
+<sub>讲师读图：把上半段“Clarify / Refine”对应需求拆解，把下半段“Search / Write / Test”对应开发验证；两段之间传递的是收敛后的上下文，不是整段聊天。图源：Anthropic《Building Effective Agents》。</sub>
+
 ### 讲师备注
 
 这是 AI 使用中最省返工的一步。推荐让 AI 先用 `rg` 找符号，再读最短调用链，再用 `git log -S` / `git show` 解释为什么代码现在这样。提交历史是证据，不是课程结构。
@@ -874,6 +884,10 @@ progress: 调试
 |---|---|---|---|
 | 1 | 事件先于账号查询可见 | 前两读无 123，第三读出现 | GREEN；进入故障注入 |
 | 2 | 模式重放失败会污染 apply state | 用户 123 第 2 条 add 失败 | 回滚后 getter 再判断 |
+
+![Prompt Engineering 与 Context Engineering 对比](harmonyos-sdd-workshop-media/anthropic/prompt-vs-context-engineering.png)
+
+<sub>讲师读图：左边只优化一次输入；右边每轮都从文档、工具、记忆和历史中筛选上下文。课堂中 `spec + current task + progress + evidence index` 就是右侧 Curation 的具体实现。图源：Anthropic《Effective Context Engineering for AI Agents》。</sub>
 
 `progress.md` 本轮新增事实：
 
@@ -1252,6 +1266,10 @@ progress: 证据
 | HiLog query | MCP 已支持 | 调用顺序、错误码、关联 ID |
 | Firewall system getter | **尚未实现** | 每用户 policy/rules 的最终事实 |
 
+![Augmented LLM：Retrieval、Tools 与 Memory 共同扩展模型](harmonyos-sdd-workshop-media/anthropic/augmented-llm.png)
+
+<sub>讲师读图：MCP 位于 Tools，不是“第三个大脑”；Retrieval 负责取上下文，Memory / progress 负责跨轮保留事实，三者都只能为判断提供输入。图源：Anthropic《Building Effective Agents》。</sub>
+
 **TARGET**：补一个只读 getter / bridge；若课前未准备，系统验收只能是 `UNKNOWN`。
 
 ### 讲师备注
@@ -1351,6 +1369,10 @@ progress: 证据
 6. diff 是否完全落在任务允许边界？
 
 结果只允许：`PASS / FAIL / UNKNOWN`。
+
+![Evaluator–Optimizer：生成、独立评估、拒绝反馈与接受](harmonyos-sdd-workshop-media/anthropic/evaluator-optimizer.png)
+
+<sub>讲师读图：Implementer 不能独自给自己打分。Reviewer 返回的必须是可执行反馈与缺失证据；只有达到预先冻结的 AC 才接受。图源：Anthropic《Building Effective Agents》。</sub>
 
 ### 讲师备注
 
@@ -2176,6 +2198,12 @@ flowchart TD
     E --> F[系统证据]
 ```
 
+**可选收束主视觉（PPT 制作时与上方 Mermaid 二选一）**
+
+![质量的瑞士奶酪模型：自动评估、人工审阅和真实运行共同拦截缺陷](harmonyos-sdd-workshop-media/anthropic/eval-quality-layers.png)
+
+<sub>讲师读图：任何单层检查都有孔洞。映射到本课就是测试、构建、日志、getter、截图/视频与同伴 Reviewer 叠加；只有多层证据对齐，才允许 PASS。图源：Anthropic《Demystifying Evals for AI Agents》。</sub>
+
 下一次拿到复杂需求，只问七个问题：
 
 1. 哪些词会让实现分叉？
@@ -2962,6 +2990,21 @@ assets/
 
 引用这些文章的目的不是给课程增加一套新名词，而是说明：本课从两个真实 HarmonyOS 项目提炼出的“需求先冻结、上下文高信号、Workflow 与 Agent 有边界、任务小、失败真、证据强、评估独立、停止清楚”，与 Anthropic 在 Agent 工程实践中总结的可靠性原则一致。
 
+## I4. 把 Agent Eval 图翻译成课堂验收
+
+![Agent Eval 组件：Task、Trial、Trajectory、Outcome、Graders 与 Harness](harmonyos-sdd-workshop-media/anthropic/agent-evaluation-components.png)
+
+课堂不要求学员搭建完整评测平台，但必须理解图中的六个对象如何映射：
+
+- `Task` → 一张带输入、AC、Allowed、Forbidden 与 Stop 的任务卡。
+- `Trial / Trajectory` → 一次 Ralph 执行及其 Prompt、工具调用、diff、测试和 `progress.md`。
+- `Outcome` → 真机最终 policy/rules，或 GPU 同一 `frameId` 的 owner / present 事实。
+- `Graders` → 确定性测试、状态 getter、Reviewer rubric 与人工设备观察。
+- `Evaluation suite` → 正常、失败注入、重复事件、跨进程和回归 Case 集合。
+- `Harness` → 负责装载上下文、调用工具、保存轨迹、执行 grader 与汇总结论的外部控制面。
+
+这张图最适合放在第 27 页之后做 2 分钟拓展：先遮住 `Outcome`，问学员“为什么聊天记录、diff 和测试全绿仍可能不够”；揭示最终环境状态后，再回到 `PASS / FAIL / UNKNOWN`。
+
 ---
 
 # 附录 J｜GPU 图片、视频与协同实操包
@@ -3062,6 +3105,10 @@ sequenceDiagram
     M-->>R: evidence pack
     R-->>H: PASS / FAIL / UNKNOWN + 最早缺失证据
 ```
+
+![Orchestrator–Workers：动态拆分、并行执行与汇总](harmonyos-sdd-workshop-media/anthropic/orchestrator-workers.png)
+
+<sub>讲师读图：只有子任务真实独立时才并行；共享同一状态、事务或输出 owner 的任务必须串行或由一个协调者统一提交。多 Agent 是复杂任务的可选组织方式，不是“进阶”的必要条件。图源：Anthropic《Building Effective Agents》。</sub>
 
 真实协同的关键不是谁打字，而是谁拥有哪类决定：
 
