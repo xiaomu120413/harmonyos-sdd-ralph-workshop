@@ -1384,6 +1384,8 @@ progress: 需求
 
 > 当“卡顿”还不能对应到某个边界时，直接让 AI 优化代码只会扩大搜索空间。
 
+![真实远程桌面播放场景：只用于建立 workload，不直接证明卡顿原因](harmonyos-sdd-workshop-media/freerdp-stutter-scenario.jpeg)
+
 ![故障录屏关键帧：连接后远程窗口持续黑屏](harmonyos-sdd-workshop-media/gpu-failure-black-screen-contact.jpg)
 
 **先让学员选，不先公布答案**：看到黑屏，你的第一步是改 shader、换 decoder、加线程，还是冻结现象并采证？要求每组选一项，并写出它能被什么证据推翻。
@@ -1533,6 +1535,8 @@ queueDepth queueAgeMs durationUs owner targetEpoch result reason
 
 分别为 AVC420、AVC444 找到第一处缺失或异常事件。
 
+![连接与诊断采集界面：用于说明采集入口，不作为队列正确性的证据](harmonyos-sdd-workshop-media/freerdp-render-queue.jpeg)
+
 ### 讲师备注
 
 AI 任务卡要限制日志开销：采样策略、周期聚合、错误全量、禁止打印 bitstream 和敏感画面数据。当前仓库已有 avg/max/count、queue depth、max EndFrame gap 等诊断；不要在课程中声称已有 P95，除非这轮真的实现并验证。
@@ -1606,7 +1610,7 @@ progress: 调试
 
 页尾：FPS 是结果指标；**最早异常 + 分段耗时 + queue age** 才能选择修改层。
 
-![远程视频、窗口切换与遮挡恢复场景](harmonyos-sdd-workshop-media/gpu-validation-video-playback-contact.jpg)
+![远程视频与窗口交互场景](harmonyos-sdd-workshop-media/freerdp-frame-pacing.jpeg)
 
 **带入问题**：CPU 低、decode 低，但画面仍卡，下一条日志应该放在 decoder 里，还是 queue→EndFrame/present 边界？先说反证，再选层。
 
@@ -1665,6 +1669,8 @@ progress: 设计
 | GPU 导入 | EGLImage / External OES 或 MapPlanes | format、stride、planes |
 | 输出目标 | XComponent / NativeWindow create、resize、destroy | generation、size、owner |
 | 失败回退 | 释放 owner、恢复 GDI producer/presenter | transition reason |
+
+![缩放与 compositor 场景：引出 retained 尺寸和 target 尺寸必须同步](harmonyos-sdd-workshop-media/freerdp-compositor-scale.jpeg)
 
 ### 讲师备注
 
@@ -2949,9 +2955,13 @@ assets/
 | `gpu-failure-black-screen-contact.jpg` | 黑屏录屏关键帧 | 投屏静止讨论、标注最早异常 | 能证明现象时序；不能替代 frameId 日志 |
 | `gpu-validation-video-playback-16s.mp4` | 视频播放、窗口切换与遮挡变化 | 第 31、38 页动态验证 | 能证明可见交互与连续性；不能单独证明 owner、EndFrame、targetEpoch 契约 |
 | `gpu-validation-video-playback-contact.jpg` | 修复后动态录屏关键帧 | 逐格检查场景覆盖 | 适合对比遮挡前后；不证明 bit-exact 或没有偶发尖峰 |
-| `gpu-e2e-interaction-public.jpg` | 打开内容、页面变化、右键交互 | 可选扩展验证 | 已移除连接信息阶段；能证明多种交互被执行，但仍不能代替连续视频与帧级日志 |
+| `gpu-connection-interaction-contact.jpg` | 连接、打开内容、页面变化、右键交互 | 可选扩展验证 | 证明多种交互被执行；前段含连接信息，公开投屏前需裁剪/脱敏 |
 | `nativebuffer-test-pattern.png` | NativeBuffer 阶段色块 | 第 29、34 页 420 import | 只证明该阶段画面；路径事实仍需 EGLImage/OES 日志 |
 | `rgba-renderer-test-pattern.png` | RGBA renderer 阶段色块 | 第 29、34 页 retained 输出 | 可与上一张肉眼对照；不能替代 dirty-rect 保留断言 |
+| `freerdp-stutter-scenario.jpeg` | 远程桌面真实播放场景 | 第 28 页场景建立 | 是场景图，不是卡顿根因证据 |
+| `freerdp-frame-pacing.jpeg` | 视频与侧栏交互画面 | 第 31 页节奏验证 | 辅助说明 workload；单帧不能证明 frame pacing |
+| `freerdp-render-queue.jpeg` | 连接与诊断界面 | 第 30 页采集准备 | 证明诊断入口可达；不证明队列行为正确 |
+| `freerdp-compositor-scale.jpeg` | compositor 缩放场景 | 第 32 页 resize 讨论 | 用来引出 target/retained 尺寸错位；仍需尺寸与 epoch 日志 |
 
 仓库素材目录：`harmonyos-sdd-workshop-media/`。
 
