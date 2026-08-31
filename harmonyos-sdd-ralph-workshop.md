@@ -19,19 +19,7 @@
 | Eval 与反证 | “AI 说完成”如何转成可评分结果？ | RED/GREEN、回归、构建、getter、帧级日志与 `PASS / FAIL / UNKNOWN` | 同时检查执行轨迹与最终 outcome，组合代码、模型和人工 grader |
 | 长任务 Harness 与协同 | 换会话、换人、换 Agent 后如何继续？ | 小任务、progress ledger、Git checkpoint、证据包、独立 Reviewer | 用结构化产物交接；Planner / Implementer / Evaluator 职责分离 |
 
-Anthropic 的公开工程实践在这里充当“方法论参照系”，不是另一套产品教程。本课会把抽象原则落到 HarmonyOS 的规格、代码、设备日志、截图、视频和系统 getter 上；完整来源与映射见附录 I。
-
-## 教学框架：先教入口动作，再让辨别力贯穿每一层
-
-![复杂需求中的 AI 熟练度成长模型：入口动作、描述耐久度与辨别力](harmonyos-sdd-workshop-media/methodology/ai-fluency-neutral.png)
-
-这张图参考 Anthropic Academy 的研究型课程模型，但做了厂商中立的重新编排：不区分 Chat、代码 Agent 或办公 Agent，也不围绕某个产品功能教学，而是保留三条跨工具成立的规律。
-
-1. **入口动作先教会**：复杂任务先澄清完成状态、边界与风险，再通过小步反馈快速迭代。
-2. **描述能力逐步持久化**：从一次任务的目标、上下文、示例和格式，升级到任务卡、工具契约、项目规则、progress 与证据库。
-3. **辨别力每一步都回访**：每轮都问“AI 假设了什么、什么会让它错、证据够不够、最终状态是否正确、何时停止”。
-
-原研究指出，描述与表达能力可能随着使用自然增长，但对输出的辨别、质疑和验证不会仅靠使用时间自动形成，需要持续、显式地教。本课因此不把“会用功能”当作进阶，而把规格反证、失败注入、系统 getter、Reviewer 和 `PASS / FAIL / UNKNOWN` 贯穿全部模块。
+Anthropic 的公开工程实践在这里充当“方法论参照系”，不是另一套产品教程。本课会把抽象原则落到 HarmonyOS 的规格、代码、设备日志、截图、视频和系统 getter 上；Academy 的课程模型只轻量参考其“先澄清与迭代、每步都做辨别”的教学节奏，不作为本课主方法论。完整来源、候选文章与取舍见附录 I。
 
 课程主线只有一条：
 
@@ -3021,6 +3009,25 @@ assets/
 - `Harness` → 负责装载上下文、调用工具、保存轨迹、执行 grader 与汇总结论的外部控制面。
 
 这张图最适合放在第 27 页之后做 2 分钟拓展：先遮住 `Outcome`，问学员“为什么聊天记录、diff 和测试全绿仍可能不够”；揭示最终环境状态后，再回到 `PASS / FAIL / UNKNOWN`。
+
+## I5. 其他值得参考的文章：分级使用，不扩张主线
+
+![复杂需求中的 AI 熟练度成长模型：仅作补充教学参考](harmonyos-sdd-workshop-media/methodology/ai-fluency-neutral.png)
+
+Academy 的课程模型只提供教学节奏：先形成“澄清目标＋快速迭代”的入口动作，再让辨别与验证贯穿每一步。课程自己的工程主线仍是 **需求拆解 → 开发 → 验证 → 问题定位与协同闭环**。
+
+| 优先级 | 官方文章 | 最值得借用的观点 | 建议落点 | 不建议带入的内容 |
+|---|---|---|---|---|
+| A | [Anthropic Education Report: The AI Fluency Index](https://www.anthropic.com/research/AI-fluency-index) | 迭代与更多熟练行为强相关；产出代码/文档等成品时，用户反而更少质疑推理、检查事实和识别缺失上下文 | 第 1 或 27 页加入一张“越像完成，越要验证”的研究数据卡 | 不把相关性说成因果；保留样本与可观测行为限制 |
+| A | [How AI Assistance Impacts the Formation of Coding Skills](https://www.anthropic.com/research/AI-assistance-coding-skills) | 对照实验中 AI 组掌握度更低；把 AI 用于追问、解释和概念理解的人保留得更好 | 实操要求学员解释真相源、不变量、失败原因和 diff，而不是只展示生成结果 | 不把单项研究泛化成“使用 AI 一定降低能力” |
+| A | [The 4 Ds of AI Fluency](https://academy.claude.com/tutorials/the-4-ds-of-ai-fluency-behavioral-indicators) | Delegation、Description、Discernment、Diligence 可作为“学员行为观察表” | 结课评价：会不会分工、描述、判断和负责地交付 | 不新增一套工程流程，不取代 SDD / Task / Verify |
+| B | [The 4 Properties of AI](https://academy.claude.com/tutorials/the-4-properties-of-ai) | next-token prediction、knowledge、working memory、steerability 解释了为什么 AI 会自信、遗忘上下文、误解意图 | 课前阅读或第 1 页 90 秒心智模型 | 不展开成模型原理课 |
+| B | [Can You Trust What AI Tells You?](https://academy.claude.com/tutorials/can-you-trust-what-ai-tells-you) | 信任是随风险调整的刻度，不是开关；高影响决策需要更强审查 | 把 `PASS / FAIL / UNKNOWN` 与风险分级结合 | 不用泛泛“AI 会幻觉”替代具体证据标准 |
+| B | [The “Think” Tool: Enabling Claude to Stop and Think](https://www.anthropic.com/engineering/claude-think-tool) | 长工具链拿到新证据后，应暂停、更新假设并检查信息是否齐全，再执行下一动作 | 第 18、30–31 页增加 `Observe → Reframe → Act` 口令 | 不讲具体工具 API；官方更新也不再建议多数场景使用独立 think tool |
+| B | [How We Built Our Multi-Agent Research System](https://www.anthropic.com/engineering/multi-agent-research-system) | 只并行真正独立的搜索；Lead 负责任务拆分、预算和最终综合；Worker 返回压缩后的高信号结果 | 附录 J4 的协同演示与分组实操 | 不把“多 Agent”包装成进阶能力本身 |
+| C | [Equipping Agents for the Real World with Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills) | 把组织的步骤、脚本、模板和资源封装为可发现、按需加载的能力包 | 课后扩展：把 Task Card、MCP 命令和验收模板沉淀成团队能力 | 120 分钟主课不讲产品配置与安装流程 |
+
+如果正文只再吸收两项，优先选择前两篇研究：一篇解释“为什么精美成品更需要辨别”，一篇解释“为什么学员必须能讲清 AI 生成的代码”。4D 适合做评分观察表，其余文章保持讲师备课参考即可。
 
 ---
 

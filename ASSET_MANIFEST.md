@@ -38,7 +38,7 @@
 
 | 文件 | 类型 | 主要用途 | 说明 |
 |---|---|---|---|
-| `methodology/ai-fluency-neutral.png` | PNG | 课程定位与开场方法论总览 | 16:9 中文投屏版，不出现具体 AI 产品 |
+| `methodology/ai-fluency-neutral.png` | PNG | 附录 I5 与可选讲师参考 | 16:9 中文投屏版，不出现具体 AI 产品 |
 | `methodology/ai-fluency-neutral.svg` | SVG | PPT、讲义和后续可编辑版本 | 本课程自绘；方法参考 Anthropic Academy 的 AI Fluency Curriculum |
 
 这张图保留“入口动作、描述能力耐久度、辨别力贯穿每一层”的教学结构，去除了具体产品名称和功能罗列。图片本身为课程自绘，文章来源仍应在讲义或备注中保留。
