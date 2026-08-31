@@ -73,4 +73,3 @@ bridge 至少返回：
 | 系统最终结论 | UNKNOWN | 没有结构化 per-user readback |
 
 不要用“内部有 getter”推导“验收已闭环”，也不要用“验收 bridge 缺失”反推“系统接口不存在”。
-

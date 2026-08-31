@@ -68,4 +68,3 @@ time window + source=account-removed + trigger=115
 - 进程内单例、静态变量和回调不能作为跨进程事实通道。
 - CommonEvent 解决的是传递，不自动完成规则重放、记录刷新或事务补偿。
 - 没有相关 ID 时明确标记遥测缺口，不用时间相近伪造确定因果。
-
