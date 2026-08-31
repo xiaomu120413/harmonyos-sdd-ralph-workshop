@@ -1,12 +1,25 @@
-# AI 驱动 HarmonyOS 复杂需求开发实践课
+# 使用 AI 进阶能力实现较为复杂的需求
 
-> 用一个真实 MDM 需求跑通 SDD + Ralph Loop + 设备证据，再把同一方法迁移到 AVC420 / AVC444 卡顿诊断
+> 以真实 HarmonyOS MDM 与 FreeRDP GPU 送显问题为载体，跑通需求拆解、上下文组织、Agent 协作、开发、验证、问题定位与证据交付
 
-> **Rich V3 / 深度讲授版**：保留原 39 页结构；在 V2 的图片、视频和实操基础上，进一步补齐第 28–38 页的讲师口播、逐步揭示、真实故障时间线、学员产出、翻牌答案与验收矩阵。配套素材见 `harmonyos-sdd-workshop-media/`，完整讲师脚本见附录 J、K。
+> **Rich V3 / 深度讲授版**：保留原 39 页结构；在 V2 的图片、视频和实操基础上，前置补齐“AI 进阶能力”方法论，并进一步完善第 28–38 页的讲师口播、逐步揭示、真实故障时间线、学员产出、翻牌答案与验收矩阵。配套素材见 `harmonyos-sdd-workshop-media/`，完整讲师脚本见附录 J、K。
 
 ## 课程定位
 
 这不是“AI 提示词技巧课”，也不是项目复盘。课程面向已经具备 HarmonyOS / ArkTS / C++ 基础的新员工，通过两个真实代码库，带着学员完成一次可追踪、可调试、可验收的复杂需求开发。
+
+这里的“进阶”不是提示词更长、模型更贵或 Agent 更多，而是工程师能够驾驭复杂需求里的六类不确定性：需求会分叉、上下文会膨胀、执行链会跨工具、实现会跨会话、结果容易被误判、多人协作会丢失事实。
+
+| AI 进阶能力 | 复杂需求中的核心问题 | 本课工程动作 | Anthropic 方法锚点 |
+|---|---|---|---|
+| 需求澄清与边界冻结 | AI 到底在实现哪个版本的需求？ | 歧义树、EARS、行为矩阵、不变量与 Task Card | 从开放探索收敛到可执行计划 |
+| 上下文工程 | 什么必须进入当前轮，什么只保留索引？ | `spec + current task + progress + related files + evidence index` | 用最小高信号上下文管理有限注意力预算 |
+| Workflow / Agent 分工 | 哪些步骤固定执行，哪些判断允许 AI 自主？ | 构建、安装、取证走确定工作流；探索、假设和最小修改由 Agent 决策 | 简单确定路径优先 workflow，开放问题再使用 Agent |
+| 工具契约与环境事实 | 工具返回的是数据，还是能支持下一步判断的证据？ | MCP 返回状态、原因码、对象标识、时间戳与 evidence path | 少量高价值、边界清晰、token 高效的工具 |
+| Eval 与反证 | “AI 说完成”如何转成可评分结果？ | RED/GREEN、回归、构建、getter、帧级日志与 `PASS / FAIL / UNKNOWN` | 同时检查执行轨迹与最终 outcome，组合代码、模型和人工 grader |
+| 长任务 Harness 与协同 | 换会话、换人、换 Agent 后如何继续？ | 小任务、progress ledger、Git checkpoint、证据包、独立 Reviewer | 用结构化产物交接；Planner / Implementer / Evaluator 职责分离 |
+
+Anthropic 的公开工程实践在这里充当“方法论参照系”，不是另一套产品教程。本课会把抽象原则落到 HarmonyOS 的规格、代码、设备日志、截图、视频和系统 getter 上；完整来源与映射见附录 I。
 
 课程主线只有一条：
 
@@ -96,9 +109,9 @@ progress: 需求
 
 ### 画面
 
-# AI 驱动 HarmonyOS 复杂需求开发
+# 使用 AI 进阶能力实现较为复杂的需求
 
-**从一句需求，到可运行代码，再到设备证据**
+**从需求拆解、开发、验证，到问题定位与协同闭环**
 
 > 需求 → 规格 → 任务 → 代码 → 调试 → 证据
 
@@ -107,6 +120,8 @@ progress: 需求
 ### 讲师备注
 
 开场不要先解释 SDD 名词。先问：“AI 说改完了、单测也过了，但新增账号没有策略，这算完成吗？”让学员明确本课的完成定义不是代码生成，而是系统事实可证明。
+
+课名里的“较为复杂”要在这一页说清楚：不是代码行数多，而是需求存在分叉、状态跨用户与进程、实现跨工具与会话、失败会留下部分状态、最终结果必须由设备事实验证。课名里的“进阶能力”则对应上下文工程、Workflow / Agent 分工、工具调用、长任务记忆、评估反证和协同交接。
 
 两个案例不是为了炫技。MDM 展示复杂业务如何被拆成可实现规格；GPU 展示现象模糊时如何先取证再改。课程结束后，学员应能把方法迁移到任何 HarmonyOS 复杂需求。
 
@@ -2175,6 +2190,8 @@ flowchart TD
 
 用两个案例做最后对照：MDM 的关键是先由规格冻结多用户与事务语义；GPU 的关键是先由证据缩小未知边界。但两者最后都落到同一个外部循环：任务小、失败真、diff 窄、证据可追踪、停止条件明确。
 
+再把七问映射回开场的六项进阶能力：前 3 问控制需求与上下文，第 4–5 问控制 Agent 边界和可验证实现，第 6 问依赖工具取得环境事实，第 7 问由 Eval 与 Reviewer 决定停止。这样学员离场时记住的是一套复杂需求交付框架，而不是 Ralph、MCP 或某个模型名称。
+
 请学员展示最终包，不再展示聊天窗口。讲师最后强调：AI 可以加速探索、测试、实现和取证，但产品决策、真相源、事务边界和 PASS 判定仍由工程师负责。
 
 ### 演示动作
@@ -2924,6 +2941,8 @@ assets/
 | [Effective Harnesses for Long-Running Agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) | 首轮建立任务与验证清单；后续一次只推进一个 feature；使用 progress、Git 和端到端测试完成跨上下文交接 | 第 14–17 页、附录 D |
 | [Effective Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) | 上下文是有限注意力预算；保留完成当前任务所需的最小高信号信息；长任务使用压缩、结构化记录和按需检索 | 第 13、17 页、附录 D |
 | [Writing Effective Tools for Agents](https://www.anthropic.com/engineering/writing-tools-for-agents) | 少量高价值工具优于大量重叠薄包装；工具应有清晰边界、语义化返回、token 效率，并用真实任务评测 | 第 25–26 页、附录 E |
+| [Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) | 复杂 Agent 评估要区分 task、trial、trace 与 outcome；组合代码、模型和人工 grader；从真实失败建立可维护的 eval suite | 第 3、26–27、39 页、附录 E |
+| [Harness Design for Long-Running Application Development](https://www.anthropic.com/engineering/harness-design-long-running-apps) | 把长任务拆成可处理片段，用结构化产物跨阶段交接；Planner、Generator 与 Evaluator 分工；持续检验 harness 中哪些假设真正必要 | 第 14–17、27、39 页、附录 D |
 
 ## I3. 从文章观点到本课动作
 
@@ -2932,14 +2951,16 @@ assets/
 | Anthropic 观点 | 本课工程化动作 | HarmonyOS 项目证据 |
 |---|---|---|
 | Agent 需要环境 ground truth | 每轮必须读取测试、构建、日志、system getter 或帧链事实 | MDM policy/rules；GPU frameId/owner/EndFrame |
+| Workflow 与 Agent 解决不同问题 | 构建、安装、采集走可重复 workflow；歧义探索、假设选择和最小 diff 才交给 Agent | MCP 验证链固定；MDM / GPU 决策路径按证据分叉 |
 | 没有检查就只能“看起来完成” | STOP 由可执行 Verification 决定，阻塞时返回 UNKNOWN | RED/GREEN、HAP build、真机回读 |
 | 一次只推进一个 feature | 一张 Task Card 只允许一个可观察结果和有限文件范围 | T01 稳定快照；T02 故障补偿；T03 getter |
 | progress 是跨上下文控制面 | 记录新事实、证据路径、剩余风险和 Stop/Next，不复制聊天 | `progress.md` 与 evidence pack |
 | 上下文要少而高信号 | 只给 spec、current task、progress、相关文件和证据索引 | 新会话复现下一步，不重新扫描整仓 |
 | 工具应面向工作流而非底层 API | MCP 返回 Agent 下一步决策所需的状态、原因码和证据路径 | `build_app`、`logs_query`、TARGET runtime getter |
-| 实现者不应独自给自己打分 | 同伴或新上下文只按 AC、diff、测试和证据反证 | 第 27 页 evidence pack 互审 |
+| Trace 与 outcome 必须分开评估 | 既审查 Agent 的工具调用、修改轨迹和越界行为，也回读系统最终状态 | `progress.md` + diff 是 trace；getter / frame evidence 是 outcome |
+| 实现者不应独自给自己打分 | Planner 冻结目标，Implementer 产出最小 diff，Reviewer 只按 AC、diff、测试和证据反证 | 第 27 页 evidence pack 互审 |
 
-引用这些文章的目的不是给课程增加一套新名词，而是说明：本课从两个真实 HarmonyOS 项目提炼出的“任务小、失败真、上下文窄、证据强、停止清楚”，与 Anthropic 在 Agent 工程实践中总结的可靠性原则一致。
+引用这些文章的目的不是给课程增加一套新名词，而是说明：本课从两个真实 HarmonyOS 项目提炼出的“需求先冻结、上下文高信号、Workflow 与 Agent 有边界、任务小、失败真、证据强、评估独立、停止清楚”，与 Anthropic 在 Agent 工程实践中总结的可靠性原则一致。
 
 ---
 
