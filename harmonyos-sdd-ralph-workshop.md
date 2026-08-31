@@ -2,24 +2,42 @@
 
 > 以真实 HarmonyOS MDM 与 FreeRDP GPU 送显问题为载体，跑通需求拆解、上下文组织、Agent 协作、开发、验证、问题定位与证据交付
 
-> **Rich V3 / 深度讲授版**：保留原 39 页结构；在 V2 的图片、视频和实操基础上，前置补齐“AI 进阶能力”方法论，并进一步完善第 28–38 页的讲师口播、逐步揭示、真实故障时间线、学员产出、翻牌答案与验收矩阵。配套素材见 `harmonyos-sdd-workshop-media/`，完整讲师脚本见附录 J、K。
+> **Rich V4 / Session Evidence 版**：保留原 39 页与 120 分钟结构；在 V3 方法论和媒体基础上，把真实 AI Session 中的错误假设、用户纠偏、日志反证、范围失控与局部成功嵌入正文。每项进阶能力都必须经过“问题暴露 → 学员操作 → 证据判定 → 迁移复用”，不能只停留在概念介绍。配套素材见 `harmonyos-sdd-workshop-media/`，Session 证据卡见附录 L。
 
 ## 课程定位
 
 这不是“AI 提示词技巧课”，也不是项目复盘。课程面向已经具备 HarmonyOS / ArkTS / C++ 基础的新员工，通过两个真实代码库，带着学员完成一次可追踪、可调试、可验收的复杂需求开发。
 
-这里的“进阶”不是提示词更长、模型更贵或 Agent 更多，而是工程师能够驾驭复杂需求里的六类不确定性：需求会分叉、上下文会膨胀、执行链会跨工具、实现会跨会话、结果容易被误判、多人协作会丢失事实。
+这里的“进阶”不是提示词更长、模型更贵或 Agent 更多，而是工程师能够驾驭复杂需求里的六类不确定性：需求会分叉、上下文会膨胀、执行链会跨工具、实现会跨会话、结果容易被误判、修改范围可能悄悄扩大。
 
-| AI 进阶能力 | 复杂需求中的核心问题 | 本课工程动作 | Anthropic 方法锚点 |
+| AI 进阶能力 | 真实问题先行 | 本课实践动作 | 可检查产物 |
 |---|---|---|---|
-| 需求澄清与边界冻结 | AI 到底在实现哪个版本的需求？ | 歧义树、EARS、行为矩阵、不变量与 Task Card | 从开放探索收敛到可执行计划 |
-| 上下文工程 | 什么必须进入当前轮，什么只保留索引？ | `spec + current task + progress + related files + evidence index` | 用最小高信号上下文管理有限注意力预算 |
-| Workflow / Agent 分工 | 哪些步骤固定执行，哪些判断允许 AI 自主？ | 构建、安装、取证走确定工作流；探索、假设和最小修改由 Agent 决策 | 简单确定路径优先 workflow，开放问题再使用 Agent |
-| 工具契约与环境事实 | 工具返回的是数据，还是能支持下一步判断的证据？ | MCP 返回状态、原因码、对象标识、时间戳与 evidence path | 少量高价值、边界清晰、token 高效的工具 |
-| Eval 与反证 | “AI 说完成”如何转成可评分结果？ | RED/GREEN、回归、构建、getter、帧级日志与 `PASS / FAIL / UNKNOWN` | 同时检查执行轨迹与最终 outcome，组合代码、模型和人工 grader |
-| 长任务 Harness 与协同 | 换会话、换人、换 Agent 后如何继续？ | 小任务、progress ledger、Git checkpoint、证据包、独立 Reviewer | 用结构化产物交接；Planner / Implementer / Evaluator 职责分离 |
+| 需求澄清与边界冻结 | “全部账号”“自动同步”“回滚”被 AI 自行解释 | 歧义树、EARS、行为矩阵、不变量 | `spec.md` |
+| 上下文工程 | 长 Session 反复搜索，换会话后重新猜问题 | 只读勘察、证据索引、按需检索、新会话交接 | `progress.md` + evidence index |
+| Workflow / Agent 分工 | 构建安装等固定步骤与开放排障混在一起 | 固定动作走 Workflow，假设选择与最小修改交给 Agent | Task Card + execution trace |
+| 工具契约与环境事实 | MCP 返回成功，但设备业务状态没有成功 | 分开 protocol、tool、business、system 四层结果 | tool result + getter/log |
+| Eval 与反证 | UI 绿、测试绿或截图正常，但系统事实仍错误 | RED/GREEN、故障注入、状态回读、Trace/Outcome 双审 | `PASS / FAIL / UNKNOWN` |
+| 长任务 Harness 与协同 | AI 越界修改、实现者自评完成、交接丢失事实 | 小任务、Git checkpoint、证据包、风险驱动 Reviewer | review verdict + next task |
 
-Anthropic 的公开工程实践在这里充当“方法论参照系”，不是另一套产品教程。本课会把抽象原则落到 HarmonyOS 的规格、代码、设备日志、截图、视频和系统 getter 上；Academy 的课程模型只轻量参考其“先澄清与迭代、每步都做辨别”的教学节奏，不作为本课主方法论。完整来源、候选文章与取舍见附录 I。
+Anthropic 的公开工程实践在这里充当“方法论参照系”，不是另一套产品教程。本课用真实 Session 解释方法为什么必要，再把抽象原则落到 HarmonyOS 的规格、代码、设备日志、截图、视频和系统 getter 上检验。Academy 的课程模型只轻量参考其“先澄清与迭代、每步都做辨别”的教学节奏，不作为本课主方法论。完整来源、候选文章、工程映射与取舍见附录 I。
+
+每个关键页面都沿用同一课堂结构：
+
+```text
+问题现场 → AI 初判 → 反证 → 最小修正 → 验收 → 可迁移规则
+```
+
+页面右上角建议固定四个小标签：`能力 / 案例 / 问题 / 产出`。讲师如果只讲了正确做法，却没有让学员看到错误方案为何失败，该页视为未完成。
+
+Agent 组织方式按风险升级，不把“Agent 更多”误当成“能力更进阶”：
+
+| 任务特征 | 默认组织方式 |
+|---|---|
+| 单文件、强测试、低风险 | 单 Agent + 确定性检查 |
+| 构建、安装、日志采集 | 固定 Workflow |
+| 多文件、路径未知、需要探索 | Agent 只读勘察 + Task Card |
+| 跨进程、事务、权限、GPU 状态 | Planner / Implementer 分离 |
+| 高风险或接近模型可靠边界 | 增加独立 Reviewer / Evaluator |
 
 课程主线只有一条：
 
@@ -33,7 +51,7 @@ flowchart LR
 
 - **MDM 主实践**：Feature-first。先冻结多用户、状态、事务和失败语义，再让 AI 实现。
 - **GPU 方法迁移**：Evidence-first。先建立帧级证据，再决定修改解码、队列、合成还是输出。
-- **MCP 的位置**：不是第三套方法，只负责每轮 Ralph 的 Verify——构建、安装、操作、日志、截图和验收取证。
+- **MCP 的位置**：不是第三套方法，只负责受控循环中的 Verify——构建、安装、操作、日志、截图和验收取证。
 
 ## 学员最终交付
 
@@ -63,7 +81,7 @@ workshop/
 | 时间 | 模块 | 学员动作 | 当场产出 |
 |---|---|---|---|
 | 00–26 | 需求闭合 | 领域建模、歧义选择、EARS、行为矩阵 | `spec.md` |
-| 26–70 | 设计与 Ralph | 真相源、任务卡、RED→GREEN、故障注入 | `design.md`、patch、`progress.md` |
+| 26–70 | 设计与受控迭代 | 真相源、任务卡、RED→GREEN、故障注入 | `design.md`、patch、`progress.md` |
 | 70–88 | 平台与验收 | 权限预检、跨进程、MCP 设备证据 | `acceptance.md`、evidence |
 | 88–116 | GPU 迁移 | 还原帧链、420/444 分路、证据诊断 | `gpu-diagnosis.md` |
 | 116–120 | 收束 | 同伴审阅与七问迁移 | 最终交付包 |
@@ -75,14 +93,16 @@ workshop/
 材料对代码事实和课堂目标严格分层：
 
 - `CURRENT`：仓库当前代码已经具备，可现场打开验证。
+- `SESSION FACT`：真实 Session 中出现过的提示词、判断、日志或用户反馈。
 - `GAP`：仓库当前仍存在的风险或未闭合问题。
 - `TARGET`：本轮课堂希望设计或实现的能力。
 - `TEACHING`：为了教学建立的 FR / D / T 编号，不是仓库既有资产。
+- `TEACHING COMPOSITE`：将多个真实问题组合成一条可连续授课的案例，不表示它们在同一次历史执行中同时发生。
 
 ## 视觉与 PPT 制作约定
 
 - 画面：16:9，浅灰白技术讲解页 + 深色代码 / 日志舞台。
-- 色彩：深海军蓝=结构；蓝=规格；紫=AI / Ralph；橙红=失败；绿=证据 / PASS。
+- 色彩：深海军蓝=结构；蓝=规格；紫=AI / 受控循环；橙红=失败；绿=证据 / PASS。
 - 字体：HarmonyOS Sans SC / 思源黑体；代码 JetBrains Mono。
 - 页型只使用六种：`CLAIM`、`MAP`、`CODE`、`DEBUG`、`LAB`、`CHECKPOINT`。
 - 每页只有一个视觉中心；画面正文建议 250–400 汉字；代码不超过 12 行；大表、提交历史和完整答案进入讲师备注。
@@ -117,7 +137,11 @@ progress: 需求
 
 > 需求 → 规格 → 任务 → 代码 → 调试 → 证据
 
-主视觉建议：左侧是一句模糊需求，中央是紫色 Ralph 循环，右侧是绿色设备证据包；背景只保留真实设备、测试结果和日志的低透明度拼贴。
+主视觉建议：左侧是一句模糊需求，中央是紫色受控 AI 循环，右侧是绿色设备证据包；背景只保留真实设备、测试结果和日志的低透明度拼贴。
+
+![真实 SecurityTool 防火墙域名规则页面](harmonyos-sdd-workshop-media/mdm/firewall-domain-rule-created.jpeg)
+
+<sub>这张真机图只能证明规则已出现在 UI；它不能单独证明每个账号的系统 policy/rules 已正确下发。开场让学员先说“它能证明什么、不能证明什么”。</sub>
 
 ### 讲师备注
 
@@ -143,7 +167,7 @@ progress: 需求
 
 ---
 
-## 第 2 页｜两小时只完成一个英雄任务
+## 第 2 页｜两小时跑通一条主闭环，再做一次跨域迁移
 
 <!--
 type: MAP
@@ -155,7 +179,7 @@ progress: 需求
 
 ### 画面
 
-**英雄任务**
+**MDM 主闭环｜TEACHING COMPOSITE**
 
 > 设备当前处于 `public` 且防火墙已开启，已覆盖账号 `[100,112]`。系统收到 `account-added(123)` 后，先等待账号事实稳定，再把 public policy / preset rules 补到最新账号集合。若账号 123 的第 2 条规则下发失败，必须恢复旧状态，不得保存目标 signature，并留下可回读证据。
 
@@ -169,7 +193,7 @@ flowchart LR
 
 ### 讲师备注
 
-课程后面遇到的“已经开启/关闭、重复事件、部分失败、跨进程、systemRuleId、MCP 回读”，都挂到这一个任务上。不要每几页换一个案例。
+这条英雄任务由三个真实问题组合：账号快照时序、跨进程事实传播、模式重放失败补偿。课程后面遇到的“已经开启/关闭、重复事件、部分失败、systemRuleId、MCP 回读”都挂到这条主闭环上；第 28–38 页再把同一套控制方法迁移到 GPU 证据诊断，而不是开启一门新课。
 
 冻结课堂语义：
 
@@ -194,7 +218,7 @@ flowchart LR
 
 ---
 
-## 第 3 页｜一轮 Ralph 必须留下六类证据
+## 第 3 页｜复杂任务每轮必须留下六类证据
 
 <!--
 type: MAP
@@ -229,7 +253,7 @@ flowchart TD
 
 ### 讲师备注
 
-SDD 负责“要到哪里、边界是什么”；Ralph 负责“一次走多远、何时停止”；MCP 只是 Verify 阶段的执行器。不要把三者画成并列方法。
+SDD 负责“要到哪里、边界是什么”；Ralph Loop 是“一次走多远、何时停止”的一种 Harness；MCP 只是 Verify 阶段的执行器。不要把三者画成并列方法，也不要把课程讲成某个模型或框架的使用说明。
 
 停止条件必须可执行：窄测试绿、相关回归绿、diff 在任务允许范围、设备事实与规格一致。权限、签名、设备或 getter 阻塞时，结论是 `UNKNOWN`，记录阻塞并停止，不继续猜测。
 
@@ -258,7 +282,7 @@ SDD 负责“要到哪里、边界是什么”；Ralph 负责“一次走多远�
 type: MAP
 section: MDM_SPEC
 layout: domain-model
-time: 4m
+time: 3m
 progress: 需求
 -->
 
@@ -320,6 +344,12 @@ progress: 需求
 
 > 防火墙支持 public / private / custom 三种模式和总开关；面向全部本地账号下发；账号增删后自动同步；处理已经开启/关闭、重复操作、部分失败和页面刷新。
 
+**SESSION FACT｜问题不是一次说清楚的**
+
+> “先不要改，先看看要怎么改，怎么实时拿到账号信息。”
+
+这句话同时冻结了三件事：本轮禁止写代码、当前目标是找到系统事实源、输出必须是方案与验收点。
+
 只高亮四个实现分叉：
 
 1. “全部账号”以事件参数、缓存还是 OS 快照为准？
@@ -329,13 +359,13 @@ progress: 需求
 
 ### 讲师备注
 
-AI 直接拿到这段话时，往往会自行补齐业务决策：用当前登录账号、对所有失败统一 try/catch、操作成功后直接改 UI、用内存单例通知页面。这些实现都可能编译通过，但不一定是正确产品语义。
+AI 直接拿到这段话时，往往会自行补齐业务决策：用当前登录账号、对所有失败统一 try/catch、操作成功后直接改 UI、用内存单例通知页面。这些实现都可能编译通过，但不一定是正确产品语义。真实 Session 里，用户先后追问“后面如果还有数据怎么办”“这样可拓展性怎么样”“这个修改感觉是在打补丁”，说明需求澄清不是一次生成文档，而是持续关闭会改变实现路径的分叉。
 
 课程不要求学员一开始知道答案，只要求先把“会导致不同代码路径”的问题列出来。判断标准：不同答案是否会改变状态模型、系统调用顺序、回滚、测试或验收？如果会，就是必须关闭的歧义。
 
 ### 演示动作
 
-将原始需求交给 AI，只允许输出：名词、状态、触发器、失败点、待决问题；禁止给代码和架构。
+先只投屏原始需求，让 AI 输出名词、状态、触发器、失败点和待决问题；再揭示 Session 原话，让学员标出新增的权限、目标和停止条件。禁止给代码和架构。
 
 ### 通过条件
 
@@ -445,6 +475,7 @@ EARS 不是为了写得像规范，而是把测试输入、前置状态、动作
 ### 素材
 
 - `account-change-coordinator.test.ets`
+- T01 RED 基线：`4b372d0d` + 从 `c0c1bc9f` 提取的目标测试
 - commit `c0c1bc9f`
 
 ---
@@ -542,7 +573,7 @@ progress: 设计
 type: CLAIM
 section: MDM_DESIGN
 layout: truth-source
-time: 3m
+time: 2m
 progress: 设计
 -->
 
@@ -612,7 +643,7 @@ flowchart TB
 
 ### 演示动作
 
-打开 Extension、Coordinator、EntryAbility 三处代码，用同一 `eventId / accountId / signature` 标注跨进程日志位置。
+打开 Extension、Coordinator、EntryAbility 三处代码，先用历史已有的 `accountId / signature / process` 标注日志位置，再让学员补设计跨进程 `eventId`；明确后者是遥测改进，不是历史已有字段。
 
 ### 通过条件
 
@@ -673,7 +704,7 @@ progress: 设计
 type: LAB
 section: MDM_DESIGN
 layout: four-block
-time: 2m
+time: 4m
 progress: 任务
 -->
 
@@ -770,7 +801,7 @@ STOP: 窄测/回归绿；diff 不越界；progress 已记录
 
 ---
 
-# 第三幕：让 Ralph 真正跑两轮
+# 第三幕：让受控循环真正跑两轮
 
 ## 第 15 页｜Round 1：先看见一个解释得通的 RED
 
@@ -807,7 +838,16 @@ RED 断言：
 
 ### 演示动作
 
-运行单个测试文件，保存 `unit-test-red.txt`；让学员用一句话解释失败与 FR-ACC-001 的关系。
+在全模块测试中运行目标用例并保存 `unit-test-red.txt`。真实 RED 是 `expect 1 equals 2`：基线只读一次就 dispatch，而测试要求等到第二次快照出现 123。让学员用一句话解释它与 FR-ACC-001 的关系。
+
+```text
+ERROR: Error in should wait until added account appears before dispatching handlers,
+expect 1 equals 2
+BUILD SUCCESSFUL ...
+HVIGOR_EXIT=0
+```
+
+这里故意保留 Hvigor 的反直觉输出：命令横幅和退出码看起来成功，目标用例仍然失败。判定必须读取用例级错误或 `test_result.txt`。
 
 ### 通过条件
 
@@ -817,6 +857,7 @@ RED 断言：
 
 - `account-change-coordinator.test.ets`
 - commit `c0c1bc9f`
+- `evidence/mdm/t01-red-green.md`
 
 ---
 
@@ -853,11 +894,17 @@ AI 修改约束：
 
 “把 123 加进数组”会让测试绿，却伪造 OS 事实；这正是需要人工审查的 AI 捷径。实现还要考虑协调器已有的 debounce、single-flight 和 pending 语义，不能为一个重试分支破坏全局调度。
 
+**SESSION FACT｜错误方案必须进入课堂**
+
+> “延迟 2S 还是拿不到，你分析得不对吧。”
+
+这句话不是要求把 2 秒改成 5 秒，而是在否定“只是系统数据刷新慢”的假设。让学员回答：延迟改变了等待时间，但是否改变了事实源、进程边界和发布机制？若没有，就不能把继续加延迟称为最小实现。
+
 代码已经存在相应实现，课堂可以采用“遮住关键分支，让 AI 按任务卡补齐”的训练仓，或使用历史提交前的版本。若直接在当前 HEAD 上演示，应改为高级缺口，例如移除事件对称稳定条件。
 
 ### 演示动作
 
-让 AI 先输出计划和预计 diff，再允许写；完成后展示实际 diff，只审查状态转换与越界文件。
+让 AI 先输出计划和预计 diff，再允许写；完成后展示实际 diff，只审查状态转换与越界文件。最后运行同一条命令，确认目标用例记录 `result=Success`；覆盖率报告器仍出现的 `00507008` 单独记为工具链 GAP，不能混进本轮业务 GREEN。
 
 ### 通过条件
 
@@ -867,10 +914,12 @@ T01 窄测试转绿，相关 coordinator 回归通过，修改文件不超出 Al
 
 - `AccountChangeCoordinator.loadStableSnapshot`
 - `AccountChangeCoordinator.runOnce`
+- T01 GREEN：`c0c1bc9f`
+- `evidence/mdm/t01-red-green.md`
 
 ---
 
-## 第 17 页｜Ralph 的价值写在 progress，不在聊天记录
+## 第 17 页｜长任务的记忆写在 progress，不在聊天记录
 
 <!--
 type: DEBUG
@@ -905,7 +954,7 @@ progress: 调试
 
 ### 演示动作
 
-故意开启一个新 AI 会话，只提供 spec、task、progress 和相关文件，验证它能否准确说出下一步与禁止修改范围。
+做一次上下文 A/B：A 组获得压缩后的长聊天，B 组只获得 `spec + current task + progress + related files + evidence index`。两组都要在 90 秒内写出下一步、禁止范围和缺失证据，再比较谁引入了更多未经支持的假设。
 
 ### 通过条件
 
@@ -930,35 +979,37 @@ progress: 调试
 
 ### 画面
 
-```text
-10:01:02.120  event account-added id=123
-10:01:02.125  read accounts=[100,112]
-10:01:02.330  read accounts=[100,112,123]
-10:01:02.338  reconcile mode=public sig=100,112,123
-10:01:02.401  addRule user=123 index=2 code=401
-```
+**SESSION FACT｜假设阶梯**
 
-最早异常：**系统调用 `addRule` 返回 401**，不是“页面没刷新”。
+| 轮次 | 当前假设 | 新证据 | 判定 |
+|---|---|---|---|
+| 1 | 系统账号查询只是刷新慢 | 延迟 2 秒后现象不变 | 假设被推翻 |
+| 2 | `SystemUserProvider` 没读到新事实 | Provider raw=`[100,114]`，snapshot signature=`100,114` | Provider 读取成立 |
+| 3 | 进程内静态状态能通知页面 | Extension 与 UI 位于两个进程 | 传播边界错误 |
+| 4 | 接入 CommonEvent 即全部完成 | 卡片刷新，但已有规则和记录未刷新 | 只得到局部 GREEN |
 
-下一步只收集：`userId / sanitized payload / error code / rule index / transactionId`。
+最早异常不是“页面没刷新”，而是：**事实已经产生，但没有跨进程、按职责传播到所有依赖者。**
 
 ### 讲师备注
 
-真实提交 `4906f7d3 → 06864339 → 78fca089` 很适合演示 Evidence-first 调试：public 规则把可选字段 `remoteIps: undefined` 带进 MDM API，真机 `addNetFirewallRule` 返回 401；随后收敛为只有有效字段才进入 payload，并保留原始错误码供上层映射。
+本页优先沿账号主线展示“延迟补丁 → Provider 日志 → 进程边界 → 局部 GREEN”的推理。它训练的是：每轮只保留一个可证伪假设，并明确什么证据会推翻它。
+
+第二个可选案例是提交 `4906f7d3 → 06864339 → 78fca089`：public 规则把可选字段 `remoteIps: undefined` 带进 MDM API，真机 `addNetFirewallRule` 返回 401；随后收敛为只有有效字段才进入 payload，并保留原始错误码供上层映射。这个案例用于说明“最早异常也可能位于 payload 契约”，不要与账号传播根因混成一次历史故障。
 
 平台真实缺少企业管理员能力常见错误码为 `9200001`；201 是权限 / admin 状态类映射之一。课堂不要把模拟错误码当唯一真机事实。
 
 ### 演示动作
 
-打开失败前后 `FirewallRuleUtils.ets` diff，对比成功与失败 payload；让学员将“optional key 不得携带 undefined”补成一条规格和测试。
+先给出前两轮证据，让学员选择下一条最小日志；揭示跨进程事实后，再让他们解释为什么 CommonEvent 只带来了局部 GREEN。时间允许时再打开 `FirewallRuleUtils.ets` 的 401 diff 作为迁移练习。
 
 ### 通过条件
 
-定位结论能被具体日志字段推翻；不能只写“可能是权限或参数”。
+定位结论能被具体日志、进程事实或系统返回推翻；不能只写“可能是缓存、权限或参数”。
 
 ### 素材
 
 - commit `4906f7d3`、`06864339`、`78fca089`
+- 账号变化 Session 证据卡（附录 L1）
 - `FirewallRuleUtils.ets`
 - `FirewallSystemRepository.ets`
 
@@ -1068,6 +1119,8 @@ progress: 调试
 ### 画面
 
 **T02 / Mode transaction fault**
+
+`TEACHING`：这是从真实失败语义抽取的确定性故障注入，不表示同一历史 Session 恰好在账号 123 的第 2 条规则失败。
 
 初始：`public + enabled + users=[100,112]`
 
@@ -1221,6 +1274,18 @@ sequenceDiagram
     U->>U: 按当前路由刷新
 ```
 
+**SESSION FACT｜关键纠偏**
+
+> “这是两个进程，你用这种静态的传递不行。”
+
+| 接入 CommonEvent 后 | 结果 |
+|---|---|
+| 黑/白名单卡片 | 已刷新 |
+| 已有防火墙规则 | 未刷新 |
+| 操作记录 | 未刷新 |
+
+结论：事件送达只是 `factPublished`；它不自动等于 `businessSucceeded` 或 `allConsumersReconciled`。
+
 三个边界：
 
 - Handler 失败不应吞掉稳定账号事实。
@@ -1229,13 +1294,15 @@ sequenceDiagram
 
 ### 讲师备注
 
-页面第 11 页讲“架构为什么这样分”，本页讲“运行时如何调试”。建议用同一个 `eventId` 串联 Extension、Coordinator、Handler、UI 四段日志，先确定事件丢在哪一层，再决定是否修改。
+页面第 11 页讲“架构为什么这样分”，本页讲“运行时如何调试”。历史真机日志已经证明 Extension 收到删除事件、Provider 读到 `[100,114]`、Coordinator dispatch 且 Handler 返回成功；同一链路没有 UI 进程日志，且 `previous=` 暴露首次 diff 基线不可信。
+
+历史日志没有统一 `eventId`，不能为了课件完整而补造。目前只能用 `time window + source + trigger + signature + process` 关联；显式 `eventId/runId` 应作为下一张可观测性任务卡。因而这里讲“两进程、四阶段”，其中事件接收、事实读取、业务 reconcile 有证据，UI 消费只有局部 GREEN。
 
 提交 `0650b8eb` 展示 Extension 与 UI 不能依赖进程内单例；`cecf6d17` 展示 handler 失败与账号事实发布是两种结果。这里还要保留 `CURRENT GAP`：缺少覆盖所有 writer 的全局串行策略。
 
 ### 演示动作
 
-模拟 Handler 返回失败，观察 CommonEvent 与 UI 刷新仍发生；再并行触发 UI 模式切换，讨论需要 session/transaction token 还是全局 writer coordinator。
+先给学员真实脱敏日志，要求判断哪些阶段有直接证据、哪些仍是 UNKNOWN；再给出 CommonEvent 后“卡片已刷新、规则和记录未刷新”的局部结果，分别填写 `eventReceived`、`businessSucceeded`、`factPublished`、`uiRefreshed`。最后让学员设计下一版 `eventId` 字段，而不是假设历史已经有它。
 
 ### 通过条件
 
@@ -1246,6 +1313,7 @@ sequenceDiagram
 - `AccountChangeCoordinator.ets`
 - `AccountChangeEventBus.ets`
 - commit `0650b8eb`、`cecf6d17`
+- `evidence/mdm/account-cross-process-log.md`
 
 ---
 
@@ -1261,18 +1329,27 @@ progress: 证据
 
 ### 画面
 
-| 证据层 | CURRENT | 能证明什么 |
+**SESSION FACT｜18 个工具真机测试暴露的四层结果**
+
+| 结果层 | 关键问题 | 典型证据 |
 |---|---|---|
-| Build / install / launch | MCP 已支持 | 工程与设备链路可运行 |
-| UI tree / action / screenshot | MCP 已支持 | 用户路径执行、画面结果 |
-| HiLog query | MCP 已支持 | 调用顺序、错误码、关联 ID |
-| Firewall system getter | **尚未实现** | 每用户 policy/rules 的最终事实 |
+| Protocol | 外部客户端请求是否满足 MCP Schema？ | 参数校验、requestId、协议错误 |
+| Tool | 工具是否被调用并正常返回？ | tool result、退出码、artifact path |
+| Business | 目标业务动作是否执行成功？ | 原始错误码、业务对象、日志链 |
+| System | 设备最终状态是否真的改变？ | system getter、系统接口回读 |
 
-![Augmented LLM：Retrieval、Tools 与 Memory 共同扩展模型](harmonyos-sdd-workshop-media/anthropic/augmented-llm.png)
+**E2E FACT｜`FW-STATUS-001` 的真实结果摘要**
 
-<sub>讲师读图：MCP 位于 Tools，不是“第三个大脑”；Retrieval 负责取上下文，Memory / progress 负责跨轮保留事实，三者都只能为判断提供输入。图源：Anthropic《Building Effective Agents》。</sub>
+```text
+tool action       toggle_firewall        PASS
+UI before/after   false → true            PASS
+evidence source   ui_tree                 PRESENT
+internal getter   getPolicy/listRules     PRESENT
+acceptance bridge get_runtime_state       MISSING
+final verdict     UNKNOWN at system layer
+```
 
-**TARGET**：补一个只读 getter / bridge；若课前未准备，系统验收只能是 `UNKNOWN`。
+CURRENT 已覆盖 build/install/launch、UI tree/action/screenshot 与 HiLog，App 内部也已有 `getNetFirewallPolicy` / `getNetFirewallRules` 读取。TARGET 是把现有读取通过测试专用只读 bridge 暴露为结构化验收事实。若课前未准备，系统验收只能是 `UNKNOWN`。
 
 ### 讲师备注
 
@@ -1282,9 +1359,15 @@ progress: 证据
 
 **Anthropic 方法锚点**：`Writing Effective Tools for Agents` 建议优先建设少量高价值、边界清晰的工具，而不是把每个底层 API 薄包装后全部暴露；工具返回也应优先提供与下一步决策相关的高信号上下文。映射到本课：`build_app`、`logs_query`、`firewall.get_runtime_state` 应分别回答“能否构建”“最早异常在哪”“系统最终事实是什么”；默认返回状态、原因码、关键对象和 evidence path，大日志按需读取，避免一次调用污染 Agent 上下文。
 
+可选方法图放讲师备注，不与真实证据争夺画面中心：
+
+![Augmented LLM：Retrieval、Tools 与 Memory 共同扩展模型](harmonyos-sdd-workshop-media/anthropic/augmented-llm.png)
+
+<sub>讲师读图：MCP 位于 Tools，不是“第三个大脑”；Retrieval 负责取上下文，Memory / progress 负责跨轮保留事实，三者都只能为判断提供输入。图源：Anthropic《Building Effective Agents》。</sub>
+
 ### 演示动作
 
-现场打开 MCP README、bridge action map 和 `status_toggle.json`，用 CURRENT / TARGET / GAP 三色贴纸标注能力。
+给学员一份“tool returned ok，但设备策略未改变”的结果，让他们分别填写 Protocol、Tool、Business、System；再打开 action map 与 `status_toggle.json` 找出缺失的最终事实。
 
 ### 通过条件
 
@@ -1296,6 +1379,8 @@ progress: 证据
 - `scripts/e2e/tools/bridge_action_map.json`
 - `scripts/e2e/cases/firewall/status_toggle.json`
 - commit `72cd7d47`
+- MCP 全工具真机测试 Session 证据卡（附录 L2）
+- `evidence/mdm/firewall-runtime-readback.md`
 
 ---
 
@@ -1311,7 +1396,7 @@ progress: 证据
 
 ### 画面
 
-**T03 / Read-only Runtime Getter — TARGET**
+**T03 / Structured Acceptance Readback — TARGET**
 
 ```json
 {
@@ -1327,15 +1412,17 @@ progress: 证据
 
 操作链：`build → install → activate admin → trigger → logs → getter → screenshot`
 
+**课堂任务不是 5 分钟现场开发 getter，而是先冻结证据契约和 PASS 规则。**
+
 ### 讲师备注
 
-这页不是声称仓库已有该 getter，而是把验收缺口变成明确任务。课前最佳做法：准备一个测试专用、只读、最小权限的 app bridge，直接调用现有 system repository getter，返回每用户 policy、受管规则、local apply record 和读取错误；不要通过 UI 文字二次解析。
+仓库已经有 App 内部 system repository getter；本页要补的是“自动验收如何稳定调用并结构化返回”的边界。课前最佳做法：准备一个测试专用、只读、最小权限的 app bridge，直接调用现有 getter，返回每用户 policy、受管规则、local apply record 和读取错误；不要通过 UI 文字二次解析。
 
 契约必须保留：设备 ID、包版本/commit、账号快照、每用户结果、原始错误码、采集时间。读取任一关键真相源失败时 `result=UNKNOWN`，不能返回空数组并 PASS。
 
 ### 演示动作
 
-学员先设计 JSON Schema 和 PASS 判定，再让 AI 生成 bridge 适配；只读 getter 不允许写 policy/rules。若课堂没有预构建 getter，执行到该步骤并展示诚实的 UNKNOWN。
+给学员 UI 文案、成功日志和一份缺字段的 runtime JSON，让他们先设计 JSON Schema、PASS 判定和 UNKNOWN 条件。只有课前已经准备预构建 getter 时才运行真实回读；主课堂不在 5 分钟内临时开发 bridge。
 
 ### 通过条件
 
@@ -1346,6 +1433,7 @@ PASS 必须同时满足：系统账号集合、各用户 policy、预期规则�
 - 附录 F 验收结果模板
 - `FirewallSystemRepository.ets`
 - `FirewallLocalRepository.ets`
+- `evidence/mdm/firewall-runtime-readback.md`
 
 ---
 
@@ -1372,17 +1460,24 @@ progress: 证据
 
 结果只允许：`PASS / FAIL / UNKNOWN`。
 
+| Eval 层 | 检查什么 | 反例 |
+|---|---|---|
+| Trace | Prompt、工具调用、diff、测试、是否越界 | 过程规范，但底层调用仍失败 |
+| Outcome | 系统账号、policy、rules、signature、mapping | 页面偶然正确，但 AI 伪造账号事实 |
+
+最终结论由 Outcome 决定；Trace 用于解释可信度、复现过程和发现越界行为。
+
 ![Evaluator–Optimizer：生成、独立评估、拒绝反馈与接受](harmonyos-sdd-workshop-media/anthropic/evaluator-optimizer.png)
 
 <sub>讲师读图：Implementer 不能独自给自己打分。Reviewer 返回的必须是可执行反馈与缺失证据；只有达到预先冻结的 AC 才接受。图源：Anthropic《Building Effective Agents》。</sub>
 
 ### 讲师备注
 
-评分建议：规格 20，设计与不变量 20，Ralph 红绿证据 25，真机回读 25，GPU 迁移 10。不要按代码行数、Prompt 长度或 AI 生成速度评分。
+评分建议：规格 20，设计与不变量 20，执行 Trace 20，真机 Outcome 30，GPU 迁移 10。不要按代码行数、Prompt 长度或 AI 生成速度评分。
 
 扩展题放到课后：删除账号对称稳定条件、mode/signature 原子保存、全局 writer serializer、结构化 compensation phase、读取失败不降级为空。它们是真实 GAP，但不应在主实践中继续扩张任务。
 
-**Anthropic 方法锚点**：Anthropic 的长任务实践建议在长时间执行后加入 fresh-context adversarial review，让没有参与实现的 Reviewer 只根据计划、diff、测试和证据寻找缺口。课堂中的相邻小组互审就是人工版本：不读取实现者的长聊天和自我解释，只读取 spec、task、diff、progress 与 evidence pack，报告需求遗漏、越界修改和证据不足，不评价个人代码风格。
+**Anthropic 方法锚点**：Anthropic 的长任务实践建议在长时间或高风险执行后加入 fresh-context adversarial review，让没有参与实现的 Reviewer 只根据计划、diff、测试和证据寻找缺口。Reviewer 不是所有小任务的固定仪式：单文件、强测试、低风险任务可以由确定性检查完成；跨进程、事务、权限、GPU 或接近模型可靠边界的任务才值得承担独立评估开销。课堂中的相邻小组互审就是人工版本：不读取实现者的长聊天和自我解释，只读取 spec、task、diff、progress 与 evidence pack，报告需求遗漏、越界修改和证据不足，不评价个人代码风格。
 
 ### 演示动作
 
@@ -1412,6 +1507,8 @@ progress: 需求
 -->
 
 ### 画面
+
+**能力回扣**：Eval 与反证｜先冻结现象和缺失证据，不让 AI 从“黑屏”直接跳到 decoder/shader。
 
 **MDM：Feature-first**
 
@@ -1488,6 +1585,8 @@ progress: 设计
 
 ### 画面
 
+**能力回扣**：上下文工程｜只加载当前 command 实际经过的 codec、consumer 与 owner，不把所有 GPU 代码塞进上下文。
+
 ```mermaid
 flowchart TB
     A[FreeRDP SurfaceCommand] --> B{Codec path}
@@ -1556,6 +1655,8 @@ progress: 调试
 -->
 
 ### 画面
+
+**能力回扣**：工具契约｜日志工具必须返回能串起同一帧的身份字段；学员产出 `last-good / first-abnormal`。
 
 **G01 / Instrument only**
 
@@ -1640,6 +1741,8 @@ progress: 调试
 
 ### 画面
 
+**能力回扣**：Eval 与反证｜指标只路由下一步调查，不能替代可证伪假设和同帧 Outcome。
+
 | 证据组合 | 最可能边界 | 下一轮只验证 |
 |---|---|---|
 | decode 高、queue 低 | codec / 输入格式 | 硬解输出与 PTS |
@@ -1701,6 +1804,8 @@ progress: 设计
 -->
 
 ### 画面
+
+**能力回扣**：需求与边界冻结｜把“支持 GPU 送显”拆成对象身份、所有权、生命周期和重建后的不变量。
 
 | 移植问题 | HarmonyOS 需要显式处理 | 验证证据 |
 |---|---|---|
@@ -1768,11 +1873,13 @@ sequenceDiagram
 type: MAP
 section: GPU_PLATFORM
 layout: decoder-boundaries
-time: 3m
+time: 2m
 progress: 设计
 -->
 
 ### 画面
+
+**能力回扣**：任务边界｜AI 必须先证明当前命令进入哪套接入，再获得修改对应文件的权限。
 
 | 接入 | 所在层 | 角色 |
 |---|---|---|
@@ -1835,6 +1942,8 @@ progress: 代码
 -->
 
 ### 画面
+
+**能力回扣**：Workflow 与 Agent｜固定小样本验证走 Workflow；AI 只解释失败位于 import、layout 还是 shader。
 
 **AVC420 / opaque output**
 
@@ -1916,6 +2025,8 @@ progress: 代码
 
 ### 画面
 
+**能力回扣**：最小实现｜对象存在不等于内容 ready；接管前先用不变量阻止 AI 通过“强制显示”制造假 GREEN。
+
 ```mermaid
 flowchart TD
     A[AVC420 command] --> B{覆盖完整 Surface？}
@@ -1980,11 +2091,13 @@ AVC420 retained state 是 RGBA FBO：GDI base 与 AVC dirty rect 在同一 retai
 type: DEBUG
 section: GPU_420
 layout: state-risk
-time: 2m
+time: 3m
 progress: 调试
 -->
 
 ### 画面
+
+**能力回扣**：Harness 与范围控制｜队列、owner 与 fail-open 需要明确状态和停止条件；清 cache 不授权删除整条路径。
 
 状态：`Detached → Active ↔ TargetPaused`；致命失败进入 `Failed`，后续成功可再次直接接管。
 
@@ -2001,6 +2114,12 @@ progress: 调试
 普通 AVC pending 需要匹配 EndFrame 再 present，但 AVC420 存在明确例外：无 AVC pending 的 GDI-only 更新可立即提交；deferred GDI-only 可在匹配 EndFrame 提交；target 恢复可重呈现 retained composite。不要讲成“所有 present 必须 EndFrame”。
 
 历史排查中曾因“降低延迟”丢弃 25 个旧 SurfaceCommand。对全帧视频这听起来合理，但 dirty-region AVC420 的旧命令可能包含未被后帧覆盖的像素，删除它们等于破坏画面状态。课堂让学员先回答：**局部更新队列能否套用 latest-frame-wins？**
+
+**SESSION FACT｜范围失控不是技术细节**
+
+> “我只让你把 cache 清除掉，你给我全删除了，反思一下，不要改代码了。”
+
+这条反馈用于检查 Agent 的授权边界：用户授权的是移除一个未提交的 cache 尝试，不是删除整条 NativeBuffer/EGLImage 路径。即使删除后能够编译，也属于 Trace FAIL。学员必须从 Task Card 中指出 Allowed object、Forbidden changes 和触发停手的用户指令。
 
 #### 队列桌面推演
 
@@ -2024,7 +2143,7 @@ C102: 更新窗口标题 C     E102
 
 ### 演示动作
 
-故障注入三种情况：target 暂不可用、连续累积失败、队列接近 720。让学员分别判断 preserve、pause、release owner 与顺序风险。
+先给出 cache 清理前后的 diff 摘要，让学员在 60 秒内判定是否越界以及应该回滚哪一部分；再进行 target 暂不可用、累计失败、队列接近 720 三种故障推演。
 
 ### 通过条件
 
@@ -2049,6 +2168,8 @@ progress: 代码
 -->
 
 ### 画面
+
+**能力回扣**：参考实现与契约｜先对齐 FreeRDP 的帧语义，再决定哪些 HarmonyOS 接口实现可以不同。
 
 | LC | 要解码的内容 | retained 更新 |
 |---:|---|---|
@@ -2121,6 +2242,8 @@ progress: 证据
 -->
 
 ### 画面
+
+**能力回扣**：Outcome Eval｜两条路径分别验证，但最终都要提交 owner、frame、target 与可见结果一致的证据包。
 
 **公共输出契约**
 
@@ -2214,13 +2337,19 @@ flowchart TD
 4. 本轮只允许 AI 改哪个边界？
 5. 怎样先制造一个可解释的 RED？
 6. 最早异常证据在哪里？
-7. 什么证据满足后，Ralph 必须停止？
+7. 什么证据满足后，本轮必须停止？
+
+**一分钟迁移题**
+
+> 权限页面第一次进入数据为空，第二次进入正常。
+
+每组必须用七问给出：一个最小只读勘察任务、一条可证伪假设、一项禁止修改范围和一个最终事实来源。不得直接回答“加延迟”或“页面初始化问题”。
 
 ### 讲师备注
 
 用两个案例做最后对照：MDM 的关键是先由规格冻结多用户与事务语义；GPU 的关键是先由证据缩小未知边界。但两者最后都落到同一个外部循环：任务小、失败真、diff 窄、证据可追踪、停止条件明确。
 
-再把七问映射回开场的六项进阶能力：前 3 问控制需求与上下文，第 4–5 问控制 Agent 边界和可验证实现，第 6 问依赖工具取得环境事实，第 7 问由 Eval 与 Reviewer 决定停止。这样学员离场时记住的是一套复杂需求交付框架，而不是 Ralph、MCP 或某个模型名称。
+再把七问映射回开场的六项进阶能力：前 3 问控制需求与上下文，第 4–5 问控制 Agent 边界和可验证实现，第 6 问依赖工具取得环境事实，第 7 问由 Eval 与风险匹配的 Reviewer 决定停止。这样学员离场时记住的是一套复杂需求交付框架，而不是 Ralph、MCP 或某个模型名称。
 
 请学员展示最终包，不再展示聊天窗口。讲师最后强调：AI 可以加速探索、测试、实现和取证，但产品决策、真相源、事务边界和 PASS 判定仍由工程师负责。
 
@@ -2246,7 +2375,7 @@ flowchart TD
 
 | 时间 | 页码 | 目标 | 必须保住的实践 |
 |---|---:|---|---|
-| 00–08 | 1–3 | 建立课程契约、英雄任务与 Ralph 循环 | PASS / FAIL / UNKNOWN |
+| 00–08 | 1–3 | 建立课程契约、英雄任务与受控循环 | PASS / FAIL / UNKNOWN |
 | 08–26 | 4–8 | 领域模型、歧义、EARS、行为矩阵 | `spec.md` |
 | 26–42 | 9–14 | 状态、真相源、架构、追踪、任务卡 | `design.md`、T01 |
 | 42–70 | 15–22 | 两轮 RED→GREEN、日志定位、故障注入、identity | `progress.md`、patch |
@@ -2909,6 +3038,8 @@ PASS | FAIL | UNKNOWN
 
 - 锁定两个仓库的演示 commit，确认所有代码锚点仍存在。
 - 准备训练分支：T01/T02 可产生真实 RED；不要直接在已经修复的 HEAD 上假演示失败。
+  - T01：GREEN=`c0c1bc9f`，基线 parent=`4b372d0d`；在训练分支上只加入目标 RED 测试，不提前带入生产修复。
+  - T02：GREEN=`0b5edc5f`，基线 parent=`46819417`；故障注入必须能区分 forward 与 compensate。
 - 在授课设备跑通 Hvigor test/build、签名、安装、admin 激活与 HDC。
 - 准备账号 `[100,112,123]` 或等价真机条件。
 - 若要最终 PASS，课前实现并验证只读 firewall runtime getter；否则在材料中固定展示 UNKNOWN。
@@ -2918,9 +3049,19 @@ PASS | FAIL | UNKNOWN
 
 ## H2. PPT 资产命名
 
+先检查现成资产，不把“建议截图”误写成“证据已经准备”：
+
+| 资产 | 当前状态 | 授课要求 |
+|---|---|---|
+| `harmonyos-sdd-workshop-media/mdm/firewall-domain-rule-created.jpeg` | READY | 第 1 页只用于证明 UI 可见，明确不能证明系统下发 |
+| `harmonyos-sdd-workshop-media/gpu-*` 与 `freerdp-*` | READY | 结合 runId/frame trace 使用，不以单图判 PASS |
+| T01 `unit-test-red/green` 输出 | EVIDENCE READY | `evidence/mdm/t01-red-green.md` 已保留 commit、命令、目标断言与退出码陷阱；课前只需转成截图 |
+| P24 两进程四阶段日志 | EVIDENCE READY / TELEMETRY GAP | `evidence/mdm/account-cross-process-log.md` 已脱敏；历史无 eventId，课件不得补造 |
+| P25 structured acceptance readback | TARGET | App 内部 getter 已存在，验收 bridge 未实现；固定演示 UNKNOWN，不用 UI tree 顶替 |
+
 ```text
 assets/
-├── 01-opening-device-vs-tests.png
+├── 01-opening-device-vs-tests.png       # 可由 READY 真机图 + 测试输出组合
 ├── 04-mdm-domain-model.svg
 ├── 15-t01-red.png
 ├── 16-t01-green.png
@@ -2945,6 +3086,9 @@ assets/
 - [ ] LAB 都有输入、允许动作、交付和通过条件。
 - [ ] DEBUG 都有最早异常、下一步和反证。
 - [ ] 证据页明确 PASS / FAIL / UNKNOWN。
+- [ ] 每个真实截图/视频都写明“能证明 / 不能证明”，并绑定 runId 或时间范围。
+- [ ] 每 10–12 分钟至少有一次学员可观察动作；不能连续三页只有讲师操作。
+- [ ] 主画面优先真实问题与项目证据；Anthropic 配图只解释方法，不抢占案例证据中心。
 - [ ] 页脚进度带 `需求—设计—任务—代码—调试—证据` 与本页阶段一致。
 
 ---
@@ -2975,6 +3119,11 @@ assets/
 | [Harness Design for Long-Running Application Development](https://www.anthropic.com/engineering/harness-design-long-running-apps) | 把长任务拆成可处理片段，用结构化产物跨阶段交接；Planner、Generator 与 Evaluator 分工；持续检验 harness 中哪些假设真正必要 | 第 14–17、27、39 页、附录 D |
 | [AI Fluency 研究型课程模型](https://academy.claude.com/tutorials/getting-good-at-claude-a-research-backed-curriculum) | 先教入口动作；描述能力沿耐久度逐渐扩展；辨别力不会随使用时间自然增长，必须在每一步重复训练 | 课程定位、第 1、3、27、39 页 |
 
+使用这些来源时保留两个时间与适用性边界：
+
+1. `Building Effective AI Agents` 发布于 2024 年，原页面已提示工具生态随后发生变化。本课只采用仍稳定的原则：从简单方案开始、区分 Workflow 与 Agent、持续读取环境事实、设置 checkpoint 和 stopping condition；不照搬具体产品配置。
+2. 独立 Evaluator 不是所有任务的固定要求。任务位于模型可靠能力范围内且已有强确定性检查时，额外 Evaluator 可能只是开销；跨进程、事务、权限、GPU、主观质量或模型能力边缘任务才优先启用。
+
 ## I3. 从文章观点到本课动作
 
 本课不照搬任何具体 AI 产品命令或功能清单，而是提炼跨工具、跨项目成立的工程动作：
@@ -2991,7 +3140,7 @@ assets/
 | 上下文要少而高信号 | 只给 spec、current task、progress、相关文件和证据索引 | 新会话复现下一步，不重新扫描整仓 |
 | 工具应面向工作流而非底层 API | MCP 返回 Agent 下一步决策所需的状态、原因码和证据路径 | `build_app`、`logs_query`、TARGET runtime getter |
 | Trace 与 outcome 必须分开评估 | 既审查 Agent 的工具调用、修改轨迹和越界行为，也回读系统最终状态 | `progress.md` + diff 是 trace；getter / frame evidence 是 outcome |
-| 实现者不应独自给自己打分 | Planner 冻结目标，Implementer 产出最小 diff，Reviewer 只按 AC、diff、测试和证据反证 | 第 27 页 evidence pack 互审 |
+| 高风险任务不由实现者独自打分 | Planner 冻结目标，Implementer 产出最小 diff，Reviewer 只按 AC、diff、测试和证据反证；低风险强测试任务允许确定性检查直接收口 | 第 27 页 evidence pack 互审 |
 
 引用这些文章的目的不是给课程增加一套新名词，而是说明：本课从两个真实 HarmonyOS 项目提炼出的“需求先冻结、上下文高信号、Workflow 与 Agent 有边界、任务小、失败真、证据强、评估独立、停止清楚”，与 Anthropic 在 Agent 工程实践中总结的可靠性原则一致。
 
@@ -3002,7 +3151,7 @@ assets/
 课堂不要求学员搭建完整评测平台，但必须理解图中的六个对象如何映射：
 
 - `Task` → 一张带输入、AC、Allowed、Forbidden 与 Stop 的任务卡。
-- `Trial / Trajectory` → 一次 Ralph 执行及其 Prompt、工具调用、diff、测试和 `progress.md`。
+- `Trial / Trajectory` → 一次受控执行及其 Prompt、工具调用、diff、测试和 `progress.md`。
 - `Outcome` → 真机最终 policy/rules，或 GPU 同一 `frameId` 的 owner / present 事实。
 - `Graders` → 确定性测试、状态 getter、Reviewer rubric 与人工设备观察。
 - `Evaluation suite` → 正常、失败注入、重复事件、跨进程和回归 Case 集合。
@@ -3372,3 +3521,162 @@ evidence/gpu-<runId>/
 | 验收诚实度 | 15 | 视频、日志、状态分别判定，缺证据保留 UNKNOWN |
 
 不按代码行数、AI 回复长度、截图数量或“现场一次成功”评分。
+
+---
+
+# 附录 L｜真实 Session 证据卡
+
+本附录保存可进入课堂的真实问题片段。它不是聊天记录归档：只保留能够改变工程判断的原始提示词、初始假设、反证、修正和迁移规则。投屏时隐藏个人路径、设备标识、账号、地址和无关上下文。
+
+## L1. 账号变化：从延迟补丁到跨进程事实
+
+| 阶段 | 证据 |
+|---|---|
+| 原始问题 | “新增规则为什么不会重新读取账号信息” |
+| 约束升级 | “先不要改，先看看要怎么改，怎么实时拿到账号信息” |
+| 错误假设 | 系统账号事实只是刷新慢，增加 2 秒延迟即可 |
+| 用户反证 | “延迟 2S 还是拿不到，你分析得不对吧” |
+| 最小观测 | Provider raw、snapshot signature、handler count、进程身份 |
+| 边界发现 | Extension 与 UI 是两个进程，进程内静态状态不能传事实 |
+| 局部 GREEN | CommonEvent 后卡片刷新，但已有规则和记录没有刷新 |
+| 职责修正 | 事实发布、业务 reconcile、UI refresh 分开判定；规则收敛进入 Service |
+| 真机链路 | 删除 115 → raw `[100,114]` → signature `100,114` → firewall handler success |
+| 新缺口 | `previous=` 导致首次 diff 基线失真；历史日志无统一 eventId；UI 阶段没有完整日志 |
+
+课堂用途：P5、P16、P18、P24；完整脱敏日志见 `evidence/mdm/account-cross-process-log.md`。迁移问题：权限、应用卸载、日志页面还有哪些消费者依赖同一账号事实？
+
+## L2. MCP：工具返回成功不等于业务成功
+
+| 阶段 | 证据 |
+|---|---|
+| 原始问题 | “之前发现 MCP 工具基本都失败了，请帮我看看为什么” |
+| 范围扩大 | 使用真实 SecurityTool 测试全部工具，并保存完整测试结果 |
+| 关键分层 | 外部客户端 Schema、工具调用、业务返回、设备最终状态 |
+| 代码事实 | App 内部已有 `getNetFirewallPolicy` / `getNetFirewallRules` 系统读取 |
+| 暴露问题 | E2E action map 没有 `firewall.get_runtime_state`，内部 getter 尚未变成验收侧结构化事实 |
+| 结论 | 协议成功、Tool成功、Business成功、System成功必须分别记录 |
+
+课堂用途：P25–P27；证据边界见 `evidence/mdm/firewall-runtime-readback.md`。学员任务：对一个 `tool returned ok` 的结果给出四层判定，并指出最小缺失证据。
+
+## L3. 开关机事件：真实生命周期推翻静态分析
+
+| 阶段 | 证据 |
+|---|---|
+| 现象 | 开关机事件缺失 |
+| 动作 | 增加诊断日志、重新构建安装、等待用户真实重启 |
+| 纠偏 | “你分析得不对”，要求重新以真机生命周期为准 |
+| 结果 | 复现后行为恢复，原假设不足以解释结果 |
+| 收尾 | 删除只用于诊断且已无长期价值的噪声日志 |
+
+迁移规则：需要重启、登录、权限激活或远端连接的事实不能靠静态代码独立证明；诊断代码完成使命后也要接受最小化审查。
+
+## L4. 权限策略：乐观 UI 与系统状态撕裂
+
+| 阶段 | 证据 |
+|---|---|
+| 现象 | 第一次进入数据为空、按钮状态与实际策略不一致 |
+| 错误方向 | 先在组件内部更新选择状态，再等待系统写入结果 |
+| 用户约束 | 失败回滚原本就是设计目的，状态只应在成功后改变 |
+| 修正 | ViewModel 保持系统事实，UI pending 与 committed state 分离 |
+| 验收 | 成功、失败、刷新、重新进入、多账号分别验证 |
+
+课堂用途：P19、P22、P39。迁移规则：乐观更新只能改变“pending intent”，不能提前伪造“system committed”。
+
+## L5. GPU：截图正确也可能是持续显示错误
+
+| 阶段 | 证据 |
+|---|---|
+| 现象 | AVC444 黑屏、颜色错误、闪烁；截图偶尔能抓到正确帧 |
+| 危险结论 | 单张截图正确，因此 renderer 已修复 |
+| 用户约束 | “不要怀疑，要看日志，没有就加” |
+| 最小观测 | negotiated codec、command codecId、frameId、dirty rect、decoder、owner、present |
+| 边界发现 | 截图只证明采样瞬间；帧配对、stride、LC readiness 或 owner 仍可能错误 |
+
+课堂用途：P28–P38。迁移规则：可见证据必须与同一 runId/frameId 的运行时事实对齐。
+
+## L6. AVC420：删除 cache 变成删除整条路径
+
+| 阶段 | 证据 |
+|---|---|
+| 用户授权 | 移除一个尚未提交的 NativeBuffer/EGLImage cache 尝试 |
+| 实际修改 | 扩大为删除整条相关实现路径 |
+| 用户纠偏 | “我只让你把 cache 清除掉，你给我全删除了，反思一下，不要改代码了” |
+| Trace 判定 | 即使能编译，仍因超出授权范围而 FAIL |
+| 正确动作 | 立即停手，识别精确对象，只回滚越界部分，不继续用新改动掩盖错误 |
+
+课堂用途：P14、P27、P36。迁移规则：Allowed/Forbidden 不只写文件，还要写具体对象、行为和删除边界。
+
+## L7. Session Evidence Card 模板
+
+```markdown
+# Session Evidence Card — <问题名称>
+
+- 能力：需求 | 上下文 | Workflow/Agent | 工具 | Eval | Harness
+- 原始提示词：
+- 用户授权边界：
+- AI 初始假设：
+- 初始动作：
+- 直接反证：
+- 最早异常边界：
+- 被推翻的方案：
+- 最小修正：
+- Trace verdict：PASS | FAIL | UNKNOWN
+- Outcome verdict：PASS | FAIL | UNKNOWN
+- 仍缺证据：
+- 可迁移规则：
+- 适用页码：
+```
+
+选材规则：优先保留“改变了下一步”的短片段，不复制整段聊天；同一结论至少绑定一份代码、日志、测试、截图或系统回读证据。只有提示词、没有环境事实的片段只能作为问题素材，不能作为技术结论。
+
+---
+
+# 附录 M｜四线闭环与授课成效审计
+
+## M1. 方法论、需求、演示、问题必须在同一页链路相遇
+
+| 教学线 | 学员必须学会 | 主案例落点 | 不能退化成 |
+|---|---|---|---|
+| 方法论 | 选择规格、上下文、Agent、工具、Eval 与 Harness 控制方式 | P3、P13–P17、P25–P27 | 背六个名词或读 Anthropic 文章 |
+| 具体需求 | 把多用户、事务、进程、帧链等真实复杂性写成可测试行为 | P4–P12、P19–P24、P29–P38 | 只看最终代码答案 |
+| 演示/截图 | 判断证据等级，复现动作并保存可追踪产物 | P1、P15、P18、P25、P28、P30、P34、P38 | 看一张图后宣布“已经好了” |
+| 处理问题 | 让假设被反证，控制修改范围，保留 UNKNOWN 和剩余风险 | P16、P18、P21–P22、P24、P31、P35–P36 | 罗列可能原因或连续打补丁 |
+
+四条线缺一条，该段都不能算完成：只有方法没有问题会空；只有需求没有方法难迁移；只有演示没有系统事实会误判；只有正确答案没有错误过程，学员遇到新问题仍不会处理。
+
+## M2. 120 分钟内学员必须产生的九个动作
+
+| 页码 | 学员动作 | 当场产出 | 讲师判定 |
+|---|---|---|---|
+| P1 | 说出真机截图能证明和不能证明什么 | evidence scope | 不把 UI 当 system truth |
+| P5–P6 | 找实现分叉并冻结一个产品语义 | Open Decision | 答案会改变代码/测试 |
+| P13 | 完成只读勘察 | 入口、事实源、GAP | 所有符号可定位 |
+| P15 | 解释目标 RED | failure statement | 失败来自目标行为而非环境 |
+| P17 | 做上下文 A/B 交接 | Next / Forbidden / Missing evidence | 不靠完整聊天继续 |
+| P18/P24 | 选择最小日志并重排跨进程链 | earliest anomaly | 能推翻当前假设 |
+| P26–P27 | 设计证据契约并互审 | Trace/Outcome verdict | 只输出 PASS/FAIL/UNKNOWN |
+| P30/P34 | 还原 frameId 与 plane/rect 不变量 | GPU diagnosis card | 420/444 不混用假设 |
+| P39 | 将七问迁移到权限首次加载问题 | 新 Task Card | 不回答“加延迟” |
+
+如果现场时间不足，优先保留 P6、P13、P18/P24、P26/P27、P30 和 P39；可以缩短讲师技术展开，但不要删除学员决策动作。
+
+## M3. 每次演示统一使用七步脚本
+
+```text
+1. Show     展示原始需求、现象、截图或失败输出
+2. Ask      只问“直接看到了什么”，禁止猜根因
+3. Guess    揭示 AI 第一版判断或修改
+4. Falsify  给出会推翻它的日志、进程事实、getter 或帧证据
+5. Decide   学员选择下一条最小观测或修改边界
+6. Verify   运行 RED/GREEN、回归、构建和系统回读
+7. Transfer 换一个模块，复用同一控制方法
+```
+
+讲师不要直接从 Show 跳到 Verify。课程精髓位于 Guess → Falsify → Decide：学员必须亲自经历“第一反应不够、证据改变下一步”。
+
+## M4. 四类常见授课失败
+
+1. **方法论过满**：连续解释多个框架名词，却没有原始需求和失败证据。处理：方法图放备注，主画面先放项目事实。
+2. **现场演示过冒险**：临时切历史提交、构建或连接远端，时间耗在环境。处理：训练分支预构建；实时操作失败时切换到带命令、退出码、commit 的回放证据。
+3. **问题处理像公布答案**：讲师直接说跨进程、stride 或 owner。处理：分轮揭示证据，让学员先选择下一条探针。
+4. **截图替代验收**：画面正常就把未知项全部勾 PASS。处理：每张图固定写“能证明/不能证明”，最终由系统 getter 或同帧 trace 收口。

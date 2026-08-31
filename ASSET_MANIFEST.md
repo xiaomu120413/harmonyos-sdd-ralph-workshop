@@ -4,6 +4,7 @@
 
 | 文件 | 类型 | 主要用途 | 注意事项 |
 |---|---|---|---|
+| `mdm/firewall-domain-rule-created.jpeg` | 真机截图 | 第 1 页建立“UI 可见不等于系统事实”的开场冲突 | 能证明域名规则出现在页面；不能证明所有账号的系统 policy/rules 已正确下发 |
 | `gpu-failure-black-screen-13s.mp4` | 视频 | 第 28/32 页黑屏故障带入 | 证明现象可复现，不直接证明根因 |
 | `gpu-failure-black-screen-contact.jpg` | 图片 | 黑屏关键帧讨论 | 需结合 frame trace |
 | `gpu-validation-video-playback-16s.mp4` | 视频 | 第 31/38 页动态验证 | 证明可见交互，不单独证明 owner/target 契约 |
@@ -31,6 +32,14 @@
 | `eval-quality-layers.png` | 第 39 页 | 多层验证共同拦截漏检 | [Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) |
 | `agent-evaluation-components.png` | 附录 I4 | Task / Trial / Trajectory / Outcome / Grader | [Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) |
 | `orchestrator-workers.png` | 附录 J4 | 解释什么时候适合动态拆分和并行协同 | [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) |
+
+## 文本证据资产
+
+| 文件 | 对应页面 | 状态 | 用途 |
+|---|---:|---|---|
+| `evidence/mdm/t01-red-green.md` | 15–17 | READY | 真实 RED/GREEN、commit、命令、用例结果与退出码陷阱；课前可直接转图 |
+| `evidence/mdm/account-cross-process-log.md` | 18、24 | READY / eventId GAP | 真机日志已脱敏；明确历史无统一 eventId，不补造四段完整链路 |
+| `evidence/mdm/firewall-runtime-readback.md` | 25–26 | READY / bridge TARGET | 证明 App 内部 getter 已存在、验收 bridge 缺失、系统结论仍为 UNKNOWN |
 
 版权归原作者 / Anthropic 所有。当前仓库仅按内部教学参考保存；公开发布、再分发或商业课件使用前，应重新确认授权、品牌与版权要求。详细记录见 `THIRD_PARTY_ASSETS.md`。
 
