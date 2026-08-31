@@ -34,6 +34,15 @@
 
 版权归原作者 / Anthropic 所有。当前仓库仅按内部教学参考保存；公开发布、再分发或商业课件使用前，应重新确认授权、品牌与版权要求。详细记录见 `THIRD_PARTY_ASSETS.md`。
 
+## 厂商中立方法论主视觉
+
+| 文件 | 类型 | 主要用途 | 说明 |
+|---|---|---|---|
+| `methodology/ai-fluency-neutral.png` | PNG | 课程定位与开场方法论总览 | 16:9 中文投屏版，不出现具体 AI 产品 |
+| `methodology/ai-fluency-neutral.svg` | SVG | PPT、讲义和后续可编辑版本 | 本课程自绘；方法参考 Anthropic Academy 的 AI Fluency Curriculum |
+
+这张图保留“入口动作、描述能力耐久度、辨别力贯穿每一层”的教学结构，去除了具体产品名称和功能罗列。图片本身为课程自绘，文章来源仍应在讲义或备注中保留。
+
 ## 未上传资源
 
 本地 V3 使用的原始场景图和完整连接联系表已同步到 Private 仓库，同时保留 `gpu-e2e-interaction-public.jpg` 供脱敏投屏。原始图片不应转入公开仓库；其他本地长录屏若包含私网地址、用户名或私人窗口，也不应在未审查时上传。

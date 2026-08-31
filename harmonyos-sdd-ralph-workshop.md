@@ -21,6 +21,18 @@
 
 Anthropic 的公开工程实践在这里充当“方法论参照系”，不是另一套产品教程。本课会把抽象原则落到 HarmonyOS 的规格、代码、设备日志、截图、视频和系统 getter 上；完整来源与映射见附录 I。
 
+## 教学框架：先教入口动作，再让辨别力贯穿每一层
+
+![复杂需求中的 AI 熟练度成长模型：入口动作、描述耐久度与辨别力](harmonyos-sdd-workshop-media/methodology/ai-fluency-neutral.png)
+
+这张图参考 Anthropic Academy 的研究型课程模型，但做了厂商中立的重新编排：不区分 Chat、代码 Agent 或办公 Agent，也不围绕某个产品功能教学，而是保留三条跨工具成立的规律。
+
+1. **入口动作先教会**：复杂任务先澄清完成状态、边界与风险，再通过小步反馈快速迭代。
+2. **描述能力逐步持久化**：从一次任务的目标、上下文、示例和格式，升级到任务卡、工具契约、项目规则、progress 与证据库。
+3. **辨别力每一步都回访**：每轮都问“AI 假设了什么、什么会让它错、证据够不够、最终状态是否正确、何时停止”。
+
+原研究指出，描述与表达能力可能随着使用自然增长，但对输出的辨别、质疑和验证不会仅靠使用时间自动形成，需要持续、显式地教。本课因此不把“会用功能”当作进阶，而把规格反证、失败注入、系统 getter、Reviewer 和 `PASS / FAIL / UNKNOWN` 贯穿全部模块。
+
 课程主线只有一条：
 
 ```mermaid
@@ -67,6 +79,8 @@ workshop/
 | 70–88 | 平台与验收 | 权限预检、跨进程、MCP 设备证据 | `acceptance.md`、evidence |
 | 88–116 | GPU 迁移 | 还原帧链、420/444 分路、证据诊断 | `gpu-diagnosis.md` |
 | 116–120 | 收束 | 同伴审阅与七问迁移 | 最终交付包 |
+
+每个模块结束固定做一次辨别力检查：**当前结论最可能错在哪里？我们看到的是表面输出、执行轨迹，还是最终系统事实？还缺哪一条证据？**
 
 ## 事实标签
 
@@ -231,7 +245,7 @@ SDD 负责“要到哪里、边界是什么”；Ralph 负责“一次走多远�
 
 停止条件必须可执行：窄测试绿、相关回归绿、diff 在任务允许范围、设备事实与规格一致。权限、签名、设备或 getter 阻塞时，结论是 `UNKNOWN`，记录阻塞并停止，不继续猜测。
 
-**Anthropic 方法锚点**：`Building Effective Agents` 强调 Agent 每一步都要从环境获取 ground truth，并用 checkpoint 与 stopping condition 控制执行；`Best practices for Claude Code` 进一步强调“给 Agent 一个它能运行的检查”，否则它只能在“看起来完成”时停下。本课把这一观点具体化为四级检查：目标 RED/GREEN、相关回归、HAP 构建、真机 getter / 帧级证据。截图是可读信号，但不能替代更强的系统事实。
+**Anthropic 方法锚点**：`Building Effective Agents` 强调 Agent 每一步都要从环境获取 ground truth，并用 checkpoint 与 stopping condition 控制执行；其 Agent 工程最佳实践进一步强调“给 Agent 一个它能运行的检查”，否则它只能在“看起来完成”时停下。本课把这一观点具体化为四级检查：目标 RED/GREEN、相关回归、HAP 构建、真机 getter / 帧级证据。截图是可读信号，但不能替代更强的系统事实。
 
 ### 演示动作
 
@@ -699,7 +713,7 @@ progress: 任务
 
 英雄任务的真实入口包括：`AccountChangeCoordinator.loadStableSnapshot/runOnce`、`FirewallAccountChangeHandler.handle`、`FirewallModeSwitchService.createSnapshot/applyModeToUsers/rollbackToSnapshot/remapDeployments`。
 
-**Anthropic 方法锚点**：Claude Code 官方建议将 Explore、Plan、Implement 分开，避免在尚未理解代码时直接解决错误问题。T00 就是这个原则的 HarmonyOS 版本：勘察轮次保持只读，输出必须引用文件、函数、测试和历史提交；冻结 Spec Gap 与修改边界后，再用干净的实现轮次执行任务。探索过程可以很宽，但交给实现轮次的上下文必须收敛。
+**Anthropic 方法锚点**：Anthropic 的 Agent 工程实践建议将 Explore、Plan、Implement 分开，避免在尚未理解代码时直接解决错误问题。T00 就是这个原则的 HarmonyOS 版本：勘察轮次保持只读，输出必须引用文件、函数、测试和历史提交；冻结 Spec Gap 与修改边界后，再用干净的实现轮次执行任务。探索过程可以很宽，但交给实现轮次的上下文必须收敛。
 
 ### 演示动作
 
@@ -1380,7 +1394,7 @@ progress: 证据
 
 扩展题放到课后：删除账号对称稳定条件、mode/signature 原子保存、全局 writer serializer、结构化 compensation phase、读取失败不降级为空。它们是真实 GAP，但不应在主实践中继续扩张任务。
 
-**Anthropic 方法锚点**：Claude Code 最佳实践建议在长时间执行后加入 fresh-context adversarial review，让没有参与实现的 Reviewer 只根据计划、diff、测试和证据寻找缺口。课堂中的相邻小组互审就是人工版本：不读取实现者的长聊天和自我解释，只读取 spec、task、diff、progress 与 evidence pack，报告需求遗漏、越界修改和证据不足，不评价个人代码风格。
+**Anthropic 方法锚点**：Anthropic 的长任务实践建议在长时间执行后加入 fresh-context adversarial review，让没有参与实现的 Reviewer 只根据计划、diff、测试和证据寻找缺口。课堂中的相邻小组互审就是人工版本：不读取实现者的长聊天和自我解释，只读取 spec、task、diff、progress 与 evidence pack，报告需求遗漏、越界修改和证据不足，不评价个人代码风格。
 
 ### 演示动作
 
@@ -2971,15 +2985,18 @@ assets/
 | [Writing Effective Tools for Agents](https://www.anthropic.com/engineering/writing-tools-for-agents) | 少量高价值工具优于大量重叠薄包装；工具应有清晰边界、语义化返回、token 效率，并用真实任务评测 | 第 25–26 页、附录 E |
 | [Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) | 复杂 Agent 评估要区分 task、trial、trace 与 outcome；组合代码、模型和人工 grader；从真实失败建立可维护的 eval suite | 第 3、26–27、39 页、附录 E |
 | [Harness Design for Long-Running Application Development](https://www.anthropic.com/engineering/harness-design-long-running-apps) | 把长任务拆成可处理片段，用结构化产物跨阶段交接；Planner、Generator 与 Evaluator 分工；持续检验 harness 中哪些假设真正必要 | 第 14–17、27、39 页、附录 D |
+| [AI Fluency 研究型课程模型](https://academy.claude.com/tutorials/getting-good-at-claude-a-research-backed-curriculum) | 先教入口动作；描述能力沿耐久度逐渐扩展；辨别力不会随使用时间自然增长，必须在每一步重复训练 | 课程定位、第 1、3、27、39 页 |
 
 ## I3. 从文章观点到本课动作
 
-本课不照搬 Claude Code 命令或 Web App 示例，而是提炼跨工具、跨项目成立的工程动作：
+本课不照搬任何具体 AI 产品命令或功能清单，而是提炼跨工具、跨项目成立的工程动作：
 
 | Anthropic 观点 | 本课工程化动作 | HarmonyOS 项目证据 |
 |---|---|---|
 | Agent 需要环境 ground truth | 每轮必须读取测试、构建、日志、system getter 或帧链事实 | MDM policy/rules；GPU frameId/owner/EndFrame |
 | Workflow 与 Agent 解决不同问题 | 构建、安装、采集走可重复 workflow；歧义探索、假设选择和最小 diff 才交给 Agent | MCP 验证链固定；MDM / GPU 决策路径按证据分叉 |
+| 入口动作决定后续学习质量 | 先冻结完成状态与边界，再进入小步迭代 | 英雄任务、歧义树与 Task Card |
+| 辨别力必须刻意训练 | 每个模块都以“什么会让它错、还缺什么证据”收尾 | 故障注入、UNKNOWN、同伴反证与最终系统回读 |
 | 没有检查就只能“看起来完成” | STOP 由可执行 Verification 决定，阻塞时返回 UNKNOWN | RED/GREEN、HAP build、真机回读 |
 | 一次只推进一个 feature | 一张 Task Card 只允许一个可观察结果和有限文件范围 | T01 稳定快照；T02 故障补偿；T03 getter |
 | progress 是跨上下文控制面 | 记录新事实、证据路径、剩余风险和 Stop/Next，不复制聊天 | `progress.md` 与 evidence pack |

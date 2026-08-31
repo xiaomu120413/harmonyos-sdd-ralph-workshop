@@ -35,6 +35,8 @@
 
 方法论参考 Anthropic 的 [Building Effective AI Agents](https://www.anthropic.com/engineering/building-effective-agents)、[Effective Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)、[Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) 与 [Harness Design for Long-Running Application Development](https://www.anthropic.com/engineering/harness-design-long-running-apps)，并在主文档附录 I 中给出逐项工程映射。
 
+课程教学节奏还参考了 Anthropic Academy 的研究型 AI Fluency 课程模型，但已重绘为厂商中立版本：**先澄清目标并迭代，再把描述能力从一次性输入升级为持久工作方式，同时在每一步训练辨别和验证能力**。课程不会围绕任何具体产品功能展开。
+
 ## GPU 章节亮点
 
 第 28–38 页包含：
@@ -63,6 +65,7 @@
 │   └── harmonyos-sdd-ralph-workshop-rich-v2.md
 └── harmonyos-sdd-workshop-media/
     ├── anthropic/*.png
+    ├── methodology/*.png / *.svg
     ├── *.jpeg / *.jpg / *.png
     └── *.mp4
 ```

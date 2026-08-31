@@ -22,3 +22,15 @@
 - 当前 GitHub 仓库为 Private，定位为内部课程素材库。
 - 转为公开仓库、公开课录像、商业培训或二次出版前，必须重新确认 Anthropic 的版权、品牌和再分发要求；无法确认时，改用自行绘制并经版权审查的中文图。
 - 下载日期：2026-08-31（Asia/Shanghai）。
+
+## 基于公开课程模型的自绘图
+
+`harmonyos-sdd-workshop-media/methodology/ai-fluency-neutral.svg` 及其 PNG 导出版由本课程重新绘制，方法参考 [Getting good at Claude: A research-backed curriculum](https://academy.claude.com/tutorials/getting-good-at-claude-a-research-backed-curriculum)。
+
+自绘版没有复制原图的产品分区与功能节点，也不突出任何具体产品；仅保留以下可迁移教学结构：
+
+- 先教授能带动后续能力的入口动作；
+- 描述能力从单次输入走向可复用与持久化配置；
+- 辨别、质疑和验证必须贯穿每个层级并反复训练。
+
+在公开课件中使用自绘图时，仍建议在讲师备注或资源页保留方法来源链接。
