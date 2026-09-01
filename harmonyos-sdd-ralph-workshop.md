@@ -19,7 +19,7 @@
 | Eval 与反证 | UI 绿、测试绿或截图正常，但系统事实仍错误 | RED/GREEN、故障注入、状态回读、Trace/Outcome 双审 | `PASS / FAIL / UNKNOWN` |
 | 长任务 Harness 与协同 | AI 越界修改、实现者自评完成、交接丢失事实 | 小任务、Git checkpoint、证据包、风险驱动 Reviewer | review verdict + next task |
 
-Anthropic 的公开工程实践在这里充当“方法论参照系”，不是另一套产品教程。本课用真实 Session 解释方法为什么必要，再把抽象原则落到 HarmonyOS 的规格、代码、设备日志、截图、视频和系统 getter 上检验。Academy 的课程模型只轻量参考其“先澄清与迭代、每步都做辨别”的教学节奏，不作为本课主方法论。完整来源、候选文章、工程映射与取舍见附录 I。
+公开的 AI Agent 工程研究与实践在这里充当“方法论参照系”，不是任何厂商的产品教程。本课用真实 Session 解释方法为什么必要，再把抽象原则落到 HarmonyOS 的规格、代码、设备日志、截图、视频和系统 getter 上检验。公开的 AI 熟练度课程模型只轻量参考其“先澄清与迭代、每步都做辨别”的教学节奏，不作为本课主方法论。完整来源、候选文章、工程映射与取舍见附录 I。
 
 每个关键页面都沿用同一课堂结构：
 
@@ -95,9 +95,10 @@ workshop/
 
 | 时间 | 模块 | 学员动作 | 当场产出 |
 |---|---|---|---|
-| 00–26 | 需求闭合 | 领域建模、歧义选择、EARS、行为矩阵 | `spec.md` |
-| 26–70 | 设计与受控迭代 | 真相源、任务卡、RED→GREEN、故障注入 | `design.md`、patch、`progress.md` |
-| 70–88 | 平台与验收 | 权限预检、跨进程、MCP 设备证据 | `acceptance.md`、evidence |
+| 00–18 | 背景与问题 | 区分对话式协作、仓库内 Agent 与异步任务代理，读懂 Agent Loop，判断“AI 完成”与“工程交付” | 一张复杂需求风险清单 |
+| 18–42 | 需求闭合 | 资产同步、歧义选择、EARS、行为矩阵 | `spec.md` |
+| 42–72 | 设计与受控迭代 | RFC、Story、真相源、任务卡、RED→GREEN、故障注入 | `design.md`、patch、`progress.md` |
+| 72–88 | 平台与验收 | 权限预检、跨进程、MCP 设备证据 | `acceptance.md`、evidence |
 | 88–116 | 远控第二案例 | 大库认知、跨平台调研、HM 方案、最小穿刺、任务与验收、开发排障 | codebase map、ADR、spike evidence、`gpu-diagnosis.md` |
 | 116–120 | 收束 | 同伴审阅与七问迁移 | 最终交付包 |
 
@@ -134,448 +135,398 @@ workshop/
 
 # 39 页 PPT-ready 讲师稿
 
-## 第 1 页｜今天交付的不是代码，是可信结果
+## 第 1 页｜AI 已经会写代码，为什么复杂需求仍然经常交付失败？
 
-<!--
-type: CLAIM
-section: OPENING
-layout: hero
-time: 2m
-progress: 需求
--->
-
-### 画面
+### PPT 内容
 
 # 使用 AI 进阶能力实现较为复杂的需求
 
-**从需求拆解、开发、验证，到问题定位与协同闭环**
+**从“让 AI 写代码”，升级到“让 AI 交付可验证的系统结果”**
 
-> 需求 → 规格 → 任务 → 代码 → 调试 → 证据
+开场只放一个问题：
 
-主视觉建议：左侧是一句模糊需求，中央是紫色受控 AI 循环，右侧是绿色设备证据包；背景只保留真实设备、测试结果和日志的低透明度拼贴。
+> AI 修改完成、测试通过、页面也能打开——这能证明需求已经交付吗？
 
-![真实 SecurityTool 防火墙域名规则页面](harmonyos-sdd-workshop-media/mdm/firewall-domain-rule-created.jpeg)
-
-<sub>这张真机图只能证明规则已出现在 UI；它不能单独证明每个账号的系统 policy/rules 已正确下发。开场让学员先说“它能证明什么、不能证明什么”。</sub>
-
-### 讲师备注
-
-开场不要先解释 SDD 名词。先问：“AI 说改完了、单测也过了，但新增账号没有策略，这算完成吗？”让学员明确本课的完成定义不是代码生成，而是系统事实可证明。
-
-课名里的“较为复杂”要在这一页说清楚：不是代码行数多，而是需求存在分叉、状态跨用户与进程、实现跨工具与会话、失败会留下部分状态、最终结果必须由设备事实验证。课名里的“进阶能力”则对应上下文工程、Workflow / Agent 分工、工具调用、长任务记忆、评估反证和协同交接。
-
-两个案例不是为了炫技。MDM 展示复杂业务如何被拆成可实现规格；GPU 展示现象模糊时如何先取证再改。课程结束后，学员应能把方法迁移到任何 HarmonyOS 复杂需求。
-
-### 演示动作
-
-快速展示一组对照：绿色单测输出 + 真机上账号 123 未收敛的日志。此时不解释原因，只留下悬念。
-
-### 通过条件
-
-学员能复述：**AI 输出只是候选变更，测试与设备事实共同决定是否完成。**
-
-### 素材
-
-- MDM 首页真机截图
-- 一段单测全绿输出
-- 一段账号新增后未收敛的设备日志
-
----
-
-## 第 2 页｜两小时跑通一条主闭环，再做一次跨域迁移
-
-<!--
-type: MAP
-section: OPENING
-layout: timeline
-time: 3m
-progress: 需求
--->
-
-### 画面
-
-**MDM 主闭环｜TEACHING COMPOSITE**
-
-> 设备当前处于 `public` 且防火墙已开启，已覆盖账号 `[100,112]`。系统收到 `account-added(123)` 后，先等待账号事实稳定，再把 public policy / preset rules 补到最新账号集合。若账号 123 的第 2 条规则下发失败，必须恢复旧状态，不得保存目标 signature，并留下可回读证据。
-
-```mermaid
-flowchart LR
-    A[账号 123 新增] --> B[稳定快照]
-    B --> C[模式重放]
-    C --> D[故障注入]
-    D --> E[补偿与回读]
-```
-
-### 讲师备注
-
-这条英雄任务由三个真实问题组合：账号快照时序、跨进程事实传播、模式重放失败补偿。课程后面遇到的“已经开启/关闭、重复事件、部分失败、systemRuleId、MCP 回读”都挂到这条主闭环上；第 28–38 页再把同一套控制方法迁移到 GPU 证据诊断，而不是开启一门新课。
-
-冻结课堂语义：
-
-- 新增事件第一次读到 `[100,112]` 不是稳定；直到包含触发账号 123 才可 dispatch。
-- public/private 账号集合变化时重放模式；custom 只同步默认 policy，不自动扩大旧自定义规则作用域。
-- 模式重放是事务：失败后尝试整体补偿，并重建恢复后的 deployment identity。
-- 总开关部分失败不是同一语义，后面专门比较。
-
-### 演示动作
-
-在白板或画布上固定写出 `100 / 112 / 123`，后续所有需求、测试与日志都沿用这三个 ID。
-
-### 通过条件
-
-所有小组使用同一英雄任务，不按模块分组拆散主链。
-
-### 素材
-
-- 账号集合变化示意图
-- `FirewallAccountChangeHandler.ets`
-- `FirewallModeSwitchService.ets`
-
----
-
-## 第 3 页｜复杂任务每轮必须留下六类证据
-
-<!--
-type: MAP
-section: OPENING
-layout: loop
-time: 3m
-progress: 任务
--->
-
-### 画面
-
-```mermaid
-flowchart TD
-    A[Task：本轮唯一结果] --> B[RED：制造可解释失败]
-    B --> C[AI：最小 Diff]
-    C --> D[Verify：窄测与回归]
-    D --> E[Evidence：日志与系统事实]
-    E --> F{停止条件满足？}
-    F -- 否 --> A
-    F -- 是 --> G[提交结果]
-```
-
-**可选对照图（PPT 制作时与上方 Mermaid 二选一）**
-
-![Autonomous Agent：Human、LLM、Environment、Feedback 与 Stop](harmonyos-sdd-workshop-media/anthropic/autonomous-agent-loop.png)
-
-<sub>讲师读图：Agent 不是“连续生成代码”，而是在环境反馈中行动，并在检查点接受人类判断或满足停止条件。图源：Anthropic《Building Effective Agents》。</sub>
-
-每轮写入 `progress.md`：
-
-`假设 / RED 命令与输出 / 修改文件 / GREEN 输出 / 新事实 / 剩余风险 / Stop 或 Next`
-
-### 讲师备注
-
-SDD 负责“要到哪里、边界是什么”；Ralph Loop 是“一次走多远、何时停止”的一种 Harness；MCP 只是 Verify 阶段的执行器。不要把三者画成并列方法，也不要把课程讲成某个模型或框架的使用说明。
-
-停止条件必须可执行：窄测试绿、相关回归绿、diff 在任务允许范围、设备事实与规格一致。权限、签名、设备或 getter 阻塞时，结论是 `UNKNOWN`，记录阻塞并停止，不继续猜测。
-
-**Anthropic 方法锚点**：`Building Effective Agents` 强调 Agent 每一步都要从环境获取 ground truth，并用 checkpoint 与 stopping condition 控制执行；其 Agent 工程最佳实践进一步强调“给 Agent 一个它能运行的检查”，否则它只能在“看起来完成”时停下。本课把这一观点具体化为四级检查：目标 RED/GREEN、相关回归、HAP 构建、真机 getter / 帧级证据。截图是可读信号，但不能替代更强的系统事实。
-
-### 演示动作
-
-展示两份短 `progress.md`：Round 1 解决账号可见性；Round 2 解决模式重放失败补偿。让学员看到“循环真正发生”。
-
-### 通过条件
-
-学员能区分 `PASS / FAIL / UNKNOWN`，并知道 UNKNOWN 不是失败，也不是可以伪装成 PASS。
-
-### 素材
-
-- 附录 D 任务卡模板
-- 附录 E `progress.md` 模板
-
----
-
-# 第一幕：把 MDM 原始需求变成可执行规格
-
-## 第 4 页｜先认识五个对象，再谈“防火墙开关”
-
-<!--
-type: MAP
-section: MDM_SPEC
-layout: domain-model
-time: 3m
-progress: 需求
--->
-
-### 画面
-
-```mermaid
-flowchart TB
-    A[业务模式 public/private/custom] --> B[用户级 Policy]
-    A --> C[业务规则 Intent]
-    C --> D[用户级 Deployment]
-    D --> E[系统规则 systemRuleId]
-```
-
-| 对象 | 作用 | 真相来源 |
-|---|---|---|
-| Account Set | 当前应该覆盖谁 | OS account API |
-| Policy | `isOpen` 与默认动作 | MDM system getter |
-| Intent | 用户想表达的业务规则 | Local repository |
-| Deployment | Intent 在各用户的落点 | Local mapping + system ID |
-
-### 讲师备注
-
-新员工最容易把“账号”当 UI 筛选条件，把一条业务规则直接等同一个系统 rule。实际一条 `FirewallRuleIntent(localRuleId, targetUserIds=[100,123])` 会展开为多个 deployment，每个 deployment 拥有独立 `systemRuleId`。
-
-还要把三个维度拆开：
-
-- `isOpen`：总开关。
-- `mode`：默认动作与预置规则策略。
-- `rules`：显式规则集合。
-
-提交 `deaf8f27` 的真实故障就是旧实现把模式切换与 `isOpen=true` 绑定，导致“已经关闭，切模式又打开”。它比抽象解释状态分层更适合开场。
-
-### 演示动作
-
-打开 `models/firewall/FirewallModels.ets` 或设计文档，只定位 Intent、Deployment、Policy 三个结构；暂不浏览 UI。
-
-### 通过条件
-
-学员能解释为什么恢复系统规则后，不能继续使用旧 `systemRuleId`。
-
-### 素材
-
-- `entry/src/main/ets/models/firewall/FirewallModels.ets`
-- commit `0ad3c1fa`、`deaf8f27`
-
----
-
-## 第 5 页｜原始需求的问题不是长，而是决定被藏起来了
-
-<!--
-type: CLAIM
-section: MDM_SPEC
-layout: statement-annotations
-time: 4m
-progress: 需求
--->
-
-### 画面
-
-> 防火墙支持 public / private / custom 三种模式和总开关；面向全部本地账号下发；账号增删后自动同步；处理已经开启/关闭、重复操作、部分失败和页面刷新。
-
-**SESSION FACT｜问题不是一次说清楚的**
-
-> “先不要改，先看看要怎么改，怎么实时拿到账号信息。”
-
-这句话同时冻结了三件事：本轮禁止写代码、当前目标是找到系统事实源、输出必须是方案与验收点。
-
-只高亮四个实现分叉：
-
-1. “全部账号”以事件参数、缓存还是 OS 快照为准？
-2. 部分失败时保留成功结果，还是整体回滚？
-3. “已应用”由本地 mode、signature 还是系统回读决定？
-4. Extension 完成后，UI 如何跨进程获得事实？
-
-### 讲师备注
-
-AI 直接拿到这段话时，往往会自行补齐业务决策：用当前登录账号、对所有失败统一 try/catch、操作成功后直接改 UI、用内存单例通知页面。这些实现都可能编译通过，但不一定是正确产品语义。真实 Session 里，用户先后追问“后面如果还有数据怎么办”“这样可拓展性怎么样”“这个修改感觉是在打补丁”，说明需求澄清不是一次生成文档，而是持续关闭会改变实现路径的分叉。
-
-课程不要求学员一开始知道答案，只要求先把“会导致不同代码路径”的问题列出来。判断标准：不同答案是否会改变状态模型、系统调用顺序、回滚、测试或验收？如果会，就是必须关闭的歧义。
-
-### 演示动作
-
-先只投屏原始需求，让 AI 输出名词、状态、触发器、失败点和待决问题；再揭示 Session 原话，让学员标出新增的权限、目标和停止条件。禁止给代码和架构。
-
-### 通过条件
-
-至少得到 8 个会改变实现的待决问题；没有出现“建议使用 MVVM”之类泛化方案。
-
-### 素材
-
-- 原始需求卡
-- 推荐 Prompt：附录 C
-
----
-
-## 第 6 页｜实践：先让 AI 找分叉，人来冻结语义
-
-<!--
-type: LAB
-section: MDM_SPEC
-layout: four-block
-time: 4m
-progress: 需求
--->
-
-### 画面
-
-**输入**：英雄任务 + 当前领域对象。
-
-**AI 允许做**：列出实现分叉，并说明每个分叉会影响哪类代码或测试。
-
-**人必须决定**：账号事实、重复操作、部分失败、提交点、UI 展示口径。
-
-**交付**：`spec.md / Open Decisions`，每项只有 `OPEN` 或明确答案。
-
-Prompt 约束：
+开场案例只展示四个事实，不先公布答案：
 
 ```text
-不要设计方案，不要写代码。
-只找会改变状态、调用顺序、补偿或验收的歧义。
-每项给出至少两个互斥答案及其工程影响。
+需求：把一条防火墙规则同步到全部账号
+AI：已完成
+测试：816 / 816
+页面：规则可见
+系统策略：？
 ```
 
-### 讲师备注
-
-课堂揭晓的核心决定：
-
-- 账号事件只是触发器，OS account snapshot 才是事实。
-- `account-added` 当前稳定条件是“快照包含 triggerAccountId”，不是连续两次读取相同。
-- 首页总开关写入覆盖全部用户，但展示只读当前/管理用户；这是 `CURRENT`，不是全局一致性证明。
-- 模式切换失败整体补偿；总开关部分失败保留成功账号。这两条并不矛盾，因为事务边界由规格决定。
-- UI 刷新与业务 reconcile 分离，CommonEvent 传递事实，不承担业务事务。
-
-### 演示动作
-
-2 人一组，3 分钟标记 AI 输出中的“事实问题”和“产品决策”；最后 1 分钟全班冻结课堂答案。
-
-### 通过条件
-
-不允许把仍为 `OPEN` 的高影响问题直接交给 AI 实现。
-
-### 素材
-
-- `AccountChangeCoordinator.ets`
-- `FirewallPolicyService.ets`
-- commit `c0c1bc9f`、`b8339196`
-
----
-
-## 第 7 页｜EARS 让一句“自动同步”直接长出测试
-
-<!--
-type: CODE
-section: MDM_SPEC
-layout: before-after
-time: 3m
-progress: 需求
--->
-
-### 画面
-
-**Before**
-
-> 新增账号后自动同步防火墙。
-
-**After — TEACHING / FR-ACC-001**
+页脚小字：
 
 ```text
-WHEN 收到 account-added(123)，
-WHILE 当前模式为 public 且 desiredEnabled=true，
-THE SYSTEM SHALL 在包含 123 的账号快照上重放模式；
-IF 5 次读取后仍不包含 123，
-THEN SHALL 不 dispatch、不提交 signature，并记录 timeout。
+本课不比较模型排行榜，也不教授万能 Prompt。
+我们只解决：复杂需求如何被拆解、执行、纠偏和验收。
 ```
+
+### 主视觉
+
+- 标题页保持克制，不画方法论大转盘。
+- 可在右下角小幅使用真实 SecurityTool 页面，作为后续案例预告，不在本页解释调用链。
+- 禁止使用“紫色 AI 中心 + 十几个节点”的自绘总览图。
 
 ### 讲师备注
 
-EARS 不是为了写得像规范，而是把测试输入、前置状态、动作、结果和失败分支放进同一句话。课堂 ID 是教学资产，明确标注 `TEACHING`，避免学员误以为仓库已有这些编号。
+不要从 SDD、Ralph、MCP 等术语开始。先让学员举手判断开场问题，大多数人会说“还要看情况”。追问：“具体还要看什么？”把回答暂时写在白板上：需求、代码、测试、设备、日志、回滚、用户体验。
 
-真实实现参数：新增事件会以约 200 ms 间隔最多重试 5 次；到达包含触发账号的快照才 dispatch。删除事件当前只读一次，没有对称等待，这是后续高级 GAP。
+本页只建立课程矛盾：模型能力提高以后，瓶颈正在从“能不能生成代码”转向“人如何定义目标、组织环境、监督过程和证明结果”。后面 7 页逐步回答这些问题。
 
-### 演示动作
+### 现场互动
 
-让学员把“重复事件不要重复下发”改写成一条 EARS；答案必须出现排序 signature 和提交条件。
+投票：以下哪一个最接近“完成”？
 
-### 通过条件
+1. AI 回复完成。
+2. 代码可以编译。
+3. 单元测试通过。
+4. 需求对应的系统事实可回读，失败路径可解释。
 
-语句能直接导出至少一个成功测试和一个失败/超时测试。
+暂不公布标准答案，等第 6 页重新投票。
 
-### 素材
+### 素材与来源
 
-- `account-change-coordinator.test.ets`
-- T01 RED 基线：`4b372d0d` + 从 `c0c1bc9f` 提取的目标测试
-- commit `c0c1bc9f`
+- 本地预告图：`harmonyos-sdd-workshop-media/mdm/firewall-domain-rule-created.jpeg`
 
 ---
 
-## 第 8 页｜行为矩阵先冻结“什么时候回滚”
+## 第 2 页｜AI 工作方式正在从“即时问答”走向“任务委托”
 
-<!--
-type: MAP
-section: MDM_SPEC
-layout: matrix
-time: 3m
-progress: 需求
--->
+### PPT 内容
 
-### 画面
+不按产品名称分类，而是看 AI 在哪里行动、上下文由谁维护、结果如何交付：
 
-| 场景 | 系统动作 | 本地提交 | 失败语义 |
+| 工作方式 | 人主要提供 | AI 主要执行 | 典型产物 |
 |---|---|---|---|
-| 重复开启 | UI no-op | 不变 | 不再写系统 |
-| 总开关部分失败 | 全用户 best-effort | 不写 `desiredEnabled` | 成功用户保留 |
-| public + 新账号 | 最新快照重放 | 成功后写 mode/signature | 失败整体补偿 |
-| 重复 signature | 不重放 | 不变 | 幂等跳过 |
+| 对话式协作 | 问题、材料、连续追问 | 理解、解释与生成 | 回答、草稿、建议 |
+| 仓库内 Agent | 目标、代码库、工具权限 | 搜索、修改、运行命令和测试 | Diff、测试结果、PR |
+| 异步任务代理 | 结果目标、文件和工具边界 | 跨文件、跨应用、多步骤执行 | 可审阅的文档、表格或任务结果 |
 
-> **不是所有失败都必须回滚；事务边界先由规格决定。**
+页内结论：
+
+> 这三种方式不是互相替代，而是把“谁负责上下文、动作和结果”逐步交给系统。
+
+### 主视觉
+
+使用上面的三行对比作为主视觉，不放厂商 Logo、产品截图或产品矩阵。三行分别突出“人持续对话”“AI 在仓库行动”“人委托后审阅结果”。
 
 ### 讲师备注
 
-这是整堂课最重要的业务判断。`FirewallPage.handleToggleWithAuth` 处理“已经开/关”的 UI no-op；`FirewallPolicyService.setFirewallEnabledForAllUsers` 自身仍会认证、读取并逐用户写入。不要把 UI 层 no-op 误讲成 Service 幂等。
+对话式协作的核心仍是“人持续组织上下文，AI 返回内容”；仓库内 Agent 把代码库、终端、Diff 和测试放进执行环境；异步任务代理进一步把“给出目标、稍后审阅结果”变成主要交互方式。
 
-总开关部分失败时，100/102 成功、101 失败，成功用户不回滚，但 `desiredEnabled` 不保存，结果返回 false。模式切换不同：先快照，失败后恢复 policy/rules/mapping。完整矩阵放附录 B，PPT 只展示四个最能改变实现的场景。
+这里不要争论哪个产品更强。让学员识别任务形状：问一个概念、改一个仓库、完成一个跨工具项目，分别适合什么方式。复杂需求可能跨越三种形态：先通过对话澄清，再让仓库内 Agent 实现，最后通过确定性工具和工作流取证。
 
-### 演示动作
+可选口播案例：同一个错误码问题，对话式协作负责解释和追问；仓库内 Agent 负责定位、修改与测试；异步任务代理负责汇总多份材料并生成 PRD、RFC 和验收清单。正文不展开这三条支线。
 
-让学员给“空账号集合”和“custom 新增账号”补两行，只说预期，不写代码。
+[Sources]
+- Anthropic, *Claude product matrix: when to use what*, 2026: https://www-cdn.anthropic.com/files/4zrzovbb/website/34783bca828d7fa331f515ced26f1c9232151b2c.pdf
+- Anthropic, *Claude Cowork*: https://claude.com/product/cowork
+- Anthropic, *Use Claude Code in VS Code*: https://code.claude.com/docs/en/vs-code
+[/Sources]
 
-### 通过条件
+### 现场互动
 
-任何人都能根据矩阵回答：失败后系统哪些变化保留、本地哪些状态能提交。
+给出三个任务，让学员选择对话式协作、仓库内 Agent 或异步任务代理，并说明依据：
 
-### 素材
+- 解释一个 HarmonyOS 权限错误。
+- 修改已有模块并运行回归。
+- 收集多份材料，生成 PRD、Story 和验收报告。
 
-- `FirewallPolicyService.ets`
-- `FirewallModeSwitchService.ets`
-- `service.test.ets`
+### 怎么判断讲清楚了
+
+学员能够用“上下文由谁组织、动作在哪里发生、产物如何验收”区分三种方式，而不是只按产品名称分类。
 
 ---
 
-# 第二幕：把规格变成 AI 不容易越界的设计与任务
+## 第 3 页｜趋势不是 Prompt 越来越长，而是人在监督越来越长的工作
 
-## 实操节奏（讲师 Runbook，不占 PPT 页数）
+### PPT 内容
 
-| 实操段 | 对应页 | 现场动作 | 学员产物 | 建议时间 | 无设备备用方案 |
-|---|---:|---|---|---:|---|
-| A. 资产同步 | 10–12 | 对照两个 Excel、PRD 和代码，完成一张冲突卡 | `requirement-card.yaml` | 6 分钟 | 使用文档中的真实 C4 冲突 |
-| B. 方案推导 | 13–15 | 四方案投票，补齐真相源与失败语义 | `ADR-FW-ACCOUNT-001` | 6 分钟 | 使用稳定快照复现事实 |
-| C. RFC 评审 | 16–17 | 给架构节点分配所有者，找一个违规依赖 | RFC 不变量/代码映射批注 | 6 分钟 | 直接打开三个真实 ETS 文件 |
-| D. Story 拆分 | 18–19 | 把 S5 填成 Worker Packet，检查禁止路径 | `worker-packet.yaml` | 7 分钟 | 使用文档内完整示例 |
-| E. Ralph 单轮 | 20–22 | 读取 Packet，检查 R6/R7 Diff 与 UT，再给状态 | `progress.yaml` + review verdict | 8 分钟 | 复用真实 Git 提交和测试结果 |
-| F. E2E 验收 | 24–25 | 追踪一个 Case JSON，执行或模拟 Driver，判定结果 | E2E report + PASS/FAIL/UNKNOWN | 10 分钟 | 运行资产校验，静态走读 action plan |
+把 AI 应用的演进简化成四层：
 
-讲授与实操的比例建议约为 1:1。每段实操必须在屏幕上留下一个文件或报告；只讨论、不落产物，不算完成。
+```text
+Prompt Engineering
+→ Context Engineering
+→ Harness Engineering
+→ Controlled Agent Loop
+```
 
-## 17 页连续叙事与进入条件（讲师总控，不占 PPT 页数）
+页内结论：
 
-| 页 | 本页接收的输入 | 本页实际动作 | 留下的证据/产物 | 进入下一页的 Gate |
-|---:|---|---|---|---|
-| 9 | 原始需求与项目仓库 | 建立六阶段证据链 | 六阶段交付目录 | 学员知道代码不是第一步 |
-| 10 | Excel、UX、PRD、代码、测试 | 标记用途和可信边界 | 资产登记表 | 每类问题知道去哪找答案 |
-| 11 | 同一需求的多源表达 | 对照并识别概念误合并 | C4 冲突卡 | 主模式与规则类型被拆开 |
-| 12 | 已裁决冲突 | 固化来源、决策、实现、测试 | `FW-MODE-001` 需求卡 | status=RESOLVED，路径可验证 |
-| 13 | 账号同步 Feature | 比较四种实现方案的失败模式 | 方案评分表 | 真相源、所有权、失败语义有候选 |
-| 14 | “事件后读一次”假设 | 最小穿刺账号事件与列表时序 | old→new 时间线 | 证明必须等待业务条件 |
-| 15 | 穿刺证据 | 冻结选择、拒绝项和重开条件 | `ADR-FW-ACCOUNT-001` | 不再在实现阶段重新选架构 |
-| 16 | ADR | 写范围、状态、不变量、失败保持 | RFC 契约 | 每个失败都知道不能改什么 |
-| 17 | RFC 抽象节点 | 映射到函数、系统 API 和状态写入门 | 双闭环调用链 | 每层责任与当前实现缺口可定位 |
-| 18 | RFC 节点与风险 | 按独立 oracle 拆 Story | S1–S6 Story Map | 每个 Story 可单独判定 |
-| 19 | S5 Story | 补齐 allowed/forbidden/AC/命令/stop | Worker Packet | 新 Session 不读聊天也能执行 |
-| 20 | Ready Worker Packet | 执行一轮受控 Ralph | progress + evidence | 本轮状态和下一步已写回 |
-| 21 | 九个真实提交 | 把调用链断点映射成迭代账 | R1–R9 时间线 | 下一轮由证据触发而非随机优化 |
-| 22 | R6/R7 文档与代码 Diff | 用 RFC 反查实现和测试缺口 | Reviewer verdict | 核心协议与事务缺口分别判定 |
-| 23 | 已定义的验收对象 | 接入讲师现有 MCP 材料 | 工具能力边界 | 学员知道 tool success ≠ business PASS |
-| 24 | Case JSON | 追到 Normalizer/Runner/Template/Driver/Assertion | 路由表 | 每个动作和断言都有执行落点 |
-| 25 | CaseResult 与 artifacts | 执行或静态推演三态判定 | acceptance result | UI、系统事实和 overall 分层结论 |
+> 演进的重点不是 Prompt 越写越长，而是上下文、工具、状态和验证逐步进入一个可控系统。
 
-如果某一页没有留下表中产物，后续页就没有合法输入。讲师应停下来补产物，而不是用口头解释跨过 Gate。
+例：修复“登录后偶发白屏”时，四层分别解决问法、事实、工具和闭环。
+
+### 主视觉
+
+![从 Prompt、Context、Harness 到 Loop 的演进参考图](harmonyos-sdd-workshop-media/methodology/user-prompt-context-harness-loop.png)
+
+落版要求：原图为 2:3，只作为裁切素材；正文优先保留四个阶段名、每层输入变化和最下方演进结论。来源未补齐前，页脚标注“用户提供的概念示意图，仅用于教学解释”。
+
+### 讲师备注
+
+多家厂商正在把 Agent 能力放进终端、IDE、桌面工作区和后台任务：一类强调人与 AI 实时协作，另一类强调把多步骤目标交出去后再回来审阅。公开产品演进已经显示，两者正在逐步汇合，并进一步出现并行任务、专门 Agent 和长任务监督界面。
+
+图中的四阶段是本课用于组织认知的教学视角，不宣称它是统一行业标准。尤其要纠正两个误区：Context Engineering 不是“给更多内容”，而是选择更少、更相关的高信号事实；Loop Engineering 也不是无限自治，而是把外部事实、验证、停止和升级条件放进循环。
+
+可选口播展开：Prompt 只是“分析并修复白屏”；Context 增加复现步骤、日志、调用链和不可修改边界；Harness 固定搜索、构建、安装、截图和日志采集方式；Loop 才负责假设、最小修改、真机验证和停止。
+
+这里的“趋势”是从多家官方产品形态做出的归纳，不等于宣称所有团队都应直接采用最高自治级别。任务越开放、动作权限越大，越需要可见过程、沙箱、检查点和人工决策。
+
+[Sources]
+- Anthropic, *Enabling Claude Code to work more autonomously*, 2025: https://www.anthropic.com/news/enabling-claude-code-to-work-more-autonomously
+- Anthropic, *Claude Cowork*: https://claude.com/product/cowork
+- OpenAI, *Introducing Codex*: https://openai.com/index/introducing-codex/
+- OpenAI, *Introducing the Codex app*, 2026: https://openai.com/index/introducing-the-codex-app/
+[/Sources]
+
+### 现场互动
+
+问学员：“当 AI 可以同时跑三个任务、离开电脑仍继续执行时，工程师减少的是哪类工作，增加的又是哪类工作？”
+
+期望回答：减少重复操作和局部实现；增加目标定义、权限控制、过程监督、冲突处理和结果审阅。
+
+---
+
+## 第 4 页｜从 Prompt 到 Agent Loop，模型开始反复行动并读取环境
+
+### PPT 内容
+
+本页使用公开工程文章中的 Coding Agent Flow，不再放自绘 Mermaid。
+
+![Coding Agent 的行动—观察高层流程](harmonyos-sdd-workshop-media/anthropic/coding-agent-flow.png)
+
+图旁只保留五个词：
+
+```text
+Prompt
+→ Model decides
+→ Tool acts
+→ Environment returns facts
+→ Repeat or Stop
+```
+
+页内结论：
+
+> Prompt 决定第一次怎么出发；Loop 决定后面如何根据环境继续走。
+
+### 讲师备注
+
+Agent Loop 的关键不是“模型连续思考”，而是模型与工具、环境反复交互。工具输出重新进入上下文，模型根据新事实决定下一步，直到返回结果、触发停止条件或需要人工输入。
+
+OpenAI 对 Codex Agent Loop 的拆解指出：工具调用可能直接修改环境，Agent 的主要产物可能是代码而不是最后一条回复；与此同时，长链路会持续增长上下文并需要管理。Anthropic 则强调 Agent 每一步应从环境获得 ground truth，并在检查点或阻塞时回到人。
+
+必须补一句：**Agent 返回最终消息，只能证明这次 Loop 结束了，不能自动证明业务目标完成。** 这句话直接引出第 5、6 页。
+
+可选口播 Trace：以“重复添加相同规则”为例，只讲搜索、RED、最小修改、GREEN、回读数量五步；只有最终规则数量仍为 1 才允许 Stop。详细实现留到后面的 MDM 案例。
+
+[Sources]
+- Anthropic, *Building Effective AI Agents*: https://www.anthropic.com/engineering/building-effective-agents
+- OpenAI, *Unrolling the Codex agent loop*, 2026: https://openai.com/index/unrolling-the-codex-agent-loop/
+[/Sources]
+
+### 现场互动
+
+让学员在图上指出：编译错误、测试失败、设备日志、用户确认分别从哪里回到 Loop。答不出就说明还把 Agent 理解为聊天机器人。
+
+---
+
+## 第 5 页｜AI 越自主，人的辨别力越不能缺席
+
+### PPT 内容
+
+复杂需求中的 AI 熟练度成长模型：
+
+![复杂需求中的 AI 熟练度成长模型](harmonyos-sdd-workshop-media/methodology/ai-fluency-neutral.png)
+
+图上方只补一句读图结论：
+
+> 入口动作让任务启动，耐久上下文让能力复用，辨别力决定结果能否被信任。
+
+### 讲师备注
+
+先按 Claude Academy 原文讲三层，不要把图解释成产品功能清单：
+
+1. **入口动作**：对话式工具先学会追问迭代；执行型与异步型 Agent 先学会在行动前澄清目标。本课把两者合并为“澄清完成状态，再用小步反馈迭代”。
+2. **描述耐久度**：一次性的目标、上下文、示例和输出格式，逐步沉淀为任务卡、工具契约、项目规则、`progress`、证据库和自动化。
+3. **辨别力螺旋**：描述能力可能随使用自然增长，但辨别力不会自动增长。每次升级都要重新追问：AI 假设了什么、证据够不够、什么会让它错、何时停止。
+
+本地自绘图没有复制 Claude 的产品分区，而是把研究结构翻译成复杂需求工程资产。中心是一次任务的目标与快速反馈；中圈是可复用任务契约；外圈是跨 Session 的项目规则、自动化和证据。橙色虚线表示辨别力不是最后一步，而是贯穿每一层。
+
+可选口播迁移：以“每周自动生成发布说明”为例，一次性层给提交和输出格式，可复用层沉淀任务卡与验收清单，持久层沉淀项目规则和证据目录；辨别问题始终是“每条说明能否追到真实 commit 和 issue”。
+
+[Sources]
+- Claude Academy, *Getting good at Claude: A research-backed curriculum*, 2026: https://academy.claude.com/tutorials/getting-good-at-claude-a-research-backed-curriculum
+[/Sources]
+
+### 现场互动
+
+让学员选一个正在做的任务，在图上回答三件事：入口动作是什么？哪些信息只在当前 Prompt 中，哪些已经持久化？本轮最可能错在哪里？
+
+### 怎么判断讲清楚了
+
+学员能够把同一任务分别写成一次性 Prompt、可复用 Task Card 和跨 Session 项目规则，并且每一层都给出一个可执行的辨别检查。
+
+---
+
+## 第 6 页｜复杂需求最危险的误判：“AI 已经完成”
+
+### PPT 内容
+
+六类控制问题：
+
+```text
+输入不一致｜上下文漂移｜状态不一致｜局部成功｜范围蔓延｜验收错位
+```
+
+先给一个 20 秒具体场景：
+
+```text
+PRD：同步到全部账号
+实现：只更新当前账号
+UI：显示“同步成功”
+测试：只覆盖当前账号
+结论：页面成功，业务结果仍可能失败
+```
+
+主视觉继续使用真实 SecurityTool 页面，不使用通用插画。
+
+![SecurityTool 防火墙规则真实页面](harmonyos-sdd-workshop-media/mdm/firewall-domain-rule-created.jpeg)
+
+右侧放分层判断：
+
+```text
+Agent message    “已完成”                 ≠ 交付
+Unit tests       816 / 816                = 代码协议证据
+UI screenshot    规则可见                  = 页面证据
+System readback  未采集                    = UNKNOWN
+```
+
+底部结论：
+
+> 低层证据不能替代高层事实；缺少最终事实时，正确答案是 UNKNOWN。
+
+### 讲师备注
+
+先把六类问题落到真实后果，而不是停留在抽象名词：
+
+| 问题 | 复杂需求中的真实后果 |
+|---|---|
+| 输入不一致 | 原图、PRD、代码表达不同，AI 选错事实源 |
+| 上下文漂移 | 长 Session 后忘记边界，重新解释已冻结决策 |
+| 状态不一致 | UI 成功、缓存成功，但系统状态未改变 |
+| 局部成功 | 多用户、多步骤中一半成功、一半失败 |
+| 范围蔓延 | 修一个问题时顺手重构无关模块 |
+| 验收错位 | 测试了“能点击”，却宣布业务策略已下发 |
+
+然后回到第 1 页投票，要求学员说明每一层到底证明了什么：
+
+- 回复完成：证明 Agent 决定停止。
+- 命令返回成功：证明工具调用成功。
+- UT 全绿：证明被覆盖的代码契约通过。
+- 页面截图：证明该时刻 UI 可见状态。
+- 系统 getter/readback：才可能证明设备最终业务状态。
+
+不要把本页讲成否定测试。它讲的是证据作用域：测试非常重要，但必须与需求声明处于同一层。复杂需求不是 Prompt 更长，而是每一步都可能改变下一步的正确答案。Anthropic 区分固定 Workflow 与动态 Agent，并提醒动态 Agent 可能累积错误；OpenAI 的 Codex 系统说明也强调用户应检查终端日志、文件和最终 Diff。
+
+[Sources]
+- OpenAI, *Codex system card addendum*: https://openai.com/index/o3-o4-mini-codex-system-card-addendum/
+- Anthropic, *Building Effective AI Agents*: https://www.anthropic.com/engineering/building-effective-agents
+- Anthropic, *Trustworthy agents in practice*: https://www.anthropic.com/research/trustworthy-agents
+[/Sources]
+
+### 现场互动
+
+重新投票第 1 页问题。学员必须给出 `PASS / FAIL / UNKNOWN` 中一个，并说明结论作用域。页面可见而 system readback 缺失时，不能给系统层 PASS。
+
+---
+
+## 第 7 页｜Ralph 的价值，是给 Agent Loop 加外部记忆、验证和停止条件
+
+### PPT 内容
+
+课堂找错：下面这条循环已经有规划、执行、验证、修复、记忆和调度，为什么仍然不能直接交付？
+
+![看似完整的自主循环：课堂找错案例](harmonyos-sdd-workshop-media/methodology/user-naive-loop-engineering.png)
+
+```text
+表面完整 ≠ 工程受控
+至少还缺：外部事实 / 独立验收 / Stop / Escalate
+```
+
+### 讲师备注
+
+Ralph 不是模型、框架或魔法 Prompt。Geoffrey Huntley 的原始定义非常直接：纯粹形式就是把编码 Agent 放进 Bash 循环，每轮从文件和仓库重新获取状态。他同时反复强调“一轮只做一件事”，并明确提醒原始做法不适合直接套到已有代码库。
+
+用户提供的图故意按“表面完整、工程不闭合”来讲：`验证` 如果只是 Agent 自己看输出，不是独立 oracle；`记忆` 如果写入的是错误结论，只会把错误带到下一轮；`调度` 如果没有最大迭代和升级条件，只会让错误更稳定地重复。讲完缺口后，再用 Anthropic Autonomous Agent Loop 中的 Environment Feedback / Stop 作为官方结构对照。
+
+因此本课不是照搬无限循环，而是工程化改造：先有规格和任务，状态写入文件与 Git；每轮有独立 oracle；失败必须留下证据；达到停止条件才退出；超限或证据冲突时升级给人。对于确定性构建、签名、安装等步骤，优先使用 Workflow，不让 Agent 每轮重新发明流程。
+
+展开时再补完整约束：一轮一个 Story，读取 spec/RFC，写回 progress/evidence，执行 RED/GREEN/regression，由独立 Reviewer 判断，并设置最大轮数、Stop、Escalate、权限边界和回滚点。Workflow、Agent Loop、Evaluator–Optimizer 与 Ralph 的区别只在讲师口播，不全部堆到本页。
+
+[Sources]
+- Geoffrey Huntley, *Ralph Wiggum as a “software engineer”*, 2025: https://ghuntley.com/ralph/
+- Anthropic, *Building Effective AI Agents*: https://www.anthropic.com/engineering/building-effective-agents
+[/Sources]
+
+### 现场互动
+
+给四个任务让学员选择 Workflow、单次 Agent、Evaluator–Optimizer 或受控 Ralph：
+
+- 固定执行构建签名安装。
+- 搜索一次 API 用法。
+- 反复改进一份有评分标准的文档。
+- 跨多个 Story 完成复杂 Feature。
+
+### 怎么判断讲清楚了
+
+学员知道“更多循环”不会自动提高正确性；Loop 必须得到外部事实、外部记忆和停止门约束。
+
+---
+
+## 第 8 页｜这门课用两种复杂需求，验证同一套受控交付方法
+
+### PPT 内容
+
+接下来用两个真实案例验证同一套方法：
+
+| 主案例：MDM 应用 | 方法迁移：大型开源工程 |
+|---|---|
+| 入口是多源需求和业务规则 | 入口是性能现象和运行证据 |
+| Feature-first：先冻结需求、状态和失败语义 | Evidence-first：先缩小调用链和根因范围 |
+
+页内结论：
+
+> 两个案例入口不同，但判断 AI 是否正确的方法相同：看它依据什么、改变了什么、如何证明。
+
+### 主视觉
+
+左侧：同一条规则再次添加时出现明确失败，带出“失败语义和幂等性怎么定义”。
+
+![MDM 重复规则真实失败画面](harmonyos-sdd-workshop-media/mdm/firewall-duplicate-rule-failure.jpeg)
+
+右侧：真实远控场景画面，只用于带出“现象可见但根因仍未知”。
+
+![远控卡顿问题场景](harmonyos-sdd-workshop-media/freerdp-stutter-scenario.jpeg)
+
+两张图中间只放六步共同主线，不补画不存在的性能曲线。
+
+### 讲师备注
+
+明确接下来的主线：第 9 页开始完整走 MDM 六阶段——资产同步、方案推导、RFC、Story、Ralph、测试验收。第二案例只负责证明这套方法能迁移到“没有清晰需求、只有运行现象”的场景。
+
+共同主线只在口播中快速带过：管理输入 → 关闭关键未知 → 固化契约 → 拆任务 → 受控迭代 → 系统事实验收。需要互动时再给两个挑战：需求材料对“全部账号”的解释不同，先冻结语义；视频卡顿但没有同 run 证据，先采证据再决定改哪里。
+
+转场问题：“如果原始 Excel、AI 修正版、PRD 和代码对同一个概念说法不同，你会先相信谁？”第 9、10 页用资产同步回答。
+
+### 现场互动
+
+请学员为两个案例分别选择入口：Feature-first 或 Evidence-first，并说明为什么不能反过来直接写代码。
+
+---
 
 ## 第 9 页｜MDM 案例要走完六个阶段，不能从需求图直接跳到代码
 
@@ -1452,7 +1403,7 @@ fix: 等待新增账号快照再 reconcile
 
 主视觉使用用户提供的 E2E 架构图：
 
-![SecurityTool E2E Runner 架构](C:/Users/mu/AppData/Local/Temp/codex-clipboard-6778939b-3ce1-44ae-baf5-06a00b13fb43.jpg)
+![SecurityTool E2E Runner 架构](harmonyos-sdd-workshop-media/e2e/e2e-runner-current-reference.jpg)
 
 图下保留一条真实路由，不再只写三句抽象结论：
 
@@ -3166,14 +3117,14 @@ assets/
 
 | 官方文章 | 核心观点（本课采用的部分） | 在课程中的落点 |
 |---|---|---|
-| [Best practices for Claude Code](https://code.claude.com/docs/en/best-practices) | 先 Explore，再 Plan、Implement；给 Agent 可运行的检查；主动管理上下文；长任务后用新上下文反证 | 第 3、13、27 页 |
-| [Building Effective AI Agents](https://www.anthropic.com/engineering/building-effective-agents) | 从最简单可行方案开始；工作流适合确定路径，Agent 适合开放任务；执行中持续获取环境 ground truth，并设置 checkpoint / stopping condition | 第 3、28、39 页 |
+| [Best practices for Claude Code](https://code.claude.com/docs/en/best-practices) | 先 Explore，再 Plan、Implement；给 Agent 可运行的检查；主动管理上下文；长任务后用新上下文反证 | 第 3–5、13、27 页 |
+| [Building Effective AI Agents](https://www.anthropic.com/engineering/building-effective-agents) | 从最简单可行方案开始；工作流适合确定路径，Agent 适合开放任务；执行中持续获取环境 ground truth，并设置 checkpoint / stopping condition | 第 4、6–7、28、39 页 |
 | [Effective Harnesses for Long-Running Agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) | 首轮建立任务与验证清单；后续一次只推进一个 feature；使用 progress、Git 和端到端测试完成跨上下文交接 | 第 14–17 页、附录 D |
 | [Effective Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) | 上下文是有限注意力预算；保留完成当前任务所需的最小高信号信息；长任务使用压缩、结构化记录和按需检索 | 第 13、17 页、附录 D |
 | [Writing Effective Tools for Agents](https://www.anthropic.com/engineering/writing-tools-for-agents) | 少量高价值工具优于大量重叠薄包装；工具应有清晰边界、语义化返回、token 效率，并用真实任务评测 | 第 25–26 页、附录 E |
 | [Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) | 复杂 Agent 评估要区分 task、trial、trace 与 outcome；组合代码、模型和人工 grader；从真实失败建立可维护的 eval suite | 第 3、26–27、39 页、附录 E |
 | [Harness Design for Long-Running Application Development](https://www.anthropic.com/engineering/harness-design-long-running-apps) | 把长任务拆成可处理片段，用结构化产物跨阶段交接；Planner、Generator 与 Evaluator 分工；持续检验 harness 中哪些假设真正必要 | 第 14–17、27、39 页、附录 D |
-| [AI Fluency 研究型课程模型](https://academy.claude.com/tutorials/getting-good-at-claude-a-research-backed-curriculum) | 先教入口动作；描述能力沿耐久度逐渐扩展；辨别力不会随使用时间自然增长，必须在每一步重复训练 | 课程定位、第 1、3、27、39 页 |
+| [AI Fluency 研究型课程模型](https://academy.claude.com/tutorials/getting-good-at-claude-a-research-backed-curriculum) | 对话式工具先教迭代，执行型与异步型 Agent 先教澄清目标；描述能力沿耐久度逐渐扩展；辨别力不会随使用时间自然增长，必须在每一步重复训练 | 第 5 页主视觉、各模块辨别检查、结课迁移 |
 
 使用这些来源时保留两个时间与适用性边界：
 
@@ -3188,7 +3139,7 @@ assets/
 |---|---|---|
 | Agent 需要环境 ground truth | 每轮必须读取测试、构建、日志、system getter 或帧链事实 | MDM policy/rules；GPU frameId/owner/EndFrame |
 | Workflow 与 Agent 解决不同问题 | 构建、安装、采集走可重复 workflow；歧义探索、假设选择和最小 diff 才交给 Agent | MCP 验证链固定；MDM / GPU 决策路径按证据分叉 |
-| 入口动作决定后续学习质量 | 先冻结完成状态与边界，再进入小步迭代 | 英雄任务、歧义树与 Task Card |
+| 不同工作形态有不同入口动作 | 对话式工具用追问迭代；执行型与异步型 Agent 先澄清完成状态与边界，再进入小步反馈 | 第 2–5 页、英雄任务、歧义树与 Task Card |
 | 辨别力必须刻意训练 | 每个模块都以“什么会让它错、还缺什么证据”收尾 | 故障注入、UNKNOWN、同伴反证与最终系统回读 |
 | 没有检查就只能“看起来完成” | STOP 由可执行 Verification 决定，阻塞时返回 UNKNOWN | RED/GREEN、HAP build、真机回读 |
 | 一次只推进一个 feature | 一张 Task Card 只允许一个可观察结果和有限文件范围 | T01 稳定快照；T02 故障补偿；T03 getter |
@@ -3217,9 +3168,7 @@ assets/
 
 ## I5. 其他值得参考的文章：分级使用，不扩张主线
 
-![复杂需求中的 AI 熟练度成长模型：仅作补充教学参考](harmonyos-sdd-workshop-media/methodology/ai-fluency-neutral.png)
-
-Academy 的课程模型只提供教学节奏：先形成“澄清目标＋快速迭代”的入口动作，再让辨别与验证贯穿每一步。课程自己的工程主线仍是 **需求拆解 → 开发 → 验证 → 问题定位与协同闭环**。
+AI 熟练度成长模型已前移到第 5 页作为正文主视觉，这里不重复放图。研究型课程模型提供教学节奏：对话式工具先形成迭代习惯，执行型与异步型 Agent 先澄清目标，再沿描述耐久度沉淀任务卡、项目规则和自动化，并让辨别与验证贯穿每一步。课程自己的工程主线仍是 **需求拆解 → 开发 → 验证 → 问题定位与协同闭环**。
 
 | 优先级 | 官方文章 | 最值得借用的观点 | 建议落点 | 不建议带入的内容 |
 |---|---|---|---|---|

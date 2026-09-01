@@ -32,8 +32,8 @@
 
 | 文件 | 对应页面 | 课堂用途 | 官方来源 |
 |---|---|---|---|
-| `autonomous-agent-loop.png` | 第 3 页 | Human / Agent / Environment / Stop | [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) |
-| `coding-agent-flow.png` | 第 13 页 | 澄清、上下文、搜索、修改与测试时序 | [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) |
+| `autonomous-agent-loop.png` | 第 7 页 | 给受控 Ralph 解释环境反馈与 Stop | [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) |
+| `coding-agent-flow.png` | 第 4 页 | 从 Prompt 进入行动、观察与修正循环 | [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) |
 | `prompt-vs-context-engineering.png` | 第 17 页 | 从单轮 Prompt 转向动态上下文筛选 | [Effective Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) |
 | `augmented-llm.png` | 第 25 页 | Retrieval / Tools / Memory 的职责边界 | [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) |
 | `evaluator-optimizer.png` | 第 27 页 | 实现与独立评估的反馈闭环 | [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) |
@@ -41,6 +41,16 @@
 | `agent-evaluation-components.png` | 附录 I4 | Task / Trial / Trajectory / Outcome / Grader | [Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) |
 | `orchestrator-workers.png` | 附录 J4 | 解释什么时候适合动态拆分和并行协同 | [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) |
 | `system-prompt-calibration.png` | 第 10/17 页候选 | 解释系统提示词应在约束强度、可复用性与自主性之间校准 | [Effective Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) |
+
+## Anthropic 产品方式与趋势配图
+
+以下图片位于 `harmonyos-sdd-workshop-media/methodology/`，用于讲师研究工作形态和素材溯源。为保持厂商中立，它们不直接进入第 2–3 页正文，也不作为本地项目运行证据。
+
+| 文件 | 对应页面 | 课堂用途 | 官方来源 |
+|---|---|---|---|
+| `anthropic-chat-code-cowork-matrix.png` | 讲师备课 / 来源存档 | 研究对话式协作、仓库内 Agent、异步任务代理三种任务形态；不进入正文 | [Claude 产品矩阵 PDF](https://www-cdn.anthropic.com/files/4zrzovbb/website/34783bca828d7fa331f515ced26f1c9232151b2c.pdf) |
+| `anthropic-claude-code-ide.png` | 第 3 页备选 / 讲师参考 | 展示 AI 进入仓库与终端后的真实执行界面 | [Anthropic 官方 CDN](https://www-cdn.anthropic.com/images/4zrzovbb/website/3613f360926fae004521197488623465eb0cd751-1920x1035.png) |
+| `anthropic-cowork-browser.webp` | 第 3 页备选 / 讲师参考 | 展示目标委托和跨工具长任务的真实界面 | [Claude Cowork](https://claude.com/product/cowork) |
 
 ## 文本证据资产
 
@@ -59,10 +69,12 @@
 
 | 文件 | 类型 | 主要用途 | 说明 |
 |---|---|---|---|
-| `methodology/ai-fluency-neutral.png` | PNG | 附录 I5 与可选讲师参考 | 16:9 中文投屏版，不出现具体 AI 产品 |
+| `methodology/ai-fluency-neutral.png` | PNG | 第 5 页：产品形态演进后，人需要提升的复杂需求能力 | 16:9 中文投屏版，不出现具体 AI 产品；正文只使用一次 |
 | `methodology/ai-fluency-neutral.svg` | SVG | PPT、讲义和后续可编辑版本 | 本课程自绘；方法参考 Anthropic Academy 的 AI Fluency Curriculum |
+| `methodology/user-prompt-context-harness-loop.png` | 用户提供概念图 | 第 3 页：Prompt → Context → Harness → Controlled Loop | 原图 2:3；落版必须裁切并重写可见结论；来源与授权待补，不作为行业标准证据 |
+| `methodology/user-naive-loop-engineering.png` | 用户提供概念图 | 第 7 页：课堂找错案例 | 故意按“表面完整但工程不闭合”讲；来源与授权待补，不作为 Ralph 官方结构 |
 
-这张图保留“入口动作、描述能力耐久度、辨别力贯穿每一层”的教学结构，去除了具体产品名称和功能罗列。图片本身为课程自绘，文章来源仍应在讲义或备注中保留。
+其中 `ai-fluency-neutral` 保留“入口动作、描述能力耐久度、辨别力贯穿每一层”的教学结构，去除了具体产品名称和功能罗列。第 5 页讲师备注必须补充原文边界：对话式工具的入口动作是迭代，执行型与异步型 Agent 的入口动作是澄清目标。图片本身为课程自绘，文章来源仍应在讲义或备注中保留。两张 `user-*` 图片的来源状态和公开使用边界见 `THIRD_PARTY_ASSETS.md`。
 
 ## 未上传资源
 
