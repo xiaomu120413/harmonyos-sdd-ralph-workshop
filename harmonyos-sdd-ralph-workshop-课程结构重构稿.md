@@ -328,7 +328,7 @@ Harness：规格 + 工具 + 证据 + 停止条件，约束 Agent Loop
 
 ## 第 9 页｜案例一的复杂性来自业务、权限、状态和设备共同作用
 
-> **MDM 第 9–25 页详细版以 `case-materials/mdm/07-PPT第9-25页内容与备注.md` 为准。** 详细版已经按“资产同步 → 方案推导 → RFC → Story → Ralph → 测试验收”重排，并引用同目录六份真实课堂文档；本文件以下内容保留为课程摘要，制作 PPT 时应使用详细版替换。
+> **MDM 第 9–25 页详细版以 `case-materials/mdm/07-PPT第9-25页内容与备注.md` 为准。** 详细版已经按“资产同步 → 方案推导 → RFC → Story → Ralph → 测试验收”重排，并引用同目录真实课堂文档；函数级调用链、系统 API、失败分支、UT oracle 与 E2E 路由以 `case-materials/mdm/08-代码级调用链与课堂穿刺.md` 为准。本文件以下内容保留为课程摘要，制作 PPT 时应使用详细版替换。
 
 ### PPT 内容
 
@@ -1514,10 +1514,14 @@ input received
 - Stack Overflow、METR、DORA 用于呈现行业问题和研究快照，必须保留时间与样本限制。
 - Ralph、Spec-Code-Test、Verifier Loop 等社区图只作为思想参照，优先重绘并注明来源，不把社区观点写成已验证工程事实。
 - 不使用无法追溯来源的社交媒体图片；如果采用 Ralph 卡通图，确认课堂传播授权或改用自绘流程。
+- 不机械要求每页配图，但相关且清晰的官方图、本地截图、日志、Diff、目录和报告有则应放，避免页面只剩文字；没有合适素材时不使用无关插画凑数，改用真实内容片段建立视觉焦点。
+- 架构图的逐页替换方案见 `visual-research/架构与示意图替换清单.md`；通用方法论图参考官方结构，MDM、E2E 与 GPU 链路只按本地证据重绘。
 
 ## 主要外部来源
 
 - https://www.anthropic.com/research/building-effective-agents
+- https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents
+- https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents
 - https://www.anthropic.com/research/trustworthy-agents
 - https://www.anthropic.com/webinars/future-of-ai-at-work-introducing-cowork
 - https://code.claude.com/docs/en/platforms
@@ -1530,6 +1534,9 @@ input received
 - https://dora.dev/research/2025/dora-report/
 - https://dora.dev/insights/balancing-ai-tensions/
 - https://github.com/coreyepstein/ralph-methodology
+- https://github.github.com/spec-kit/
+- https://modelcontextprotocol.io/specification/2025-06-18/architecture
+- https://gitcode.com/openharmony/multimedia_av_codec
 - https://addyosmani.com/blog/good-spec/
 - https://www.philschmid.de/inner-loop-vs-outer-loop
 - https://www.langchain.com/blog/improving-deep-agents-with-harness-engineering

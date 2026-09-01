@@ -98,6 +98,97 @@ AccountChangeEventBus / AccountRuntimeService
 | policy 下发 | `entry/src/main/ets/services/firewall/FirewallPolicyService.ets` |
 | UI 运行时消费 | `entry/src/main/ets/services/account/AccountRuntimeService.ets` |
 
+### 7.1 代码级时序：新增账号
+
+```text
+EnterpriseAdminAbility.onAccountAdded(accountId)
+  ├─ ensureKeepAliveAppRegistered(...)
+  └─ scheduleAccountReconcile('account-added', accountId)
+       ↓
+AccountChangeCoordinator.schedule(context, source, triggerAccountId)
+  ├─ pendingRequest = latest request
+  ├─ clearTimeout(old timer)
+  └─ setTimeout(runPending, 400ms)
+       ↓
+runPending() → runOnce(request)
+       ↓
+loadStableSnapshot(request)
+  ├─ loadSnapshot → SystemUserProvider.loadAvailableUserIds
+  │                  └─ getOsAccountLocalIds
+  ├─ shouldWaitForAddedAccount
+  ├─ 不包含 trigger ID → 每 200ms 重读，最多 5 次
+  └─ 仍不可见 → stable=false，停止分发
+       ↓ stable=true
+buildSnapshot(current/previous/added/removed/signature)
+       ↓
+dispatchHandlers → FirewallAccountChangeHandler.handle
+```
+
+### 7.2 Handler 到系统 API 的调用链
+
+```text
+FirewallAccountChangeHandler.handle(snapshot)
+  ├─ currentUserIds=[] → skip，避免误 prune
+  ├─ FirewallLocalRepository.pruneUnavailableUsers
+  ├─ read currentMode + desiredEnabled
+  ├─ custom
+  │   ├─ FirewallPolicyService.applyPolicyForMode
+  │   │   ├─ FirewallSystemRepository.getPolicy
+  │   │   │   └─ netFirewall.getNetFirewallPolicy
+  │   │   └─ FirewallSystemRepository.setPolicy
+  │   │       └─ netFirewall.setNetFirewallPolicy
+  │   └─ saveModeApplyState(custom, signature)
+  └─ public/private
+      ├─ compare lastAppliedMode + lastAppliedUserIdsSignature
+      └─ FirewallModeSwitchService.applyModeToUsers
+          ├─ createSnapshot(policy/rules/mode/mapping)
+          ├─ clearRules → removeNetFirewallRule
+          ├─ applyPolicyForMode → setNetFirewallPolicy
+          ├─ buildRulesForMode
+          ├─ addRule → addNetFirewallRule
+          ├─ saveCurrentMode + saveModeApplyState
+          └─ any failure → rollbackToSnapshot
+```
+
+### 7.3 前台刷新不是业务修复
+
+业务 Handler 执行结束后，Coordinator 调用 `AccountChangeEventBus.publishSnapshot()`。UI 进程通过 `commonEventManager` 收到 `source/triggerAccountId/signature/timestamp`，再由 `ApplicationRuntimeManager` 调用：
+
+```text
+refreshFirewallOverviewForAccountChange()
+refreshFirewallRulesForAccountChange()
+  → SystemUserProvider.loadAvailableUserIds()
+  → FirewallRulesViewModel.refreshForAccountChange(context, users)
+     → userOptions = users
+     → reloadDefaultPolicies
+     → reloadRules
+```
+
+因此页面是否打开、ViewModel 是否已加载，只影响展示刷新；后台防火墙同步不能依赖此链。
+
+### 7.4 事务与失败保持
+
+| 失败点 | 返回/动作 | 不能宣称或写入 |
+|---|---|---|
+| 新账号在重试窗口内始终不可见 | `runOnce=false`；不 dispatch、不 publish | 不能宣称账号已同步 |
+| prune 本地引用失败 | Handler=false，停止后续模式处理 | 不能继续保存新签名 |
+| 读取旧 policy 失败 | `createSnapshot` 失败 | 不能开始破坏性模式切换 |
+| clear/set/add/save 任一步失败 | 收集 `failedItems`，尝试 rollback | 不能保存成功状态；回滚也不能假定必成功 |
+| custom policy 成功但签名保存失败 | Handler=false | 不能用“policy 已写”替代整体成功 |
+| UI refresh 失败 | 记录运行时警告 | 不能反向修改后台业务状态 |
+
+### 7.5 当前实现与 RFC 不变量之间的审阅缺口
+
+RFC 第 6 条“失败不能保存新账号签名”是目标契约，当前实现还存在以下需要单独 Story 收敛的风险：
+
+- `applyModeToUsers()` 在 `saveCurrentMode()` 失败后仍调用 `saveModeApplyState()`。
+- `saveModeApplyState()` 分两次写 `lastAppliedMode` 和 `lastAppliedUserIdsSignature`，可能部分成功。
+- `rollbackToSnapshot()` 没有恢复 last-applied mode/signature。
+- `listRules()` 读取失败回退为 `[]`，系统快照无法区分“无规则”和“读取失败”。
+- Handler 返回失败时 Coordinator 仍发布稳定账号事实，且没有自动业务重试；运行时消费链拿不到 Handler 结果。
+
+这意味着当前代码应判定为“核心同步协议已实现，事务性与业务失败可观测性仍需补强”，而不是把 RFC 目标直接当作已完成事实。
+
 ## 8. 测试边界
 
 - UT：防抖/重试、稳定快照、Handler 分发、模式分支、prune、签名保存、空列表与失败。
@@ -117,4 +208,3 @@ AccountChangeEventBus / AccountRuntimeService
 - `PLACEHOLDER`：总体架构图。
 - `PLACEHOLDER`：状态/不变量表。
 - `PLACEHOLDER`：RFC 到当前代码的映射表。
-

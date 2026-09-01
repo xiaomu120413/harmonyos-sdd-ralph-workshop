@@ -56,6 +56,13 @@ evidence/<story-id>/          RED、GREEN、构建、设备证据
 - 只修改 `AccountChangeCoordinator.ets` 和 `account-change-coordinator.test.ets`。
 - RED/GREEN 关注：先旧后新、一直旧、removed 不等待。
 
+本轮不是“加一个重试循环”，而是增加并保护四个代码行为：
+
+1. `runOnce()` 先调用 `loadStableSnapshot()`，`stable=false` 立即停止。
+2. `shouldWaitForAddedAccount()` 只对 `account-added + triggerAccountId 不可见` 返回 true。
+3. 只有稳定后才更新 `previousUserIds`、分发 Handler、发布 EventBus。
+4. UT 同时断言 query、Handler、publish 和 signature，防止旧快照从其他路径泄漏。
+
 这两轮之间只有约 5 分钟，但顺序很重要：先让方案成为可审查契约，再让 AI 进行受控执行。
 
 ## 5. progress.md 示例
@@ -103,4 +110,3 @@ stop_if:
 - `PLACEHOLDER`：9 个提交组成的迭代时间线。
 - `PLACEHOLDER`：`4b372d0d` 与 `c0c1bc9f` 两个真实 Git 详情。
 - `PLACEHOLDER`：一轮 progress + evidence 目录。
-

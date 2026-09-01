@@ -5,6 +5,10 @@
 | 文件 | 类型 | 主要用途 | 注意事项 |
 |---|---|---|---|
 | `mdm/firewall-domain-rule-created.jpeg` | 真机截图 | 第 1 页建立“UI 可见不等于系统事实”的开场冲突 | 能证明域名规则出现在页面；不能证明所有账号的系统 policy/rules 已正确下发 |
+| `mdm/firewall-duplicate-rule-failure.jpeg` | 真机截图 | MDM Story 验收、失败语义与幂等性讨论 | 真实展示“已存在完全相同的规则”的失败弹窗；只证明 UI 捕获到重复规则结果，不单独证明底层规则表与错误码映射完整 |
+| `e2e/peripheral-policy-current.png` | 真机截图 | E2E 结果页与跨模块验收样例 | 证明外设策略页面在该次运行中的可见状态；系统策略事实仍需 readback 或 HDC/MCP 证据 |
+| `e2e/security-log-menu-open.jpeg` | 真机截图 | 可观测性、审计日志与菜单交互样例 | 含真实审计日志行，投屏前仍应检查设备名、账号和时间信息 |
+| `e2e/e2e-runner-current-reference.jpg` | 架构参考图 | E2E 两页预留内容的结构输入 | 用户提供的当前版本；结构可用但版式需重绘，不作为最终视觉或运行事实证据 |
 | `gpu-failure-black-screen-13s.mp4` | 视频 | 第 28/32 页黑屏故障带入 | 只证明该媒体中可见黑屏，不直接证明根因或与卡顿报告属于同一 run |
 | `gpu-failure-black-screen-contact.jpg` | 图片 | 黑屏关键帧讨论 | 需结合 frame trace |
 | `gpu-validation-video-playback-16s.mp4` | 视频 | 第 31/38 页媒体观察 | 只证明该媒体中可见播放/部分交互；未绑定 commit/runId，不证明硬解、性能或 owner/target 契约 |
@@ -36,6 +40,7 @@
 | `eval-quality-layers.png` | 第 39 页 | 多层验证共同拦截漏检 | [Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) |
 | `agent-evaluation-components.png` | 附录 I4 | Task / Trial / Trajectory / Outcome / Grader | [Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) |
 | `orchestrator-workers.png` | 附录 J4 | 解释什么时候适合动态拆分和并行协同 | [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) |
+| `system-prompt-calibration.png` | 第 10/17 页候选 | 解释系统提示词应在约束强度、可复用性与自主性之间校准 | [Effective Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) |
 
 ## 文本证据资产
 

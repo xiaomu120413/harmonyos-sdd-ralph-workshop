@@ -14,6 +14,7 @@
 | `harmonyos-sdd-workshop-media/anthropic/eval-quality-layers.png` | [Anthropic CDN](https://www-cdn.anthropic.com/images/4zrzovbb/website/b77b8dbb7c2e57f063fbc8a087a853d5809b74b0-4584x2580.png) | [Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) | 第 39 页：多层质量防线 |
 | `harmonyos-sdd-workshop-media/anthropic/agent-evaluation-components.png` | [Anthropic CDN](https://www-cdn.anthropic.com/images/4zrzovbb/website/0205b36f9639fc27f2f6566f73cb56b06f59d555-4584x2580.png) | [Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) | 附录 I4：Eval 对象映射 |
 | `harmonyos-sdd-workshop-media/anthropic/orchestrator-workers.png` | [Anthropic CDN](https://www-cdn.anthropic.com/images/4zrzovbb/website/8985fc683fae4780fb34eab1365ab78c7e51bc8e-2401x1000.png) | [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) | 附录 J4：动态拆分与并行协同 |
+| `harmonyos-sdd-workshop-media/anthropic/system-prompt-calibration.png` | [Anthropic CDN](https://www-cdn.anthropic.com/images/4zrzovbb/website/0442fe138158e84ffce92bed1624dd09f37ac46f-2292x1288.png) | [Effective Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) | 第 10/17 页候选：系统提示词约束强度校准 |
 
 ## 使用边界
 

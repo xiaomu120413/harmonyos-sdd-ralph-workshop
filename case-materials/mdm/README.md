@@ -34,6 +34,8 @@
 
 详细页稿与讲师 Runbook 见 `07-PPT第9-25页内容与备注.md`。
 
+代码级调用链、系统 API、失败分支、UT oracle 与 E2E Runner 路由见 `08-代码级调用链与课堂穿刺.md`。讲师至少应完成一次从 `onAccountAdded()` 到 `netFirewall`、再从 Case JSON 到 `CaseResult` 的现场穿刺；只展示架构图或文件树不足以支撑本案例。
+
 ## 事实标记
 
 - `REPO FACT`：当前 SecurityTool 仓库可以直接打开或运行验证。

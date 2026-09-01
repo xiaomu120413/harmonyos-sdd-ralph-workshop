@@ -75,7 +75,8 @@ S6 custom 模式签名与全链验收
 - 目标：account-added 只有在完整集合包含触发 ID 后才分发。
 - 允许路径：模块设计、专项方案、Coordinator、Coordinator UT。
 - 禁止：把 trigger ID 直接 append 到集合；超时仍更新 previous。
-- AC：首次 `[100,122]`、后续 `[100,122,123]` 时只分发一次稳定集合；持续旧集合时不分发、不 publish。
+- 代码锚点：`schedule()`、`runPending()`、`runOnce()`、`loadStableSnapshot()`、`shouldWaitForAddedAccount()`。
+- AC：首次 `[100,122]`、后续 `[100,122,123]` 时 query=2、Handler=1、publish=1、signature=`100,122,123`；持续旧集合时 query=6、Handler=0、publish=0、success=false；removed 时 query=1。
 - 证据：文档提交 `4b372d0d`；代码/测试提交 `c0c1bc9f`。
 
 ### S6｜custom 模式保存已处理账号签名
@@ -83,7 +84,8 @@ S6 custom 模式签名与全链验收
 - 目标：custom 默认 policy 同步成功后保存 `custom + signature`，但不扩规则作用域。
 - 允许路径：Handler、模块设计、Handler UT。
 - 禁止：把旧 rules 的 targetUserIds 自动加入新用户。
-- AC：policy 成功 + 保存签名；保存失败返回 false；intent/deployment 不新增。
+- 代码锚点：`FirewallAccountChangeHandler.handle()` custom 分支、`FirewallPolicyService.applyPolicyForMode()`、`FirewallLocalRepository.saveModeApplyState()`。
+- AC：policy 成功 + 保存 `custom/signature`；`FirewallModeSwitchService.applyModeToUsers()` 调用次数为 0；保存失败返回 false；intent/deployment 不新增。
 - 证据：`account-change-handler.test.ets`、提交 `9c7fb186`。
 
 ## 5. Worker Packet 示例（S5）
@@ -102,9 +104,9 @@ forbidden:
   - FirewallPage.ets
   - SystemUserProvider 内业务副作用
 acceptance:
-  - old_then_new_dispatch_once
-  - never_visible_dispatch_zero
-  - removed_and_manual_read_once
+  - old_then_new: query=2, handler=1, publish=1, signature=100,122,123
+  - never_visible: query=6, handler=0, publish=0, success=false
+  - removed: query=1, handler=1, publish=1
 commands:
   - python scripts/check_docs_consistency.py
   - hvigorw test --mode module -p product=default -p module=entry@default
@@ -135,4 +137,3 @@ stop:
 - `PLACEHOLDER`：Story 地图。
 - `PLACEHOLDER`：S5 Worker Packet 真实 Markdown 截图。
 - `PLACEHOLDER`：对应 Git 提交文件列表。
-
