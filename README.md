@@ -5,7 +5,7 @@
 ## 从这里开始
 
 - [完整课程讲师稿（Rich V5 / 双案例工程闭环版）](harmonyos-sdd-ralph-workshop.md)
-- [V5 双案例证据版 PPT（39 页）](deliverables/AI进阶能力复杂需求培训-V5-双案例证据版.pptx)
+- [39 页课程结构重构稿](harmonyos-sdd-ralph-workshop-课程结构重构稿.md)
 - [媒体资源清单](ASSET_MANIFEST.md)
 - [T01 真实 RED/GREEN 证据](evidence/mdm/t01-red-green.md)
 - [账号变化跨进程日志证据](evidence/mdm/account-cross-process-log.md)
@@ -16,8 +16,6 @@
 - [案例二独立工程交付包](case-materials/gpu/README.md)
 - [案例二：证据状态总表（空白项与媒体边界）](case-materials/gpu/00-证据状态总表.md)
 - [案例二：源码调用链与任务拆解主文档](case-materials/gpu/09-源码调用链与任务拆解.md)
-- [原始大纲](archive/harmonyos-sdd-ralph-workshop-original.md)
-- [Rich V2 归档](archive/harmonyos-sdd-ralph-workshop-rich-v2.md)
 
 ## 课程主线
 
@@ -57,9 +55,9 @@
 
 ## GPU 章节亮点
 
-> 当前状态：源码级调用链与任务拆分已先完成文档修订；仓库中的 V5 PPT 尚未同步这些新图，后续以 `case-materials/gpu/09-源码调用链与任务拆解.md` 为底稿单独改版。
+> 当前状态：源码级调用链与任务拆分已完成文档修订；后续 PPT 以 `case-materials/gpu/09-源码调用链与任务拆解.md` 为 GPU 章节底稿。
 
-主讲稿第 28–38 页已整理为一条可讲、可演示、可审计的案例二证据链；V5 PPT 尚待后续同步：
+主讲稿第 28–38 页已整理为一条可讲、可演示、可审计的案例二证据链：
 
 - 从“用户报告远控视频卡顿”拆出已知事实、工作假设和 `PENDING / UNKNOWN` 指标；
 - 用三个源码入口与一条真实 `SurfaceCommand → candidate policy → OH_AVCodec → pending → EndFrame present` 调用链控制上下文预算；
@@ -102,9 +100,6 @@
 │   ├── 08-PPT第28-38页内容映射.md
 │   ├── 09-源码调用链与任务拆解.md
 │   └── tasks/T-GPU-00..07.md
-├── archive/
-│   ├── harmonyos-sdd-ralph-workshop-original.md
-│   └── harmonyos-sdd-ralph-workshop-rich-v2.md
 └── harmonyos-sdd-workshop-media/
     ├── anthropic/*.png
     ├── methodology/*.png / *.svg
