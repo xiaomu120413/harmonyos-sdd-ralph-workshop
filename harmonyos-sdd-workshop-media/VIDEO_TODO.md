@@ -19,4 +19,3 @@
 - `gpu-failure-black-screen-13s.mp4`：开发失败现象，不等于 CPU 卡顿基线。
 - `gpu-validation-video-playback-16s.mp4`：可见播放/交互，不等于性能 A/B。
 - `freerdp-stutter-scenario.jpeg`：卡顿场景静态说明，不能证明持续时间与 CPU 路径。
-

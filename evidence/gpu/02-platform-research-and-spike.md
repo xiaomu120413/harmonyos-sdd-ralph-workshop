@@ -89,4 +89,3 @@ FreeRDP H.264 subsystem selected
 - 所有设备的 decoder 行为一致。
 
 这些内容必须进入后续任务和验收矩阵，而不是从一帧成功外推。
-
