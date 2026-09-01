@@ -14,6 +14,7 @@
 - [案例二：跨平台调研与最小穿刺](evidence/gpu/02-platform-research-and-spike.md)
 - [案例二：任务、验收与排障证据链](evidence/gpu/03-task-acceptance-and-debug.md)
 - [案例二独立工程交付包](case-materials/gpu/README.md)
+- [案例二：源码调用链与任务拆解主文档](case-materials/gpu/09-源码调用链与任务拆解.md)
 - [原始大纲](archive/harmonyos-sdd-ralph-workshop-original.md)
 - [Rich V2 归档](archive/harmonyos-sdd-ralph-workshop-rich-v2.md)
 
@@ -29,7 +30,7 @@
 ```
 
 - MDM 主实践采用 Feature-first：先冻结多用户、状态、事务和失败语义，再实现。
-- 远控案例采用 Context-first + Evidence-first：先用分层地图控制 55 万行级代码库的上下文，再沿其他平台的 H.264 子系统契约映射 HarmonyOS `OH_AVCodec`，通过最小能力穿刺、任务拆解和设备证据逐步收口。
+- 远控案例采用 Context-first + Evidence-first：先用符号级调用链控制 55 万行级代码库的上下文；再区分“OHOS RDPGFX bridge → App GPU compositor”接管路径与“GDI → H264 subsystem”原生回退路径，通过最小能力穿刺、任务拆解和设备证据逐步收口。
 - MCP 负责构建、安装、设备操作、日志、截图与证据保存，不负责替代工程判断。
 
 每项能力都按同一教学闭环展开：
@@ -55,10 +56,12 @@
 
 ## GPU 章节亮点
 
+> 当前状态：源码级调用链与任务拆分已先完成文档修订；仓库中的 V5 PPT 尚未同步这些新图，后续以 `case-materials/gpu/09-源码调用链与任务拆解.md` 为底稿单独改版。
+
 PPT 第 28–38 页改为一条可讲、可演示、可审计的案例二证据链：
 
 - 从“远控视频卡顿”现场拆出已知事实、工作假设和 `PENDING / UNKNOWN` 指标；
-- 用四层代码地图控制 55.9 万行级仓库的上下文预算；
+- 用三个源码入口与一条真实 `SurfaceCommand → candidate policy → OH_AVCodec → pending → EndFrame present` 调用链控制上下文预算；
 - 对照 FFmpeg / OpenH264、Windows Media Foundation、Android MediaCodec 与 HarmonyOS `OH_AVCodec`，提炼输入输出、生命周期、线程、资源 owner 和 fallback 契约；
 - 用 `ADR-GPU-001` 固化调用链、Decision、Deferred 与 Fallback；
 - 通过 `SP-01..05` 最小能力穿刺先证明初始化、送帧、取帧、显示与释放边界；
@@ -95,6 +98,7 @@ PPT 第 28–38 页改为一条可讲、可演示、可审计的案例二证据�
 │   ├── 06-工程验收计划.md
 │   ├── 07-开发排障复盘.md
 │   ├── 08-PPT第28-38页内容映射.md
+│   ├── 09-源码调用链与任务拆解.md
 │   └── tasks/T-GPU-00..07.md
 ├── archive/
 │   ├── harmonyos-sdd-ralph-workshop-original.md

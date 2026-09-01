@@ -21,7 +21,7 @@
 AI 第一次只回答：
 
 1. H.264 数据从哪个协议回调进入？
-2. 当前实际选择了哪个 decoder subsystem？
+2. 当前 command 是被 GPU compositor 消费，还是交回原生 GDI/H.264 subsystem？
 3. 解码结果以什么格式、stride 和 plane 交给后续链路？
 4. 哪个组件拥有最终显示 Surface，何时 present？
 5. 如何证明设备运行的是新路径而不是 fallback？
@@ -32,10 +32,10 @@ AI 第一次只回答：
 
 | 层 | 只读入口 | 本轮需要回答 | 暂不展开 |
 |---|---|---|---|
-| 协议语义 | `libfreerdp/gdi/gfx.c`、`libfreerdp/codec/h264.c` | AVC420/444 命令如何进入、原生 fallback 是什么 | 音频、文件、打印等无关 channel |
-| 平台 codec | `h264_ffmpeg.c`、`h264_openh264.c`、`h264_mf.c`、`h264_mediacodec.c`、`h264_ohos_*` | subsystem 的 Init/Decompress/Uninit 契约 | 编码端与当前客户端无关能力 |
-| OHOS 适配 | `client/OHOS/ohos_rdpgfx_*`、`app/common/.../rdpgfx_pipeline.*` | FreeRDP 与 App/NativeWindow 如何交接 | ArkTS 页面样式和其他业务 UI |
-| 输出与生命周期 | `surface_bridge.*`、`render_output_owner.*`、`avc420_*`、`avc444_*` | Surface、owner、queue、EndFrame、resize 如何闭合 | 还未触发的问题分支 |
+| 原生 GDI/fallback | `libfreerdp/gdi/gfx.c`、`libfreerdp/codec/h264.c` | AVC420/444 如何分发，original callback 最终去哪里 | 音频、文件、打印等无关 channel |
+| 平台 decoder 对照 | `h264_ffmpeg.c`、`h264_openh264.c`、`h264_mf.c`、`h264_mediacodec.c`、`h264_ohos_*` | Init/Input/Output/Uninit 契约；不把它误当成完整 GPU 方案 | 编码端与当前客户端无关能力 |
+| OHOS hook/policy | `ohos_rdpgfx_bridge.c`、`ohos_rdpgfx_surface.c`、`ohos_rdpgfx_avc444_policy.c`、`rdpgfx_pipeline.cpp` | 保存/替换回调、校验、consumed 与 fallback | ArkTS 页面样式和其他业务 UI |
+| GPU 输出/生命周期 | `avc420_gpu_compositor*`、`render_output_owner.*`、`surface_bridge.*` | OH_AVCodec、native buffer、worker、retained state、EndFrame、resize | 还未触发的问题分支 |
 
 ## 4. 上下文预算
 
@@ -56,12 +56,13 @@ AI 第一次只回答：
 
 | ID | 代码锚点 | 事实 | 可信度 |
 |---|---|---|---|
-| C01 | `libfreerdp/codec/h264.c` | 上层通过 `H264_CONTEXT_SUBSYSTEM` 调用平台后端 | CODE FACT |
-| C02 | `libfreerdp/codec/h264_mediacodec.c` | Android 已有 MediaCodec 后端，可参考契约和生命周期 | CODE FACT |
-| C03 | `libfreerdp/codec/h264_mf.c` | Windows 已有 Media Foundation 后端 | CODE FACT |
-| C04 | `libfreerdp/codec/h264_ohos_decoder.c` | OHOS 后端选择硬件 H.264 decoder 并实现 subsystem | CODE FACT |
-| C05 | `client/OHOS/README.md` | AVC420 buffer 模式与 AVC444 GPU compositor 有不同输出策略 | CODE FACT |
-| C06 | 设备路径日志 | 本次运行是否真正选择 OHOS hardware decoder | RUNTIME REQUIRED |
+| C01 | `ohos_rdpgfx_bridge.c::freerdp_ohos_rdpgfx_bridge_attach` | 先保存 original callbacks，再替换 StartFrame/SurfaceCommand/EndFrame | CODE FACT |
+| C02 | `ohos_rdpgfx_surface.c::ohos_rdpgfx_surface_command` | AVC420/444 未 consumed 时调用保存的 original SurfaceCommand | CODE FACT |
+| C03 | `ohos_rdpgfx_avc444_policy.c::ohos_rdpgfx_record_avc420_gpu_candidate` | GPU 路径沿原生顺序校验；callback 未 ready 时保留 GDI | CODE FACT |
+| C04 | `avc420_gpu_compositor_internal.cpp::ProcessCommand` | App GPU 路径直接调用 OH_AVCodec、native import 与 retained composite | CODE FACT |
+| C05 | `PresentQueuedUpdate` / `PresentEndFrame` | pendingFrameId 只有在 matched EndFrame 才 present | CODE FACT |
+| C06 | `libfreerdp/gdi/gfx.c::gdi_SurfaceCommand` | original GDI 仍分发 AVC420/444，并进入 H.264 subsystem | CODE FACT |
+| C07 | 设备 frame trace | 本次运行是否真正经过目标 decoder→buffer→owner→EndFrame | RUNTIME REQUIRED |
 
 ## 5. AI 勘察 Prompt
 
@@ -84,3 +85,5 @@ AI 第一次只回答：
 - AI 能在不读取全库的前提下画出一条可定位调用链。
 - 每个结论都有代码锚点或显式标记 `UNKNOWN`。
 - 下一轮上下文由问题驱动，不把历史聊天整体带入。
+
+完整源码流程、分支条件与任务推导见 [`../../case-materials/gpu/09-源码调用链与任务拆解.md`](../../case-materials/gpu/09-源码调用链与任务拆解.md)。

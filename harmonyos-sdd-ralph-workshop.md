@@ -1607,10 +1607,10 @@ AI 熟悉大库的产物不是“仓库总结”，而是 `codebase-map.md`：
 
 | 层 | 本轮只读入口 | 先不读什么 |
 |---|---|---|
-| 协议 | `libfreerdp/gdi/gfx.c`、`codec/h264.c` | 无关 channel |
-| 平台 codec | `h264_ffmpeg/openh264/mf/mediacodec/ohos_*` | 编码端与非 H.264 codec |
-| OHOS bridge | `client/OHOS/ohos_rdpgfx_*`、`rdpgfx_pipeline.*` | ArkTS 页面业务 |
-| 输出 | `surface_bridge.*`、`render_output_owner.*` | 尚未触发的优化分支 |
+| 原生 GDI/fallback | `libfreerdp/gdi/gfx.c`、`codec/h264.c` | 无关 channel |
+| 平台 decoder 对照 | `h264_ffmpeg/openh264/mf/mediacodec/ohos_*` | 编码端与非 H.264 codec |
+| OHOS hook/policy | `client/OHOS/ohos_rdpgfx_bridge.c`、`ohos_rdpgfx_surface.c`、`ohos_rdpgfx_avc444_policy.c` | ArkTS 页面业务 |
+| App GPU 输出 | `rdpgfx_pipeline.cpp`、`avc420_gpu_compositor*`、`render_output_owner.*` | 尚未触发的优化分支 |
 
 每个发现只保存 `path:line + 输入/输出 + 为什么相关 + 可信度`。AI 下一轮通过 evidence index 按需检索，而不是把整段历史 Session 再喂一遍。
 
@@ -1625,7 +1625,7 @@ AI 熟悉大库的产物不是“仓库总结”，而是 `codebase-map.md`：
 
 ### 演示动作
 
-让学员用 `rg` 从 `RDPGFX_CODECID_AVC420` 或 `h264_context_new` 开始，三分钟内画出第一版路径。讲师用 `evidence/gpu/01-codebase-map.md` 翻牌。
+让学员先从 `gfx->SurfaceCommand` 找到 `freerdp_ohos_rdpgfx_bridge_attach` 保存/替换回调的位置，再追 `ohos_rdpgfx_record_avc420_gpu_candidate` 的 consumed/fallback 分支；最后才打开 `h264_context_new`，确认它属于 original GDI 回退链。讲师用 `case-materials/gpu/09-源码调用链与任务拆解.md` 翻牌。
 
 ### 通过条件
 
@@ -1669,7 +1669,7 @@ progress: 设计
 
 ### 讲师备注
 
-这一步不是让 AI 上网找一篇“HarmonyOS 硬解教程”然后照抄。优先研究同一仓库已经认可的扩展点：`H264_CONTEXT_SUBSYSTEM` 如何隔离 FFmpeg、OpenH264、Media Foundation 和 MediaCodec。
+这一步不是让 AI 上网找一篇“HarmonyOS 硬解教程”然后照抄。先研究 `H264_CONTEXT_SUBSYSTEM` 如何隔离 FFmpeg、OpenH264、Media Foundation 和 MediaCodec，提炼 decoder 生命周期；随后必须回到 OHOS RDPGFX bridge，确认最终 GPU 接管还需要 command 校验、dirty rect、owner、fallback 与 EndFrame。decoder subsystem 是重要参考，不是完整方案。
 
 AI 输出一张“同与不同”表：
 
@@ -1685,7 +1685,7 @@ AI 输出一张“同与不同”表：
 
 ### 通过条件
 
-学员能够说明：**我们复用的是 FreeRDP 的 subsystem 和协议契约，不是把 Android API 名称替换成 HarmonyOS API 名称。**
+学员能够说明：**我们复用其他平台的 decoder 生命周期经验，但最终接入点是 OHOS RDPGFX bridge；原生 H264 subsystem/GDI 保留为 fallback。**
 
 ### 素材
 
@@ -1707,35 +1707,38 @@ progress: 设计
 ### 画面
 
 ```mermaid
-flowchart LR
-    A[FreeRDP H264 subsystem] --> B[OH_AVCodec adapter]
-    B --> C[hardware decoder]
-    C --> D[AVBuffer / decoded planes]
-    D --> E{codec path}
-    E -->|AVC420| F[buffer composition / GDI-compatible output]
-    E -->|AVC444| G[GPU luma + chroma state]
-    F --> H[render output owner]
-    G --> H
-    H --> I[EndFrame / NativeWindow]
+flowchart TD
+    A["gfx->SurfaceCommand"] --> B["ohos_rdpgfx_surface_command"]
+    B --> C["record_avc420_gpu_candidate<br/>原生顺序校验 + consumed policy"]
+    C -->|ready| D["Ohos...SurfaceCommandCallback"]
+    D --> E["Avc420GpuCompositor::OnSurfaceCommand"]
+    E --> F["worker → ProcessCommand"]
+    F --> G["OH_AVCodec → OH_NativeBuffer"]
+    G --> H["CompositeFrame → pendingFrameId"]
+    H --> I["matched EndFrame"]
+    I --> J["PresentQueuedUpdate → EGL swap"]
+    C -->|not consumed / takeover 前失败| K["original SurfaceCommand"]
+    K --> L["gdi_SurfaceCommand → H264 subsystem / GDI"]
 ```
 
 Architecture Decision：
 
 ```text
-先在既有 H264 subsystem 内接入 OH_AVCodec；
-先做 AVC420 单路 buffer 硬解穿刺；
-保留软件/GDI fallback；
-AVC444、零拷贝、队列与 resize 分任务推进。
+在 OHOS RDPGFX bridge 保存原回调并受控拦截；
+App compositor 直接管理 OH_AVCodec、native buffer、retained composite 与 EndFrame；
+takeover 前失败回到 original GDI/H264 subsystem；
+先用 AVC420 证明一帧 decode→pending→matched present→fallback；
+AVC444、队列与生命周期在边界证实后分任务推进。
 ```
 
 ### 讲师备注
 
 方案评审只回答四个问题：
 
-1. 新 backend 是否仍从 FreeRDP 的协议入口被选择？
-2. 平台输出能否转换为上层理解的格式与状态？
-3. 新路径失败时谁接管，是否可观测？
-4. App、FreeRDP OHOS layer 与通用库的职责是否清楚？
+1. hook 是否先保存 original callback，再替换 SurfaceCommand/EndFrame？
+2. command 只有在校验、target/background、decode/composite 成功后才 consumed 吗？
+3. decode/composite 是否只生成 pending，并在匹配 EndFrame present？
+4. takeover 前与 takeover 后的失败策略是否区分，owner 是否唯一？
 
 AI 容易给出“OH_AVCodec → Surface 直接显示”的漂亮方案，但这可能绕开 dirty rect、AVC444 LC、EndFrame 和原生 fallback。只有调用链与失败语义完整，方案才进入穿刺。
 
@@ -1767,13 +1770,13 @@ progress: 代码
 ### 画面
 
 ```text
-SP-01 编译并链接 OHOS backend
+SP-01 bridge 与 compositor 进入 arm64/HAP 产物
   ↓
 SP-02 真机选择 hardware decoder
   ↓
-SP-03 一个 AVC420 sample 产生合法 output
+SP-03 一个 AVC420 sample 产生可关联的 native output
   ↓
-SP-04 同一 frame 到达正确 owner / present
+SP-04 同一 frame 完成 composite / pending / matched EndFrame present
   ↓
 SP-05 注入失败时回到可解释 fallback
 ```
@@ -1832,20 +1835,20 @@ progress: 任务
 
 ### 画面
 
-| Task | 一个可观察结果 | Stop 条件 |
+| Task | 主要源码边界 | 一个可观察结果 / Stop |
 |---|---|---|
-| T00 | 保存 CPU 卡顿 before 基线 | 路径不明则不归因 |
-| T01 | 真机选择 OHOS hardware decoder | 运行时仍 fallback |
-| T02 | AVC420 一帧输出合法 | format/stride/plane 未证实 |
-| T03 | 一帧进入正确 display owner | GDI/GPU 双写 |
-| T04 | 连续播放队列有界 | backlog 持续增长 |
-| T05 | resize/后台/重连恢复 | stale generation |
-| T06 | AVC444 LC 与单 decoder 闭合 | 复用 420 假设 |
-| T07 | 同场景 A/B 与回归验收 | 缺 CPU/FPS/path evidence |
+| T00 | diagnostics only | 保存同 runId before；路径不明则不归因 |
+| T01 | `InstallRdpgfxDiagnosticsHooks`、`bridge_attach`、decoder init | bridge + hardware decoder 真机成立；只编译成功则停 |
+| T02 | decoder input/output、`OH_AVBuffer_GetNativeBuffer` | 一帧输入输出可关联；format/native buffer 不明则停 |
+| T03 | candidate policy、`OnSurfaceCommand`、`ProcessCommand`、`PresentEndFrame` | consumed→owner→matched present 闭环；GDI/GPU 双写则 FAIL |
+| T04 | `EnqueueSurfaceCommand`、worker compaction | 连续队列有界；depth/age 持续增长则停 |
+| T05 | target generation、pause/detach/recreate | resize/后台/重连拒绝 stale task；旧 target 可写则 FAIL |
+| T06 | AVC444 candidate/compositor、LC retained state | 单 decoder + LC + EndFrame；复用 420 假设则停 |
+| T07 | 测试/脚本/报告，生产代码冻结 | 同场景 A/B；缺 CPU/FPS/path/soak 则 UNKNOWN |
 
 ### 讲师备注
 
-穿刺以前只能确定探索任务，不能假装完整实现计划已经可靠。穿刺以后，关键接口和真实平台限制才足够清楚，可以把工作拆成有依赖的 Task Graph。
+穿刺以前只能确定探索任务，不能假装完整实现计划已经可靠。穿刺以后，任务沿源码中的状态所有权拆开：decoder 输出属于 T02；是否 consumed、谁拥有 output、何时 EndFrame present 属于 T03；跨线程积压属于 T04；target generation 属于 T05。这样黑屏或卡顿时能定位第一处异常，而不是让一个“大任务”同时改 codec、renderer、queue 和 lifecycle。
 
 每张任务卡必须包含：Requirement、Current Evidence、Allowed、Forbidden、RED/Probe、Minimal Change、Verify、Stop。特别强调 `Forbidden` 写到对象和行为，例如：T02 不允许顺手重写 AVC444 compositor，也不允许为了“干净”删除原生 fallback。
 
@@ -1866,6 +1869,7 @@ progress: 任务
 ### 素材
 
 - `evidence/gpu/03-task-acceptance-and-debug.md`
+- `case-materials/gpu/09-源码调用链与任务拆解.md`
 - 附录 D Task Card / Progress Ledger
 
 ---

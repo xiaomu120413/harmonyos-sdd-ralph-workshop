@@ -4,7 +4,7 @@
 
 ## 1. 先看仓库已经接受的扩展方式
 
-FreeRDP H.264 层通过 subsystem 隔离平台实现。当前源码可定位到：
+FreeRDP H.264 层通过 subsystem 隔离平台 decoder，实现可用于提炼 codec 生命周期；但当前 GPU 接管路径还必须研究 OHOS RDPGFX bridge 与 App compositor。当前源码可定位到：
 
 | 路径 | 平台/作用 | 可借鉴的契约 |
 |---|---|---|
@@ -39,17 +39,19 @@ failure → explicit fallback or explicit UNKNOWN
 ```text
 ADR-GPU-001
 Decision:
-  先在 FreeRDP 既有 H264_CONTEXT_SUBSYSTEM 契约内接入 OH_AVCodec，
-  不绕开协议语义另建一套“收到字节就直接画”的旁路。
+  在 OHOS RDPGFX bridge 保存原 SurfaceCommand / EndFrame 回调并受控拦截；
+  App compositor 直接管理 OH_AVCodec、native buffer、retained state 与 present；
+  原生 gdi_SurfaceCommand → H264_CONTEXT_SUBSYSTEM 保留为 fallback。
 
 First slice:
-  AVC420 单路 buffer 硬解，一帧输入、一帧输出、可回退。
+  AVC420 一帧输入、一份合法 native output、一次 retained composite、
+  一次 matched EndFrame present、一次可解释回退。
 
 Deferred:
   AVC444 luma/chroma 状态、GPU 合成、零拷贝、队列优化、resize 长稳。
 
 Why:
-  先证明 codec 能被选择且产出正确帧，再扩展所有权和持续显示；
+  先证明 hook、codec、buffer、owner、EndFrame 与 fallback 的最短链；
   否则黑屏时无法区分 codec、format、composition、owner 和 present。
 ```
 
@@ -58,13 +60,14 @@ Why:
 穿刺不是“做一个无法复用的 demo”，而是沿最终架构走通最短真实路径：
 
 ```text
-FreeRDP H.264 subsystem selected
-  → OH_AVCodec hardware decoder created
+OHOS RDPGFX bridge attached; original callbacks preserved
+  → AVC420 candidate passed native-order validation
+  → App compositor created OH_AVCodec hardware decoder
   → known AVC420 sample queued
-  → one decoded output returned
-  → width/height/stride/planes validated
-  → one frame reaches the existing output boundary
-  → failure can return to software/native path
+  → one decoded native buffer returned and validated
+  → retained composite queued as pendingFrameId
+  → matched EndFrame reaches the unique output owner
+  → takeover-before failure returns to original GDI path
 ```
 
 ### Spike 验收点
