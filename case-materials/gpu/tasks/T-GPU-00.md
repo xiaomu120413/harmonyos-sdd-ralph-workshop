@@ -1,4 +1,4 @@
-# T-GPU-00｜保存卡顿基线
+# T-GPU-00｜保存视频卡顿 before 基线
 
 - Source Scope：仅允许 diagnostics、日志、性能采样和录屏脚本；不得修改 `ohos_rdpgfx_*`、decoder、compositor 与 owner 状态机。
 - Requirement：同一设备、服务端、分辨率和视频片段下保存 30 秒 before。

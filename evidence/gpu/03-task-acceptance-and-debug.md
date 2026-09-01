@@ -4,7 +4,7 @@
 
 | Task | 一个可观察结果 | Allowed | 验收重点 |
 |---|---|---|---|
-| T-GPU-00 | 保存 CPU 卡顿基线 | diagnostics / media only | 同一场景 CPU、FPS、codec path、视频 |
+| T-GPU-00 | 保存视频卡顿 before 基线 | diagnostics / media only | 同一场景 CPU、FPS、codec path、视频；未采集前留空 |
 | T-GPU-01 | 运行时选择 OHOS hardware decoder | codec backend + build flags | decoder name、fallback reason |
 | T-GPU-02 | AVC420 一帧合法输出 | OHOS codec buffer adapter | size、format、stride、plane、frameId |
 | T-GPU-03 | 一帧进入正确显示 owner | bridge/output boundary | owner、target、present，不被旧 GDI 覆盖 |
@@ -77,17 +77,19 @@ Reviewer / Evaluator
 
 ## 6. 最终验收矩阵
 
-| 维度 | 最低验收 | 当前材料状态 |
-|---|---|---|
-| Build | FreeRDP OHOS arm64 + HAP 成功 | 可从本地工程复核 |
-| Path | 真机明确选择 hardware decoder，fallback 可解释 | 需要本次演示日志 |
-| Correctness | AVC420/444 画面、颜色、脏区、frame boundary 正确 | 已有部分图片/视频，需绑定 runId |
-| Performance | 同设备同视频 CPU 下降、FPS/卡顿改善 | `gpu-cpu-stutter-before.mp4` 与采样待补 |
-| Stability | 连续播放、resize、后台、重连无死锁/无限队列 | 需要 soak evidence |
-| Interaction | 画面、鼠标、键盘、滚轮使用同一 viewport | 已有动态播放/交互素材，完整矩阵待补 |
-| Scope | diff 未越过 Task Card | 由 Reviewer 独立检查 |
+| 维度 | 最低验收 | 当前证据 | 判定 |
+|---|---|---|---|
+| Build | FreeRDP OHOS arm64 + HAP 成功 |  | `PENDING` |
+| Path | 真机明确选择 hardware decoder，fallback 可解释 |  | `PENDING` |
+| Correctness | AVC420/444 画面、颜色、脏区、frame boundary 正确 |  | `PENDING` |
+| Performance | 同设备同视频 CPU 下降、FPS/卡顿改善 |  | `UNKNOWN` |
+| Stability | 连续播放、resize、后台、重连无死锁/无限队列 |  | `UNKNOWN` |
+| Interaction | 画面、鼠标、键盘、滚轮使用同一 viewport | `gpu-validation-video-playback-16s.mp4` 可见部分交互；runId/path 未绑定 | `MEDIA FACT / PENDING` |
+| Scope | diff 未越过 Task Card |  | `PENDING` |
 
 当前仓库里的黑屏与播放视频能证明“存在失败现象”和“某次运行可见播放/交互”，不能单独证明 CPU 性能目标已经达成。课程必须保留这个 `UNKNOWN`，直到 before/after 性能证据补齐。
+
+当前空白项与媒体边界统一见 `case-materials/gpu/00-证据状态总表.md`。
 
 ## 7. 最终证据包
 

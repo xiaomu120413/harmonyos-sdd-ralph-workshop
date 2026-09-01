@@ -6,7 +6,7 @@
 
 ## Context
 
-软件 H.264 路径可作为正确性 fallback，但用户场景出现视频卡顿。目标是在不破坏 FreeRDP 协议语义和原生回退的前提下接入 HarmonyOS 硬件 decoder。
+软件 H.264 路径可作为正确性 fallback。用户报告远端视频播放卡顿，但当前 decoder path 与性能根因尚未由同一 run 证据确认。方案目标是在不破坏 FreeRDP 协议语义和原生回退的前提下评估并接入 HarmonyOS 硬件 decoder；是否改善性能由后续 A/B 单独判定。
 
 ## Decision
 

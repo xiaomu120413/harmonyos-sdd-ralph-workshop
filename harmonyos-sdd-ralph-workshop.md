@@ -2,7 +2,7 @@
 
 > 以真实 HarmonyOS MDM 与 FreeRDP GPU 送显问题为载体，跑通需求拆解、上下文组织、Agent 协作、开发、验证、问题定位与证据交付
 
-> **Rich V5 / 双案例工程闭环版**：保留 39 页与 120 分钟结构，不压缩 V4 的事实、媒体与 Session 证据；重新把“AI 如何完成复杂需求”放回主角位置。案例一用 MDM 跑通需求到验收，案例二基于 55 万行级 FreeRDP 源码，完整演示 CPU 视频卡顿如何经过代码认知、跨平台调研、HarmonyOS 对接、最小穿刺、任务拆解、开发排障和设备验收收口。
+> **Rich V5 / 双案例工程闭环版**：保留 39 页与 120 分钟结构，不压缩 V4 的事实、媒体与 Session 证据；重新把“AI 如何完成复杂需求”放回主角位置。案例一用 MDM 跑通需求到验收，案例二基于 55 万行级 FreeRDP 源码，从用户报告的远控视频卡顿问题出发，演示代码认知、跨平台调研、HarmonyOS 对接、最小穿刺、任务拆解、开发排障与证据验收。CPU 路径、性能改善和长稳在没有同 run 证据前保持空白或 `UNKNOWN`。
 
 ## 课程定位
 
@@ -1509,9 +1509,11 @@ progress: 证据
 
 ---
 
-# 第五幕：案例二——在 55 万行级开源库中完成 HarmonyOS 远控硬解闭环
+# 第五幕：案例二——在 55 万行级开源库中拆解 HarmonyOS 远控硬解需求
 
-## 第 28 页｜案例二背景：在 55 万行级 FreeRDP 上解决视频卡顿
+> 本幕所有结果陈述以 `case-materials/gpu/00-证据状态总表.md` 为准。没有绑定同一 commit/runId 的运行数据时，页面保持空白或 `PENDING / UNKNOWN`。
+
+## 第 28 页｜案例二背景：在 55 万行级 FreeRDP 上验证视频卡顿问题
 
 <!--
 type: CLAIM
@@ -1525,18 +1527,19 @@ progress: 需求
 
 **任务背景**
 
-> 基于 30 万行级以上开源库实现 HarmonyOS 远控应用。连接、输入与基础画面已经可用，但播放远端视频时，当前 CPU/软件解码路径出现明显卡顿，需要接入 HarmonyOS 硬件解码并形成可交付的工程方案。
+> 基于 30 万行级以上开源库实现 HarmonyOS 远控应用。用户报告播放远端视频时出现卡顿，希望评估 HarmonyOS 硬件解码与 GPU 合成方案。当前没有与源码 commit、decoder path、CPU/FPS 绑定的 before 证据，因此根因和改善幅度都不能提前下结论。
 
 ```text
 本地 FreeRDP 快照：2014 个相关源文件 / 约 559,355 行
-用户现象：远端视频播放卡顿
+用户报告：远端视频播放卡顿
+现有媒体：某次运行可见播放/交互，但未绑定 decoder path
 第一目标：证明当前路径、建立 before 基线
 最终目标：硬解路径可用、可回退、可验收、可维护
 ```
 
 <!-- VIDEO SLOT: harmonyos-sdd-workshop-media/gpu-cpu-stutter-before.mp4 -->
 
-当前用 `freerdp-stutter-scenario.jpeg` 做场景占位。正式授课应替换为 20–30 秒 before 视频，并同时录入 CPU/FPS 与 codec path；拍摄脚本见 `harmonyos-sdd-workshop-media/VIDEO_TODO.md`。
+当前用 `freerdp-stutter-scenario.jpeg` 做场景占位，它不证明卡顿。正式授课应替换为 20–30 秒 before 视频，并同时录入 CPU/FPS 与 codec path；拍摄脚本见 `harmonyos-sdd-workshop-media/VIDEO_TODO.md`。
 
 ![FreeRDP 视频播放卡顿场景](harmonyos-sdd-workshop-media/freerdp-stutter-scenario.jpeg)
 
@@ -1554,7 +1557,7 @@ progress: 需求
 
 ### 演示动作
 
-播放卡顿视频槽位，要求学员写下它能证明和不能证明什么。翻牌：视频可证明持续现象；CPU/FPS、协商 codec 和 decoder subsystem 需要独立采样。
+当前 before 视频槽位为空。先展示静态场景并要求学员指出“静态图不能证明卡顿”；课前补齐视频后，视频只能证明持续现象，CPU/FPS、协商 codec 和 decoder path 仍需独立采样。
 
 ### 通过条件
 
@@ -1584,19 +1587,23 @@ progress: 设计
 
 ```text
 协议：H.264 从哪里进入？
-选择：运行时选了哪个 decoder subsystem？
+选择：command 被 GPU compositor consumed，还是回到 original GDI？
 输出：格式、stride、plane 是什么？
 显示：谁拥有 Surface，何时 present？
-证明：怎样排除 software/GDI fallback？
+证明：怎样把 decoder、frame、owner、present 绑定到同一 run？
 ```
 
 ```mermaid
-flowchart LR
-    A[RDPGFX command] --> B[H264 subsystem]
-    B --> C[platform decoder]
-    C --> D[decoded planes / buffer]
-    D --> E[composition / owner]
-    E --> F[NativeWindow present]
+flowchart TD
+    A["gfx->SurfaceCommand"] --> B["ohos_rdpgfx_surface_command"]
+    B --> C["record_avc420_gpu_candidate"]
+    C -->|ready/consumed| D["OnSurfaceCommand → worker"]
+    D --> E["ProcessCommand → OH_AVCodec"]
+    E --> F["native buffer → CompositeFrame"]
+    F --> G["pendingFrameId"]
+    G --> H["matched EndFrame → PresentComposite"]
+    C -->|not consumed| I["original SurfaceCommand"]
+    I --> J["gdi_SurfaceCommand → H264 subsystem/GDI"]
 ```
 
 右侧放上下文预算：`1 个问题 + 1 条调用链 + 3–7 个接口 + 1 个假设 + 1 条下一步命令`。
@@ -1954,7 +1961,7 @@ progress: 调试
 
 ```text
 1 command received
-2 codec/subsystem selected
+2 candidate path / decoder selected
 3 compressed input queued
 4 decoded output valid
 5 format / stride / planes valid
@@ -2017,9 +2024,9 @@ progress: 调试
 
 | frameId | codec | decoder | output | owner | present | verdict |
 |---:|---|---|---|---|---|---|
-| 842 | AVC420 | OHOS HW | NV12 valid | GDI-compatible | EndFrame | PASS |
-| 843 | AVC444 | OHOS HW | luma only | GPU claimed | none | FAIL |
-| 844 | AVC444 | fallback | unknown | unknown | screenshot ok | UNKNOWN |
+|  |  |  |  |  |  | `PENDING` |
+
+> 本表等待真实 frame trace；不再使用未绑定 run 的示例 frameId 冒充证据。
 
 下方两句：
 
@@ -2040,7 +2047,7 @@ AVC444 的真实教训是：两个 decoder、过早 suppress GDI、在 SurfaceCo
 
 ### 演示动作
 
-给出 frame 843，只允许学员选择一个最小修正：释放 owner、补 chroma、恢复 fallback 或移动 present；选择必须引用第一处 FAIL。
+在有真实 frame trace 时，只允许学员根据第一处 FAIL 选择一个最小修正。当前 trace 未入库，本环节保留为空白模板，不预设“释放 owner、补 chroma、恢复 fallback 或移动 present”中的任何一个是事实答案。
 
 ### 通过条件
 
@@ -2054,7 +2061,7 @@ AVC444 的真实教训是：两个 decoder、过早 suppress GDI、在 SurfaceCo
 
 ---
 
-## 第 37 页｜穿刺成功以后，工程化能力决定它能不能交付
+## 第 37 页｜穿刺有结论以后，工程化能力决定它能不能交付
 
 <!--
 type: CHECKPOINT
@@ -2104,7 +2111,7 @@ progress: 证据
 
 ---
 
-## 第 38 页｜最后结果：不仅展示“能播放”，还要证明为什么可信
+## 第 38 页｜当前证据状态：已有材料证明什么，还缺什么
 
 <!--
 type: CHECKPOINT
@@ -2116,35 +2123,39 @@ progress: 证据
 
 ### 画面
 
-左：before 视频槽位（CPU/软件路径卡顿）
+左：before 视频槽位（`PENDING`；当前为空）
 
-中：硬解路径证据链
+中：硬解路径待填证据链
 
 ```text
-FreeRDP command
-→ OHOS hardware decoder
-→ valid output
-→ correct owner
-→ EndFrame present
+commit:
+runId:
+candidate path:
+decoder identity:
+frameId / output:
+owner / matched EndFrame:
+present:
 ```
 
-右：after 动态播放与验收矩阵
+右：现有可见媒体与验收矩阵
 
 | 结论 | 当前证据 | 判定 |
 |---|---|---|
-| HarmonyOS H.264 硬解对接方向成立 | 源码、构建与现有实现路径 | CURRENT / 可复核 |
-| 画面与交互在某次运行可见 | 播放视频、交互联系表 | PARTIAL PASS |
-| 黑屏/颜色/owner 问题有真实复盘 | 失败视频、日志、代码复盘 | PASS as diagnosis evidence |
-| CPU 与卡顿达到目标 | 同场景 before/after CPU/FPS 尚未入库 | UNKNOWN / 待补 |
-| resize/后台/重连长稳 | 需要完整 soak 与设备矩阵 | UNKNOWN / 待补 |
+| 源码存在 bridge→compositor→EndFrame 路径 | 源码锚点与调用链 | `REPO FACT` |
+| 当前 arm64/HAP 构建通过 |  | `PENDING` |
+| 真机实际选择 OHOS hardware decoder |  | `PENDING` |
+| 某次运行可见播放与部分交互 | `gpu-validation-video-playback-16s.mp4` | `MEDIA FACT / UNBOUND` |
+| 某次运行出现黑屏 | `gpu-failure-black-screen-13s.mp4` | `MEDIA FACT / UNBOUND` |
+| CPU/FPS 与卡顿改善 |  | `UNKNOWN` |
+| resize/后台/重连长稳 |  | `UNKNOWN` |
 
 <!-- VIDEO SLOT: harmonyos-sdd-workshop-media/gpu-hwdecode-after.mp4 -->
 
-![修复后动态播放与交互关键帧](harmonyos-sdd-workshop-media/gpu-validation-video-playback-contact.jpg)
+![现有可见播放与交互关键帧](harmonyos-sdd-workshop-media/gpu-validation-video-playback-contact.jpg)
 
 ### 讲师备注
 
-先播放 `gpu-validation-video-playback-16s.mp4`，但不要说“性能目标已经完成”。它能证明某次运行可以播放和交互，不能替代 CPU/FPS A/B、codec path 日志和长稳。
+可以播放 `gpu-validation-video-playback-16s.mp4`，但不要称它为“修复后”或“硬解 after”。它只能证明某次运行可见播放和部分交互；由于缺少 commit、runId、decoder path 和性能 CSV，不能替代 CPU/FPS A/B、路径日志和长稳。
 
 案例二最终收获不是一个 `OH_AVCodec` API 清单，而是五种可迁移能力：
 
@@ -2158,7 +2169,7 @@ FreeRDP command
 
 ### 演示动作
 
-播放修复后视频，让学员先填验收矩阵再翻牌。最后要求每组回答：“AI 为什么可能是对的？我们用什么证明？如果错了，回到哪一个 checkpoint？”
+播放现有可见视频，让学员先填写它能证明与不能证明的内容，再对照 `00-证据状态总表.md`。最后要求每组回答：“AI 为什么可能是对的？我们还缺什么证明？如果错了，回到哪一个 checkpoint？”
 
 ### 通过条件
 
@@ -2171,6 +2182,7 @@ FreeRDP command
 - `gpu-e2e-interaction-public.jpg`
 - `evidence/gpu/03-task-acceptance-and-debug.md`
 - `harmonyos-sdd-workshop-media/VIDEO_TODO.md`
+- `case-materials/gpu/00-证据状态总表.md`
 
 ---
 ## 第 39 页｜把方法带回项目，只保留七个问题
@@ -3059,10 +3071,10 @@ Academy 的课程模型只提供教学节奏：先形成“澄清目标＋快速
 
 | 素材 | 内容 | 课堂用途 | 能证明 / 不能证明 |
 |---|---|---|---|
-| `gpu-failure-black-screen-13s.mp4` | 连接后远程窗口持续黑屏 | 第 28、32 页故障起点 | 能证明用户现象可复现；不能直接证明 decoder、GPU 或 Surface 是根因 |
+| `gpu-failure-black-screen-13s.mp4` | 连接后远程窗口持续黑屏 | 第 28、32 页故障起点 | 能证明该媒体中存在黑屏；不能证明它与卡顿用户报告属于同一 run，也不能证明根因 |
 | `gpu-failure-black-screen-contact.jpg` | 黑屏录屏关键帧 | 投屏静止讨论、标注最早异常 | 能证明现象时序；不能替代 frameId 日志 |
-| `gpu-validation-video-playback-16s.mp4` | 视频播放、窗口切换与遮挡变化 | 第 31、38 页动态验证 | 能证明可见交互与连续性；不能单独证明 owner、EndFrame、targetEpoch 契约 |
-| `gpu-validation-video-playback-contact.jpg` | 修复后动态录屏关键帧 | 逐格检查场景覆盖 | 适合对比遮挡前后；不证明 bit-exact 或没有偶发尖峰 |
+| `gpu-validation-video-playback-16s.mp4` | 视频播放、窗口切换与遮挡变化 | 第 31、38 页媒体观察 | 能证明该媒体时段内可见播放/交互；未绑定 commit/runId，不能命名为硬解 after |
+| `gpu-validation-video-playback-contact.jpg` | 现有动态录屏关键帧 | 逐格检查媒体覆盖 | 适合观察遮挡前后；不证明 bit-exact、decoder path 或性能 |
 | `gpu-connection-interaction-contact.jpg` | 连接、打开内容、页面变化、右键交互 | 可选扩展验证 | 证明多种交互被执行；前段含连接信息，公开投屏前需裁剪/脱敏 |
 | `nativebuffer-test-pattern.png` | NativeBuffer 阶段色块 | 第 29、34 页 420 import | 只证明该阶段画面；路径事实仍需 EGLImage/OES 日志 |
 | `rgba-renderer-test-pattern.png` | RGBA renderer 阶段色块 | 第 29、34 页 retained 输出 | 可与上一张肉眼对照；不能替代 dirty-rect 保留断言 |
@@ -3105,9 +3117,9 @@ queueDepth queueAgeMs durationUs owner targetEpoch result reason
 
 交付物必须包含命令、退出结果、时间窗与 evidence path。若日志仍串不起完整一帧，结论为 UNKNOWN，下一轮任务是补唯一缺口。
 
-### Round 3｜修复后做正向与破坏性验证（8–12 分钟）
+### Round 3｜证据补齐后做正向与破坏性验证（8–12 分钟）
 
-播放 `gpu-validation-video-playback-16s.mp4`，逐项检查：
+先播放 `gpu-validation-video-playback-16s.mp4` 练习“媒体能证明什么”；只有取得绑定同一 runId 的 trace/metrics 后，才逐项判定：
 
 | 动作 | 可见检查 | 同步证据 | 判定 |
 |---|---|---|---|
@@ -3295,7 +3307,7 @@ evidence/gpu-<runId>/
 
 ### 验证
 
-> “视频流畅是必要的用户证据，但不是全部契约。我们还要确认没有双写、没有 stale callback、局部更新没丢像素、LC readiness 正确。缺一个关键事实就写 UNKNOWN。”
+> “可见播放是必要的用户证据，但不是全部契约。我们还要确认实际 decoder path、没有双写、没有 stale callback、局部更新没丢像素、LC readiness 正确。缺一个关键事实就写 UNKNOWN。”
 
 ## K5. 图片与视频的现场使用方式
 
@@ -3311,7 +3323,7 @@ evidence/gpu-<runId>/
 - 揭示两张视觉近似，但一张来自 NativeBuffer 阶段，一张来自 RGBA renderer。
 - 追问：如果画面相同，为什么仍要保留 EGL import 和 rect 外 hash 两种证据？
 
-### 修复后动态录屏
+### 现有可见播放录屏
 
 - 不问“是不是好了”，改问“这 16 秒覆盖了哪几条 AC，没覆盖哪几条？”
 - 让学员在验收矩阵中只勾可见交互相关项。
@@ -3321,7 +3333,7 @@ evidence/gpu-<runId>/
 
 - 30s：内容打开，证明会话与远端内容可达。
 - 45s：页面变化，证明不是一张静态缓存图。
-- 58s：右键交互，证明输入与画面更新形成闭环。
+- 58s：画面中出现右键菜单变化，证明该媒体记录了交互结果；完整输入映射仍需同 run 事件日志。
 - 三帧仍不能证明无偶发卡顿，需要完整视频和分段指标。
 
 ## K6. 学员证据卡

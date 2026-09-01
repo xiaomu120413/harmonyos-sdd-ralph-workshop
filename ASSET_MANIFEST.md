@@ -5,20 +5,22 @@
 | 文件 | 类型 | 主要用途 | 注意事项 |
 |---|---|---|---|
 | `mdm/firewall-domain-rule-created.jpeg` | 真机截图 | 第 1 页建立“UI 可见不等于系统事实”的开场冲突 | 能证明域名规则出现在页面；不能证明所有账号的系统 policy/rules 已正确下发 |
-| `gpu-failure-black-screen-13s.mp4` | 视频 | 第 28/32 页黑屏故障带入 | 证明现象可复现，不直接证明根因 |
+| `gpu-failure-black-screen-13s.mp4` | 视频 | 第 28/32 页黑屏故障带入 | 只证明该媒体中可见黑屏，不直接证明根因或与卡顿报告属于同一 run |
 | `gpu-failure-black-screen-contact.jpg` | 图片 | 黑屏关键帧讨论 | 需结合 frame trace |
-| `gpu-validation-video-playback-16s.mp4` | 视频 | 第 31/38 页动态验证 | 证明可见交互，不单独证明 owner/target 契约 |
-| `gpu-cpu-stutter-before.mp4` | 视频槽位 / PENDING | 第 28 页案例二原始问题：视频经 CPU 路径播放卡顿 | 当前仓库没有能同时证明卡顿、CPU 占用和协商路径的原始视频；拍摄脚本见 `harmonyos-sdd-workshop-media/VIDEO_TODO.md` |
+| `gpu-validation-video-playback-16s.mp4` | 视频 | 第 31/38 页媒体观察 | 只证明该媒体中可见播放/部分交互；未绑定 commit/runId，不证明硬解、性能或 owner/target 契约 |
+| `gpu-cpu-stutter-before.mp4` | 视频槽位 / PENDING | 第 28 页：待采集用户报告的卡顿现象；文件名中的 CPU 不是已证事实 | 当前仓库没有能同时证明卡顿、CPU 占用和协商路径的原始视频；拍摄脚本见 `harmonyos-sdd-workshop-media/VIDEO_TODO.md` |
 | `gpu-hwdecode-after.mp4` | 视频槽位 / PENDING | 第 38 页硬解方案最终 A/B 验收 | 必须与 before 使用同一设备、分辨率、服务端和片段，并同时保存性能采样与路径日志 |
 | `gpu-validation-video-playback-contact.jpg` | 图片 | 视频、切换、遮挡关键帧 | 用于逐项核对场景覆盖 |
-| `gpu-e2e-interaction-public.jpg` | 图片 | 打开内容、页面变化、右键交互 | 已排除连接信息阶段 |
-| `gpu-connection-interaction-contact.jpg` | 图片 | 本地 V3 的完整连接与交互联系表 | 含连接信息，仅限 Private 仓库与内部授课 |
+| `gpu-e2e-interaction-public.jpg` | 图片 | 打开内容、页面变化、右键交互 | 只证明关键帧中可见这些结果，不证明完整输入路径 |
+| `gpu-connection-interaction-contact.jpg` | 图片 | 本地 V3 的完整连接与交互联系表 | 含连接信息；当前仓库为 Public，公开使用前必须再次审查与脱敏 |
 | `freerdp-stutter-scenario.jpeg` | 图片 | 建立真实远程 workload | 是场景图，不是卡顿根因证据 |
 | `freerdp-frame-pacing.jpeg` | 图片 | frame pacing 讨论 | 单帧不能证明连续帧节奏 |
 | `freerdp-render-queue.jpeg` | 图片 | 日志/诊断采集入口 | 含连接信息；不证明队列本身正确 |
 | `freerdp-compositor-scale.jpeg` | 图片 | resize、retained/target 尺寸讨论 | 需要尺寸和生命周期日志佐证 |
 | `nativebuffer-test-pattern.png` | 图片 | AVC420 NativeBuffer 阶段 | import 成功还需 EGLImage/OES 日志 |
 | `rgba-renderer-test-pattern.png` | 图片 | RGBA retained 输出阶段 | dirty rect 还需 rect 外像素断言 |
+
+案例二媒体与空白证据的统一状态见 `case-materials/gpu/00-证据状态总表.md`。
 
 ## Anthropic 方法论配图
 

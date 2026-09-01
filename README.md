@@ -14,6 +14,7 @@
 - [案例二：跨平台调研与最小穿刺](evidence/gpu/02-platform-research-and-spike.md)
 - [案例二：任务、验收与排障证据链](evidence/gpu/03-task-acceptance-and-debug.md)
 - [案例二独立工程交付包](case-materials/gpu/README.md)
+- [案例二：证据状态总表（空白项与媒体边界）](case-materials/gpu/00-证据状态总表.md)
 - [案例二：源码调用链与任务拆解主文档](case-materials/gpu/09-源码调用链与任务拆解.md)
 - [原始大纲](archive/harmonyos-sdd-ralph-workshop-original.md)
 - [Rich V2 归档](archive/harmonyos-sdd-ralph-workshop-rich-v2.md)
@@ -58,13 +59,13 @@
 
 > 当前状态：源码级调用链与任务拆分已先完成文档修订；仓库中的 V5 PPT 尚未同步这些新图，后续以 `case-materials/gpu/09-源码调用链与任务拆解.md` 为底稿单独改版。
 
-PPT 第 28–38 页改为一条可讲、可演示、可审计的案例二证据链：
+主讲稿第 28–38 页已整理为一条可讲、可演示、可审计的案例二证据链；V5 PPT 尚待后续同步：
 
-- 从“远控视频卡顿”现场拆出已知事实、工作假设和 `PENDING / UNKNOWN` 指标；
+- 从“用户报告远控视频卡顿”拆出已知事实、工作假设和 `PENDING / UNKNOWN` 指标；
 - 用三个源码入口与一条真实 `SurfaceCommand → candidate policy → OH_AVCodec → pending → EndFrame present` 调用链控制上下文预算；
 - 对照 FFmpeg / OpenH264、Windows Media Foundation、Android MediaCodec 与 HarmonyOS `OH_AVCodec`，提炼输入输出、生命周期、线程、资源 owner 和 fallback 契约；
 - 用 `ADR-GPU-001` 固化调用链、Decision、Deferred 与 Fallback；
-- 通过 `SP-01..05` 最小能力穿刺先证明初始化、送帧、取帧、显示与释放边界；
+- 用 `SP-01..05` 定义最小能力穿刺；当前运行数据未入库的步骤保留 `PENDING`；
 - 将实现拆成 `T-GPU-00..07` 八张任务卡，每张卡都有前置条件、修改范围、产物、验收步骤和失败回滚；
 - 展示 Planner / Explorer / Implementer / Tool / Reviewer 的交付物式协同；
 - 用黑屏失败视频说明 `Stop → Preserve → Locate → Falsify → Repair` 排障循环；
@@ -90,6 +91,7 @@ PPT 第 28–38 页改为一条可讲、可演示、可审计的案例二证据�
 │   ├── 02-platform-research-and-spike.md
 │   └── 03-task-acceptance-and-debug.md
 ├── case-materials/gpu/
+│   ├── 00-证据状态总表.md
 │   ├── 01-问题与基线.md
 │   ├── 02-大代码库认知地图.md
 │   ├── 03-跨平台实现调研.md
