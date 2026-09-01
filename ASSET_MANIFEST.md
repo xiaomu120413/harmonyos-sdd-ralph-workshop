@@ -101,3 +101,16 @@ commit / package version
 capture time range
 PASS / FAIL / UNKNOWN scope
 ```
+
+## GPU 案例文档生成证据图
+
+以下图片由仓库内真实 Markdown 文档本地渲染生成，用于第 29–33 页解释“文档怎么生成、谁来确认、为什么成为下一阶段约束”。它们不是运行结果，也不冒充 GPU 性能或真机验收证据。
+
+| 文件 | 文档来源 | 对应页面 | 用途 |
+|---|---|---:|---|
+| `gpu-docs/doc-29-codebase-map.png` | `case-materials/gpu/02-大代码库认知地图.md` | 29 | 完整认知地图文档截面 |
+| `gpu-docs/doc-29-codebase-map-strip.png` | 同上 | 29 | 在现有小图框中展示 Input / AI / Human / Why / Next |
+| `gpu-docs/doc-30-platform-research.png` | `case-materials/gpu/03-跨平台实现调研.md` | 30 | 平台生命周期、失败与释放语义对照 |
+| `gpu-docs/doc-31-adr.png` | `case-materials/gpu/04-ADR-GPU-001-HarmonyOS硬解方案.md` | 31 / 备课 | ADR Alternatives、Preferred 与 Evidence Gate |
+| `gpu-docs/doc-32-spike-plan.png` | `case-materials/gpu/05-最小能力穿刺计划.md` | 32 | 穿刺步骤、证据和 Stop 条件 |
+| `gpu-docs/doc-33-task-card.png` | `case-materials/gpu/tasks/T-GPU-02.md` | 33 / 备课 | 单结果任务卡、AC、Forbidden 与 Stop |

@@ -1622,6 +1622,16 @@ progress: 设计
 
 ### 画面
 
+先亮出真实产物名：`02-大代码库认知地图.md / codebase-map.md`。旁边固定放生成卡：
+
+```text
+Input：问题背景 + 仓库文件清单 + 入口符号
+AI action：rg 定位 → 追一条调用链 → 记录未知
+Human decision：抽查 path::symbol，拒绝把文件名当运行事实
+Why：把“55 万行上下文”压缩成下一轮可检索的证据索引
+Next：给跨平台调研限定要比较的接口与边界
+```
+
 **从“读全库”改成“回答五个问题”**
 
 ```text
@@ -1694,6 +1704,7 @@ AI 熟悉大库的产物不是“仓库总结”，而是 `codebase-map.md`。�
 
 - `evidence/gpu/01-codebase-map.md`
 - `case-materials/gpu/02-大代码库认知地图.md`
+- `case-materials/gpu/11-AI文档生成与审阅链.md`
 - `case-materials/gpu/09-源码调用链与任务拆解.md`
 - `harmony/third_party/FreeRDP/libfreerdp/codec/h264.c`
 - `harmony/third_party/FreeRDP/client/OHOS/README.md`
@@ -1711,6 +1722,16 @@ progress: 设计
 -->
 
 ### 画面
+
+顶部先放真实文件名：`03-跨平台实现调研.md`，再显示它的生成链：
+
+```text
+Input：codebase-map + FFmpeg/OpenH264/MF/MediaCodec/OH_AVCodec
+AI action：对齐生命周期、buffer 状态、失败传播和释放语义
+Human decision：复用契约，不复制 API、线程模型和 Surface ownership
+Why：调研必须减少 ADR 的未知，而不是堆资料
+Next：输出候选方案、风险、Deferred 与 Evidence Gate
+```
 
 | 已有实现 | 作用 | 能复用 | 不能照抄 |
 |---|---|---|---|
@@ -1768,6 +1789,7 @@ AI 输出一张“同与不同”表：
 
 - `evidence/gpu/02-platform-research-and-spike.md`
 - `case-materials/gpu/03-跨平台实现调研.md`
+- `case-materials/gpu/11-AI文档生成与审阅链.md`
 - `h264_mediacodec.c` / `h264_mf.c` / `h264_ohos_decoder.c`
 
 ---
@@ -1783,6 +1805,16 @@ progress: 设计
 -->
 
 ### 画面
+
+先说明这不是 AI 突然给出的架构图，而是 `ADR-GPU-001` 对上页已审阅调研的决策记录：
+
+```text
+Input：平台调研 + 当前源码调用链 + 失败/回退约束
+AI action：给出候选方案、Alternatives、Deferred 与风险
+Human decision：选择 Bridge 受控接管 + App Compositor + original fallback
+Why：开发前冻结 owner、EndFrame、fallback 边界，防止实现中途漂移
+Next：只允许最小穿刺验证 Evidence Gate 中最大的未知
+```
 
 ```mermaid
 flowchart TD
@@ -1832,6 +1864,8 @@ AI 容易给出“OH_AVCodec → Surface 直接显示”的漂亮方案，但这
 
 - `evidence/gpu/02-platform-research-and-spike.md`
 - `client/OHOS/README.md`
+- `case-materials/gpu/04-ADR-GPU-001-HarmonyOS硬解方案.md`
+- `case-materials/gpu/11-AI文档生成与审阅链.md`
 
 ---
 
@@ -1846,6 +1880,16 @@ progress: 代码
 -->
 
 ### 画面
+
+先亮出 `05-最小能力穿刺计划.md`，并解释它不是凭空拆出来的：
+
+```text
+Input：ADR Evidence Gate + 最大技术未知
+AI action：倒推 SP-01～SP-05，每步绑定一条证据和一个 Stop
+Human decision：只验证一帧 decode→pending→present→fallback
+Why：用最短真实路径证伪接口边界，不提前做完整性能优化
+Next：只有穿刺通过的边界，才允许进入任务拆分
+```
 
 ```text
 SP-01 bridge 与 compositor 进入 arm64/HAP 产物
@@ -1898,6 +1942,8 @@ Missing evidence:
 - `gpu-failure-black-screen-13s.mp4`
 - `evidence/gpu/02-platform-research-and-spike.md`
 - `gpu-failure-black-screen-contact.jpg`
+- `case-materials/gpu/05-最小能力穿刺计划.md`
+- `case-materials/gpu/11-AI文档生成与审阅链.md`
 
 ---
 
@@ -1912,6 +1958,16 @@ progress: 任务
 -->
 
 ### 画面
+
+页首先显示 `tasks/T-GPU-00..07.md` 的生成逻辑：
+
+```text
+Input：穿刺 PASS/FAIL/UNKNOWN + 源码边界 + 用户验收目标
+AI action：按“一个可观察结果”切 Task，补 Allowed/Forbidden/Verify/Stop
+Human decision：确认不能跨边界，验收标准必须先于实现
+Why：失败时能回到准确任务卡，不把整条 GPU 链一起重写
+Next：Ralph 每轮只领取一张 Task Card，并把证据写回 progress
+```
 
 先给一张从穿刺结果推导出来的任务图：
 
@@ -1964,6 +2020,7 @@ Stop: 输出不可关联或格式不支持时不进入 T03
 - `evidence/gpu/03-task-acceptance-and-debug.md`
 - `case-materials/gpu/09-源码调用链与任务拆解.md`
 - `case-materials/gpu/tasks/T-GPU-02.md`
+- `case-materials/gpu/11-AI文档生成与审阅链.md`
 - 附录 B7 Task Card / Progress Ledger
 
 ---
