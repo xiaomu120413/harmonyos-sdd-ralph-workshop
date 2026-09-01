@@ -12,7 +12,7 @@
 
 | AI 进阶能力 | 真实问题先行 | 本课实践动作 | 可检查产物 |
 |---|---|---|---|
-| 需求澄清与边界冻结 | “全部账号”“自动同步”“回滚”被 AI 自行解释 | 歧义树、EARS、行为矩阵、不变量 | `spec.md` |
+| 需求澄清与边界冻结 | “全局禁用”“默认策略”“单设备规则”被 AI 混为一谈 | 歧义树、EARS、行为矩阵、不变量 | `spec.md` |
 | 上下文工程 | 长 Session 反复搜索，换会话后重新猜问题 | 只读勘察、证据索引、按需检索、新会话交接 | `progress.md` + evidence index |
 | Workflow / Agent 分工 | 构建安装等固定步骤与开放排障混在一起 | 固定动作走 Workflow，假设选择与最小修改交给 Agent | Task Card + execution trace |
 | 工具契约与环境事实 | MCP 返回成功，但设备业务状态没有成功 | 分开 protocol、tool、business、system 四层结果 | tool result + getter/log |
@@ -147,13 +147,32 @@ workshop/
 
 > AI 修改完成、测试通过、页面也能打开——这能证明需求已经交付吗？
 
-![真实 SecurityTool 防火墙域名规则页面](harmonyos-sdd-workshop-media/mdm/firewall-domain-rule-created.jpeg)
+![真实 SecurityTool 外设策略页面](harmonyos-sdd-workshop-media/e2e/peripheral-policy-current.png)
 
-<sub>这张真机图只能证明规则已出现在 UI；它不能单独证明每个账号的系统 policy/rules 已正确下发。开场让学员先说“它能证明什么、不能证明什么”。</sub>
+```text
+需求：USB 全局总控、默认规则和设备黑白名单必须协同
+AI：已完成
+测试：816 / 816
+页面：设备显示“禁止接入”
+MDM 回读 / 实物行为：？
+```
+
+页脚小字：
+
+```text
+本课不比较模型排行榜，也不教授万能 Prompt。
+我们只解决：复杂需求如何被拆解、执行、纠偏和验收。
+```
+
+### 主视觉
+
+- 标题页保持克制，不画方法论大转盘。
+- 可在右下角小幅使用真实 SecurityTool 页面，作为后续案例预告，不在本页解释调用链。
+- 禁止使用“紫色 AI 中心 + 十几个节点”的自绘总览图。
 
 ### 讲师备注
 
-开场不要先解释 SDD 名词。先问：“AI 说改完了、单测也过了，但新增账号没有策略，这算完成吗？”让学员明确本课的完成定义不是代码生成，而是系统事实可证明。
+开场不要先解释 SDD 名词。先问：“AI 说改完了、单测也过了，但 USB 系统回读和实物行为还没验证，这算完成吗？”让学员明确本课的完成定义不是代码生成，而是系统事实可证明。
 
 课名里的“较为复杂”要在这一页说清楚：不是代码行数多，而是需求存在分叉、状态跨用户与进程、实现跨工具与会话、失败会留下部分状态、最终结果必须由设备事实验证。课名里的“进阶能力”则对应上下文工程、Workflow / Agent 分工、工具调用、长任务记忆、评估反证和协同交接。
 
@@ -161,7 +180,7 @@ workshop/
 
 ### 演示动作
 
-快速展示一组对照：绿色单测输出 + 真机上账号 123 未收敛的日志。此时不解释原因，只留下悬念。
+快速展示一组对照：绿色单测输出 + 页面显示“禁止接入”，但 MDM 系统回读和实物行为仍是 `PENDING`。此时不解释原因，只留下悬念。
 
 ### 通过条件
 
@@ -171,7 +190,7 @@ workshop/
 
 - MDM 首页真机截图
 - 一段单测全绿输出
-- 一段账号新增后未收敛的设备日志
+- 一份 USB 页面回显与系统回读待交叉验证的证据卡
 
 ---
 
@@ -424,30 +443,30 @@ progress: 需求
 
 **MDM 主闭环｜TEACHING COMPOSITE**
 
-> 设备当前处于 `public` 且防火墙已开启，已覆盖账号 `[100,112]`。系统收到 `account-added(123)` 后，先等待账号事实稳定，再把 public policy / preset rules 补到最新账号集合。若账号 123 的第 2 条规则下发失败，必须恢复旧状态，不得保存目标 signature，并留下可回读证据。
+> USB 全局开关当前启用，设备 A 为显式 `deny/active=deny`，设备 B 为 `allow`。管理员执行全局禁用时，系统必须先暂停在线 active deny，再下发 restrictions `usb`。若全局下发失败，必须补偿恢复 A 的 deny，不得改写 `desiredPolicy`，并留下可回读证据。
 
 ```mermaid
 flowchart LR
-    A[账号 123 新增] --> B[稳定快照]
-    B --> C[模式重放]
-    C --> D[故障注入]
-    D --> E[补偿与回读]
+    A[全局禁用] --> B[捕获在场设备]
+    B --> C[暂停 active deny]
+    C --> D[restrictions 下发]
+    D --> E[失败补偿与回读]
 ```
 
 ### 讲师备注
 
-这条英雄任务由三个真实问题组合：账号快照时序、跨进程事实传播、模式重放失败补偿。课程后面遇到的“已经开启/关闭、重复事件、部分失败、systemRuleId、MCP 回读”都挂到这条主闭环上；第 28–38 页再把同一套控制方法迁移到 GPU 证据诊断，而不是开启一门新课。
+这条英雄任务由三个真实问题组合：全局与单设备策略优先级、意图与执行态分离、事务中途失败补偿。课程后面遇到的“页面回显、系统回读、部分失败、补偿、实物验收”都挂到这条主闭环上；第 28–38 页再把同一套控制方法迁移到 GPU 证据诊断，而不是开启一门新课。
 
 冻结课堂语义：
 
-- 新增事件第一次读到 `[100,112]` 不是稳定；直到包含触发账号 123 才可 dispatch。
-- public/private 账号集合变化时重放模式；custom 只同步默认 policy，不自动扩大旧自定义规则作用域。
-- 模式重放是事务：失败后尝试整体补偿，并重建恢复后的 deployment identity。
-- 总开关部分失败不是同一语义，后面专门比较。
+- 优先级冻结为 `global deny > explicit desiredPolicy > usbDefaultPolicy`。
+- 全局禁用只覆盖有效结果，不改写设备 `desiredPolicy`。
+- MDM 下发成功后才提交 `activePolicy`；失败时 UI 和本地状态保持旧值。
+- fingerprint 是业务身份，系统 deny 实际是 `baseClass` 粒度，必须用同类型双设备验收影响面。
 
 ### 演示动作
 
-在白板或画布上固定写出 `100 / 112 / 123`，后续所有需求、测试与日志都沿用这三个 ID。
+在白板或画布上固定写出 `global / desired / default / active`，后续所有需求、代码、测试与证据都沿用这四个语义。
 
 ### 通过条件
 
@@ -455,9 +474,9 @@ flowchart LR
 
 ### 素材
 
-- 账号集合变化示意图
-- `FirewallAccountChangeHandler.ets`
-- `FirewallModeSwitchService.ets`
+- USB 分层策略与补偿流程图
+- `UsbGlobalPolicyService.ets`
+- `UsbDevicePolicyStateService.ets`
 
 ---
 
@@ -504,7 +523,7 @@ SDD 负责“要到哪里、边界是什么”；Ralph Loop 是“一次走多�
 
 ### 演示动作
 
-展示两份短 `progress.md`：Round 1 解决账号可见性；Round 2 解决模式重放失败补偿。让学员看到“循环真正发生”。
+展示两份短 `progress.md`：Round 1 解决全局开关与默认策略语义冲突；Round 2 解决全局下发失败后的 deny 补偿。让学员看到“循环真正发生”。
 
 ### 通过条件
 
@@ -709,6 +728,7 @@ EARS 不是为了写得像规范，而是把触发条件、等待状态、期望
 
 - 附录 B4 `spec.md` 模板
 - 附录 L4 权限策略 Session Evidence Card
+- 本地预告图：`harmonyos-sdd-workshop-media/e2e/peripheral-policy-current.png`
 
 ---
 
@@ -839,7 +859,7 @@ OpenAI 对 Codex Agent Loop 的拆解指出：工具调用可能直接修改环�
 
 必须补一句：**Agent 返回最终消息，只能证明这次 Loop 结束了，不能自动证明业务目标完成。** 这句话直接引出第 5、6 页。
 
-可选口播 Trace：以“重复添加相同规则”为例，只讲搜索、RED、最小修改、GREEN、回读数量五步；只有最终规则数量仍为 1 才允许 Stop。详细实现留到后面的 MDM 案例。
+可选口播 Trace：以“默认 allow 的新 USB 没有进入白名单”为例，只讲搜索、RED、最小修改、GREEN、状态库回读五步；只有设备保持可用且新增 `desired=allow/active=none` 记录才允许 Stop。详细实现留到后面的 MDM 案例。
 
 [Sources]
 - Anthropic, *Building Effective AI Agents*: https://www.anthropic.com/engineering/building-effective-agents
@@ -903,24 +923,24 @@ OpenAI 对 Codex Agent Loop 的拆解指出：工具调用可能直接修改环�
 先给一个 20 秒具体场景：
 
 ```text
-PRD：同步到全部账号
-实现：只更新当前账号
-UI：显示“同步成功”
-测试：只覆盖当前账号
-结论：页面成功，业务结果仍可能失败
+PRD：USB 全局禁用时保留设备黑白名单意图
+实现：页面把设备改成 deny，但系统仍按旧策略运行
+UI：显示“禁止接入”
+测试：只覆盖 ViewModel 状态
+结论：页面成功，MDM 与实物结果仍可能失败
 ```
 
 主视觉继续使用真实 SecurityTool 页面，不使用通用插画。
 
-![SecurityTool 防火墙规则真实页面](harmonyos-sdd-workshop-media/mdm/firewall-domain-rule-created.jpeg)
+![SecurityTool 外设策略真实页面](harmonyos-sdd-workshop-media/e2e/peripheral-policy-current.png)
 
 右侧放分层判断：
 
 ```text
-Agent message    “已完成”                 ≠ 交付
-Unit tests       816 / 816                = 代码协议证据
-UI screenshot    规则可见                  = 页面证据
-System readback  未采集                    = UNKNOWN
+Agent message    “已完成”                    ≠ 交付
+Unit tests       默认/显式/回退分支通过        = 代码协议证据
+UI screenshot    黑白名单与开关可见            = 页面证据
+MDM + USB        系统回读/实物未采集           = UNKNOWN
 ```
 
 底部结论：
@@ -1022,9 +1042,9 @@ Ralph 不是模型、框架或魔法 Prompt。Geoffrey Huntley 的原始定义�
 
 ### 主视觉
 
-左侧：同一条规则再次添加时出现明确失败，带出“失败语义和幂等性怎么定义”。
+左侧：真实外设黑白名单页面，带出“页面策略、应用意图和系统执行态是否一致”。
 
-![MDM 重复规则真实失败画面](harmonyos-sdd-workshop-media/mdm/firewall-duplicate-rule-failure.jpeg)
+![MDM 外设策略真实页面](harmonyos-sdd-workshop-media/e2e/peripheral-policy-current.png)
 
 右侧：真实远控场景画面，只用于带出“现象可见但根因仍未知”。
 
@@ -1036,7 +1056,7 @@ Ralph 不是模型、框架或魔法 Prompt。Geoffrey Huntley 的原始定义�
 
 明确接下来的主线：第 9 页开始完整走 MDM 六阶段——资产同步、方案推导、RFC、Story、Ralph、测试验收。第二案例只负责证明这套方法能迁移到“没有清晰需求、只有运行现象”的场景。
 
-共同主线只在口播中快速带过：管理输入 → 关闭关键未知 → 固化契约 → 拆任务 → 受控迭代 → 系统事实验收。需要互动时再给两个挑战：需求材料对“全部账号”的解释不同，先冻结语义；视频卡顿但没有同 run 证据，先采证据再决定改哪里。
+共同主线只在口播中快速带过：管理输入 → 关闭关键未知 → 固化契约 → 拆任务 → 受控迭代 → 系统事实验收。需要互动时再给两个挑战：USB 全局开关与默认策略被混为一谈，先冻结优先级和真源；视频卡顿但没有同 run 证据，先采证据再决定改哪里。
 
 转场问题：“如果原始 Excel、AI 修正版、PRD 和代码对同一个概念说法不同，你会先相信谁？”第 9、10 页用资产同步回答。
 
@@ -1048,1114 +1068,470 @@ Ralph 不是模型、框架或魔法 Prompt。Geoffrey Huntley 的原始定义�
 
 END ARCHIVED INTRO 2-8 -->
 
-## 第 9 页｜MDM 案例要走完六个阶段，不能从需求图直接跳到代码
+## 第 9 页｜案例背景：外设管理不是几个开关，而是四层策略叠加
 
-### PPT 内容
-
-主视觉是一条六阶段证据链：
+### 页内内容
 
 ```text
-1 资产同步
-→ 2 方案推导
-→ 3 架构 RFC
-→ 4 Story 拆分
-→ 5 Ralph 迭代
-→ 6 测试验收
+目标：企业管理员统一管控 USB，并支持动态黑白名单
+
+L1 设备级 USB 全局总控
+L2 USB 存储访问模式
+L3 已识别设备显式 allow / deny
+L4 未识别设备默认 allow / deny
+
+难点：优先级、真相源、动态生效、失败回退、实物验收
 ```
 
-每一步都生成一个可检查文档：
+右侧放现有 `peripheral-policy-current.png`，角标：“页面事实，不等于系统事实”。
 
-| 阶段 | 生成文档 | 解决的问题 |
+### 讲师备注
+
+- 怎么做：先让学员列出四层状态，不展示代码。
+- 怎么判断：同一设备在全局关/开、默认 allow/deny 下是否有唯一结果。
+- 不对怎么办：如果大家把默认策略说成全局开关，立即进入第 11 页的真实历史冲突。
+- 证据：页面截图只证明 UI 已存在；完整实物矩阵 PENDING。
+
+## 第 10 页｜资产同步：用索引建立上下文，不把工程塞进 Prompt
+
+### 页内内容
+
+| 读取轮次 | 输入 | 产物 |
 |---|---|---|
-| 资产同步 | 资产清单、术语表、冲突矩阵 | 输入是否完整、一致 |
-| 方案推导 | 备选方案表、ADR、穿刺报告 | 为什么选这个方案 |
-| RFC | 架构、状态、不变量、失败语义 | 系统应该怎样工作 |
-| Story | Feature Map、Worker Packet | AI 每轮只做什么 |
-| Ralph | progress、evidence、iteration ledger | 多轮如何不断线、不漂移 |
-| 验收 | acceptance report | 凭什么给 PASS |
+| 仓库地图 | AGENTS、路由、模块设计 | 入口与硬约束 |
+| 符号地图 | 5 个核心状态词 | 类与函数清单 |
+| 关键切片 | 命中代码 | UI→VM→Service→Repo/MDM |
+| 历史地图 | Story、changelog、git log | 旧方案为什么错 |
+| 证据地图 | UT/E2E/截图 | PASS/FAIL/PENDING |
 
-### 怎么做 / 怎么判断 / 不对怎么办
+页脚命令：
 
-- 怎么做：每一阶段读取上一阶段产物，并产生下一阶段的进入条件。
-- 怎么判断：任何代码都能追到 Story，任何 Story 都能追到 RFC/需求，任何 PASS 都能追到证据。
-- 不对怎么办：缺少上游文档就停止向下执行；不能靠更长 Prompt 补齐不存在的决策。
+```powershell
+rg -n "usbDisabled|usbDefaultPolicy|desiredPolicy|activePolicy|clearAllPolicies" ...
+```
 
 ### 讲师备注
 
-- 先问学员：“一张需求图给 AI，最快几分钟能开始写代码？”然后指出“开始写”并不是这门课的目标。
-- 本案例只选一条真实 Feature 深挖：系统账号变化后的防火墙同步。这样能把六阶段讲透，而不是展示七个模块的功能清单。
-- 告诉学员，后面每页都会打开一份真实文档，而不是只看流程箭头。
+- 怎么做：现场只打开 `PeripheralViewModel`、`UsbGlobalPolicyService` 和 `UsbDevicePolicyStateService` 三个关键文件。
+- 怎么判断：能否在两分钟内指出全局状态、默认策略和设备规则各自真源。
+- 不对怎么办：继续缩小检索，不要用“总结整个仓库”的超大 Prompt。
+- 证据：资产清单见 `01-资产同步与冲突清单.md`。
 
-### 文档 / 截图
+## 第 11 页｜冲突是最有价值的资产：文档和 AI 都可能“合理地错”
 
-- 文档：`case-materials/mdm/README.md`
-- **【补充素材】**：六份文档目录的文件树截图。
-
----
-
-## 第 10 页｜资产同步先建立来源和可信边界，不是把所有文件塞进上下文
-
-### PPT 内容
-
-展示本项目真实资产层级：
+### 页内内容
 
 ```text
-docs/00-原始输入/
-  信创工具需求清单.xlsx
-  信创工具需求清单_AI修正版.xlsx
-docs/01-UX设计/
-  index.html / script.js / styles.css
-docs/02-总体设计/
-  PRD.md / 总体设计RFC.md
-docs/03-模块设计/
-  防火墙管理组件设计说明.md
-entry/src/main/ets/...
-entry/src/test/...
-scripts/e2e/cases/firewall/...
+2026-05-14 旧方案：USB 接口 = usb_default_policy
+2026-07-11 当前方案：USB 接口 = restrictions usb 全局总控
+当前默认策略：黑白名单页独立入口
+
+为什么纠偏？
+全局开关控制现在所有设备；默认策略只决定未来新设备。
 ```
 
-AI 对每类资产只做对应工作：
-
-- 原始 Excel：抽取需求原文，不做技术裁决。
-- AI 修正版：作为候选平台映射，不自动视为真相。
-- UX：抽取页面和交互，不证明业务生效。
-- PRD/RFC/模块设计：分别管理产品范围、架构、模块状态与异常。
-- 代码/测试：验证当前实现事实，不决定未来产品取舍。
-
-### 怎么做 / 怎么判断 / 不对怎么办
-
-- 怎么做：为每个资产记录路径、版本、用途、可信边界、被谁引用。
-- 怎么判断：新 Session 看到资产索引，能知道“去哪找哪类问题的答案”。
-- 不对怎么办：文档和代码冲突时不自动选最新文件；生成冲突卡，交给下一页决策。
+再列两个冲突：连接记录 ≠ 策略真源；fingerprint 身份 ≠ 系统单设备粒度。
 
 ### 讲师备注
 
-- 现场打开原始 Excel，只看表头：场景、描述、功能、详细描述、接口、测试用例。指出原始文件后三列大量为空，这就是 AI 可以补充但不能擅自决定的空间。
-- 再打开 AI 修正版，说明它补了接口，却仍可能误解产品抽象。
+- 怎么做：并排展示两份 plan 和当前代码入口。
+- 怎么判断：至少需要“当前代码 + 权威规格 + 测试”三者互证。
+- 不对怎么办：把冲突写进清单，冻结结论，不让 AI 自选一个看起来最新的文档。
+- 证据：模块设计 changelog 1.0.13 与 1.0.58/当前 2.1；代码 `InterfaceControlViewModel`。
 
-### 现场实操
+## 第 12 页｜资产同步的出口是一张可验收需求卡
 
-1. 给学员 90 秒，从五类资产中各选一个文件，填写 `path / answers / cannot_prove / downstream`。
-2. 用代码搜索验证两条事实：`FirewallPresetMode` 定义在哪里；真实系统防火墙 API 被封装在哪里。
-3. 小组互换资产表，检查是否把 UX 当成业务真相、把代码现状当成未来需求、或把 AI 修正版当成最终决策。
+### 页内内容
 
-学员产物示例：
+```text
+Feature：USB 外设分层策略管理
 
-```yaml
-path: entry/src/main/ets/services/firewall/FirewallSystemRepository.ets
-answers: 当前系统防火墙 API 的封装方式
-cannot_prove: public/private/custom 的产品取舍
-downstream: RFC code mapping / system readback
+In：全局总控 / 存储模式 / 显式规则 / 默认规则 / 动态设置 / 回退
+Out：蓝牙单设备名单 / 管理员激活流程 / 假设序列号级系统阻断
+核心不变量：global > desired > default
+Oracle：UI + 本地状态 + MDM 回读 + 实物行为
 ```
 
-### 文档 / 截图
+### 讲师备注
 
-- 文档：`case-materials/mdm/01-资产同步与冲突清单.md#输入资产`
-- **【补充素材】**：两个 Excel、UX、PRD、代码目录拼成一张真实资产地图。
+- 怎么做：让学员把“支持黑白名单”改写为 4 个可观察事实。
+- 怎么判断：每条需求能否绑定独立 oracle。
+- 不对怎么办：没有 oracle 的句子退回澄清，不进入开发。
+- 证据：`01` 的需求重述卡与 `00` 证据状态总表。
 
----
+## 第 13 页｜方案推导先比较失败模式
 
-## 第 11 页｜资产同步最有价值的产物，是把“AI 修正错了”也保留下来
+### 页内内容
 
-### PPT 内容
-
-展示真实冲突：
-
-| 来源 | 对同一需求的表达 |
+| 方案 | 最大失败模式 |
 |---|---|
-| 原始 Excel C4 | 公共、专用、自定义三种缺省配置 |
-| AI 修正版 C4:E4 | 认为这是 Windows 概念，改成 IP/域名/DNS 三种规则类型 |
-| 当前 PRD | 要求 `public/private/custom` 三种主模式 |
-| 当前模块设计/代码 | 同时存在主模式和 IP/DOMAIN/DNS 规则类型 |
+| 单布尔状态 | 无法表达恢复与白名单 |
+| UI records 真源 | 重启/清记录后丢策略，容易假成功 |
+| 分层策略模型 | 结构更复杂，但可恢复、可验证 |
 
-最终决策：
+结论：采用“系统全局真源 + 默认 Preferences + 设备状态 RDB”。
 
-```text
-主模式：public / private / custom
-规则类型：IP / DOMAIN / DNS
-```
+### 讲师备注
 
-结论：平台接口没有“公共网络模式”枚举，不代表产品不能用预置规则组合出公共/私有模式。
+- 怎么做：不问哪个方案代码最少，问失败后能否恢复。
+- 怎么判断：是否能从持久状态推出下一步补偿动作。
+- 不对怎么办：若需要读历史事件才能猜当前规则，说明真源建错了。
+- 证据：`02-方案推导与决策记录.md`。
 
-代码事实必须在同页出现：
+## 第 14 页｜最小能力穿刺：系统执行粒度改变了整个架构
+
+### 页内内容
 
 ```ts
-// FirewallModels.ets
-export type FirewallPresetMode = 'public' | 'private' | 'custom'
+// 页面身份
+USB-SN:<serial> / USB-WEAK:<vid>:<pid>:<hash>
 
-// 同一模型文件中的规则类型集合
-RULE_IP / RULE_DOMAIN / RULE_DNS
-
-// FirewallModeStrategy.buildRulesForMode
-public  → buildPublicRules → 预置模板 × 当前账号集合
-private → buildPrivateRules → 私网配置模板 × 当前账号集合
-custom  → buildCustomRules → 既有 intent.targetUserIds
+// 系统下发
+{ baseClass, subClass: 0, protocol: 0, descriptor: INTERFACE }
 ```
 
-这三段代码说明两个维度不是同义词：`mode` 决定规则生成策略，`rule type` 决定单条规则的数据形态。
-
-### 怎么做 / 怎么判断 / 不对怎么办
-
-- 怎么做：把来源原文、AI 解释、代码现状、冲突和决策放到同一张矩阵。
-- 怎么判断：一个概念是否被错误合并；产品抽象和平台 API 是否被混为一谈。
-- 不对怎么办：AI 修正版与业务目标冲突时，保留原文和候选解释，由人做产品决策，再同步 PRD/RFC。
+大字结论：业务上按 fingerprint 管理，系统上按 USB 类型执行。
 
 ### 讲师备注
 
-- 这是资产同步的“真实戏剧点”。不要快速略过。
-- 可以问学员：“AI 修正版写得很专业、接口也很全，为什么仍然可能错？”答案是它回答了平台能力，却替产品做了取舍。
-- 强调同步产物必须保留反例，否则后续 Session 会再次把模式和规则类型混淆。
-- 现场从 `FirewallModels.ets:4` 跳到 `FirewallModeStrategy.buildRulesForMode()`，再打开 `mode_cards.json`。让学员分别指出：产品枚举、实现策略、E2E 可见性证据。三者职责不同，但可以通过同一 requirement ID 串起来。
+- 怎么做：打开 Dispatch Service 的 `toUsbDeviceType()`。
+- 怎么判断：插入两台同 baseClass 设备，观察影响面。
+- 不对怎么办：如果产品要求真正序列号级阻断，升级架构/产品决策，不能改 UI 文案掩盖。
+- 证据：D2 已有；同类型双设备 D6/D7 PENDING。
 
-### 文档 / 截图
+## 第 15 页｜ADR 把真相源、所有权和失败语义一次固定
 
-- 文档：`case-materials/mdm/01-资产同步与冲突清单.md#真实冲突`
-- **【补充素材】**：两个 Excel 第 4 行、PRD 7.2、`FirewallPresetMode` 与模式卡代码四联截图。
+### 页内内容
 
----
+| 状态 | Owner | 失败语义 |
+|---|---|---|
+| 全局 USB | restrictions 系统 | 不本地镜像 |
+| 默认策略 | Preferences Repo | 保存失败保持旧值；非法值→allow |
+| desired/present/active | USB State Repo | 系统成功后才提交 active |
+| trace | Trace Repo | 写失败不回滚已成功安全策略，但必须告警 |
 
-## 第 12 页｜资产同步结束时，要生成一张能追到代码和测试的需求卡
+### 讲师备注
+
+- 怎么做：每个状态只允许一个 owner。
+- 怎么判断：沿写路径搜索，是否存在第二个仓储或 UI 镜像。
+- 不对怎么办：先合并真源，再写业务逻辑。
+- 证据：ADR-001～004。
+
+## 第 16 页｜MVVM 必须落到真实类，而不是抽象四层
+
+### 页内内容
+
+```text
+PeripheralPage
+  ├─ InterfaceControlTab ─ InterfaceControlViewModel
+  │                         └─ UsbGlobalPolicyService
+  └─ PolicyList ────────── PeripheralPolicyViewModel
+                            ├─ DefaultPolicyRepository
+                            ├─ UsbDevicePolicyStateService
+                            └─ DispatchService
+
+PeripheralViewModel：管理员门禁 + 跨 Tab 刷新
+```
+
+### 讲师备注
+
+- 怎么做：强调父 VM 是协调器，不是万能 Service。
+- 怎么判断：View 中无 MDM/RDB，VM 中无 SQL/Preferences 细节，Service 中无页面状态。
+- 不对怎么办：发现越层调用时先重新分配责任，不在原类继续堆条件。
+- 证据：RFC 第 3、4、13 节。
+
+## 第 17 页｜源码调用链：动态规则为何不会假成功
+
+### 页内内容
+
+```text
+PolicyList
+ → PeripheralViewModel（admin + updating）
+ → PeripheralPolicyViewModel（校验 fingerprint/global）
+ → UsbDevicePolicyStateService（校验 present）
+ → DispatchService（校验 storage + MDM）
+ → 成功后 Repository.upsert
+ → reloadRecords
+```
+
+红线：`dispatch failed → old state stays`。
+
+### 讲师备注
+
+- 怎么做：现场沿 `handlePeripheralPolicyChange()` 追到 `setPolicy()`。
+- 怎么判断：查 `upsert` 是否位于 dispatch success 之后。
+- 不对怎么办：先回滚状态提交顺序，再补失败测试。
+- 证据：源码与 `PeripheralPolicyViewModel.test.ets`。
+
+## 第 18 页｜按可独立证明的能力拆成 8 个 Story
+
+### 页内内容
+
+```text
+S1 身份与状态真源
+S2 默认策略
+S3 首次连接
+S4 动态黑白名单
+S5 全局禁用/恢复
+S6 存储冲突
+S7 还原与残留清理
+S8 证据闭环
+```
+
+依赖主线：`S1+S2 → S3 → S4 → S5/S6 → S7 → S8`。
+
+### 讲师备注
+
+- 怎么做：按不变量拆，不按页面拆。
+- 怎么判断：每个 Story 能否单独写一个失败测试和 Done 证据。
+- 不对怎么办：一个 Story 同时修改全局、默认、E2E 三套语义时继续拆。
+- 证据：`04-Feature与Story拆解.md`。
+
+## 第 19 页｜Worker Packet 让新 Session 不靠聊天记忆接力
+
+### 页内内容
+
+```text
+Goal / Read first / Invariants / Allowed files / Forbidden
+Tests / Device dependency / Done evidence / Stop condition
+```
+
+示例不变量：全局不改 desired；失败补偿；不新增 global 本地持久化。
+
+### 讲师备注
+
+- 怎么做：现场展示 S5 Worker Packet。
+- 怎么判断：把当前聊天关掉，新 Session 是否仍能直接执行。
+- 不对怎么办：若 Worker 需要“看上文”，说明外部记忆不完整。
+- 证据：`04` 第 5 节。
+
+## 第 20 页｜Ralph 一轮只收敛一个未知
+
+### 页内内容
+
+```text
+READ → PLAN → IMPLEMENT → VERIFY → RECORD
+                    ↑                     ↓
+                    └── next unknown ─────┘
+
+STOP：AC 已证明
+CONTINUE：出现新未知
+ESCALATE：需要设备/权限/产品决策
+```
+
+### 讲师备注
+
+- 怎么做：限制每轮一个主失败和一个 oracle。
+- 怎么判断：progress 能说清本轮证据和下一未知。
+- 不对怎么办：重复三轮同一阻塞就升级，不无限重试。
+- 证据：`05-Ralph迭代运行账.md`。
+
+## 第 21 页｜真实十轮收敛：每次错误都固化成不变量
+
+### 页内内容
+
+选择 5 个关键转折：
+
+```text
+默认策略误作全局开关 → 两入口分离
+连接记录反推名单     → 独立策略状态库
+desired=active        → 意图/执行态分离
+还原=删除             → 清系统残留 + 保留卡片
+默认 allow 不入名单  → allow 也保存资产状态
+```
+
+页脚放提交：`63dda4b4 / 6e7702cd / 23c4a046 / f95c5109`。
+
+### 讲师备注
+
+- 怎么做：不逐个讲 commit，只讲“症状→根因→新不变量”。
+- 怎么判断：修复是否同时更新设计、代码、测试和证据。
+- 不对怎么办：如果修复只改 UI，回到系统真源重做。
+
+## 第 22 页｜失败处理：补偿和还原不是同一件事
+
+### 页内内容
+
+左侧“全局禁用失败补偿”：
+
+```text
+suspend deny → global disable FAIL → restore deny → UI 不提交
+```
+
+右侧“管理员还原”：
+
+```text
+read EDM residue → remove all → local allow/none → reload
+```
+
+### 讲师备注
+
+- 怎么做：让学员指出哪一步失败会导致什么状态。
+- 怎么判断：系统清理失败时本地是否仍保持原值。
+- 不对怎么办：若出现系统/本地不一致，停止自动循环，重新回读并人工决策。
+- 证据：Global Service 与 `clearAllPolicies()`。
+
+## 第 23 页｜证据阶梯：不同证据只能证明不同事实
+
+### 页内内容
+
+```text
+D1 文档 → D2 代码 → D3 UT → D4 构建
+       → D5 E2E/UI → D6 系统回读 → D7 实物行为
+```
+
+示例：`PER-IF-002 PASS` 只证明 UI 往返，不证明 USB 真被禁用。
+
+### 讲师备注
+
+- 怎么做：给每个验收结论贴证据等级。
+- 怎么判断：涉及“系统已生效”的句子是否至少有 D6。
+- 不对怎么办：证据不足标 UNKNOWN/PENDING，不补推理。
+- 证据：`00-外设管理证据状态总表.md`。
+
+## 第 24 页｜保留 FAIL 才能证明迭代：同一入口从失败到通过
+
+### 页内内容
+
+| 运行 | 结果 | 证据 |
+|---|---|---|
+| `PER-BL-USB-001` | FAIL | 页面/Tab 定位 UNKNOWN，找不到“还原策略” |
+| `PER-POL-001` | PASS | 页面、Tab、还原入口均可见 |
+
+结论：失败证据不删除；修复后新增一份可比较结果。
+
+### 讲师备注
+
+- 怎么做：现场打开两个 JSON 的 status、steps、primary_evidence。
+- 怎么判断：先区分驱动失败、环境未知和产品失败。
+- 不对怎么办：导航 UNKNOWN 时先修测试可观测性，不直接改业务逻辑。
+- 证据：两份真实 E2E JSON；自包含摘要见 `evidence/mdm/peripheral-e2e-summary.md`；artifacts 为空，视频仍 PENDING。
+
+## 第 25 页｜最终验收：当前部分通过，完整设备矩阵仍待补
+
+### 页内内容
+
+| 维度 | 当前 |
+|---|---|
+| 架构与规则 | PASS（文档/代码） |
+| 关键失败分支 | PASS/部分覆盖（UT） |
+| 页面路径 | PASS（多条 E2E） |
+| 系统回读 | PENDING |
+| USB 实物矩阵 | PENDING |
+
+预留视频：默认 allow/deny、全局禁用/恢复、还原、同类型双设备。
+
+### 讲师备注
+
+- 怎么做：用验收矩阵收口，不做口头“总体通过”。
+- 怎么判断：每个 AC 都能追到 evidence ID。
+- 不对怎么办：系统/实物缺证据就不发布“完成”，建立设备验收任务。
+- 收获：复杂需求的完成定义是“架构可解释、失败可恢复、证据可复核”。
+
+## 第 26 页｜实践：把外设策略验收写成可执行系统契约
 
 ### PPT 内容
 
-展示 `FW-MODE-001` 需求卡：
+学员任选一个场景，写完整 Case：
+
+```text
+A 默认 allow 新设备
+B 默认 deny 新设备
+C 全局禁用/恢复
+D 还原系统残留
+E 同 baseClass 双设备影响面
+```
+
+Case 必须包含：
 
 ```yaml
-requirement_id: FW-MODE-001
-source:
-  - 原始需求清单.xlsx!Sheet1:C4
-  - PRD.md#7.2
-decision: 保留 public/private/custom 产品模式
-implementation:
-  - FirewallPage.ets
-  - FirewallModeStrategy.ets
-tests:
-  - mode-strategy.test.ets
-  - e2e/cases/firewall/mode_cards.json
-conflict:
-  source: AI修正版.xlsx!Sheet1:C4:E4
-  resolution: 规则类型与主模式是两个维度
-status: RESOLVED
-```
-
-资产同步的出口门：来源可追溯、术语有定义、冲突有状态、缺口有负责人、代码和测试有初步落点。
-
-需求卡必须通过四个机器可检查项：
-
-```text
-source 坐标可回读      Excel/Markdown 位置存在
-implementation 可定位  文件存在，并能找到目标类型/函数
-tests 可执行            UT 文件或 Case JSON 存在
-claim 不越过证据        mode_cards 只证明模式卡可见，不证明策略已下发
+precondition:
+  admin: activated
+  global_usb: enabled
+  storage_policy: read_write
+  local_policy_state: baseline
+action:
+  - set_default_deny
+  - attach_usb_device
+oracles:
+  ui: device appears in blacklist
+  local: desired=deny, active=deny, present=true
+  system: disallowed usb type is readable
+  physical: device cannot be used
+cleanup:
+  - restore_all_policies
+result: PENDING
 ```
 
 ### 怎么做 / 怎么判断 / 不对怎么办
 
-- 怎么做：把 Excel 行转换成稳定 ID，并附来源坐标、决策、实现和测试路径。
-- 怎么判断：不打开长 Session，仅凭需求卡即可复述“原始需求是什么、AI 改了什么、最终为何这样做”。
-- 不对怎么办：状态仍为 OPEN/UNKNOWN 的冲突不能进入正式 RFC，先作为澄清或穿刺任务。
+- 怎么做：先写预置和清理，再写动作，最后定义四栏 oracle。
+- 怎么判断：换一台设备、换一个 Session 仍能重复执行，并能区分 FAIL/UNKNOWN。
+- 不对怎么办：无法系统回读时标 UNKNOWN；清理失败时停止下一 Case，避免污染。
 
 ### 讲师备注
 
-- 解释“结构化”不是为了机器好看，而是为了让下一步可自动检查：路径是否存在、测试是否映射、状态是否关闭。
-- 这张需求卡后续可以做截图，也可以作为 Ralph 每轮读取的最小上游材料。
-
-### 现场实操
-
-- 给学员一张故意有错的需求卡：把 `mode_cards.json` 写成“证明系统 policy 已生效”。
-- 要求学员把结论改成“公共/私有模式卡文本可见”，并追加缺失证据：`getNetFirewallPolicy(userId)` readback。
-- 最终产物不是一句评价，而是修正后的 `requirement-card.yaml`，包含 `claim_scope` 和 `missing_evidence`。
+- 要求学员特别写出“同类型第二台设备”，验证平台 baseClass 粒度。
+- 强调视频是实物证据，但视频里还要同步出现操作、设备和时间/Case ID。
 
 ### 文档 / 截图
 
-- 文档：`case-materials/mdm/01-资产同步与冲突清单.md#同步后的需求卡示例`
-- **【补充素材】**：需求卡 Markdown 实际渲染截图。
+- 文档：`case-materials/mdm/06-测试验收报告.md#5-真机验收-runbook`
+- **【视频占位】**：默认 deny 插入 U 盘，UI/系统回读/实物行为同屏。
 
 ---
 
-## 第 13 页｜方案推导先比较失败模式，再决定类和接口
+## 第 27 页｜MDM Checkpoint：交付的不是代码，而是一条可复核证据链
 
 ### PPT 内容
 
-以“账号变化后同步防火墙”为 Feature，展示四个方案：
+```text
+需求卡
+  → 冲突清单
+  → 穿刺与 ADR
+  → MVVM / 策略 RFC
+  → Story + Worker Packet
+  → Ralph 运行账
+  → UT / E2E / 系统回读 / 实物视频
+  → 验收矩阵
+```
 
-| 方案 | 主要问题 | 决策 |
-|---|---|---|
-| Provider 读取后直接同步防火墙 | 真相源和副作用耦合，其他模块无法复用 | 拒绝 |
-| 直接使用事件里的账号 ID | 不是完整集合，删除/并发语义不完整 | 拒绝 |
-| MainPage/页面重进强刷 | UI 看似更新，系统 policy 仍可能错误 | 拒绝 |
-| Coordinator + 全量快照 + Handler | 真相源单一、可扩展、可测试 | 选择 |
+本案例当前状态：
 
-方案不是因为“结构优雅”被选择，而是因为它能同时满足：完整账号真相、模块可扩展、失败不误删、UI 不承担修复。
+| 维度 | 结论 |
+|---|---|
+| 架构、规则、代码映射 | PASS |
+| 关键分支 UT | PASS / 有覆盖缺口 |
+| 页面 E2E | PASS（保留一份旧 FAIL） |
+| 系统回读 | PENDING |
+| 实物 USB 矩阵 | PENDING |
 
-选中方案落实到现有代码责任：
+学员应能回答：
 
-| 决策问题 | 选中的代码责任 | 为什么不放到别处 |
-|---|---|---|
-| 谁接事件 | `EnterpriseAdminAbility.onAccountAdded/Removed` | 这里只拿触发信号，不知道防火墙语义 |
-| 谁读完整集合 | `SystemUserProvider.loadAvailableUserIds` | Provider 只读取事实，不产生副作用 |
-| 谁处理时序/并发 | `AccountChangeCoordinator.schedule/runPending/loadStableSnapshot` | 公共协调逻辑可复用，不绑定页面 |
-| 谁决定防火墙分支 | `FirewallAccountChangeHandler.handle` | public/private/custom 是模块业务 |
-| 谁写系统状态 | `FirewallSystemRepository` | 把 MDM API 和错误封装在系统边界 |
-| 谁刷新 UI | `ApplicationRuntimeManager → ViewModel` | 只消费稳定事实，不承担修复 |
+1. AI 为什么这样拆是对的？
+2. 哪个状态是谁的真源？
+3. 系统失败后怎样补偿或回退？
+4. 哪份证据能证明哪层事实？
+5. 证据不足时为什么要停止并升级？
 
 ### 怎么做 / 怎么判断 / 不对怎么办
 
-- 怎么做：每个方案写“优点、失败模式、需要新增的状态、验证成本”。
-- 怎么判断：选中的方案能否解释正常、失败、并发和未来扩展；而不只是主路径能跑。
-- 不对怎么办：只有一个方案时，要求 AI 至少给出两个可行替代和拒绝证据，避免把第一反应包装成架构。
+- 怎么做：从验收矩阵任取一行，反向追到 Story、RFC、代码和需求。
+- 怎么判断：链路任一跳都能打开真实文件或结果。
+- 不对怎么办：断链处就是下一项工作，不用一句“整体完成”覆盖。
 
 ### 讲师备注
 
-- 先只展示方案名，让学员投票；再逐行展开失败模式。
-- 尤其要讲 UI 强刷：它是最容易演示成功、也最容易把业务错误藏起来的方案。
-- 投票后不是宣布正确答案，而是让每组用一个失败场景攻击自己的方案：新增事件早到、读取空集合、Handler 失败、页面未打开、连续事件。只有能解释这些场景的方案才进入穿刺。
-
-### 现场实操
-
-- 每组领取一个拒绝方案，写出最短反例和“错误会藏在哪一层”。
-- 选择方案 D 的小组必须补充一个它仍未解决的问题，例如账号列表何时稳定、Handler 失败如何重试、跨进程结果如何传递。
-- 当场产物：方案评分表，不允许只写“扩展性好/耦合低”，必须包含失败输入、错误状态和验证成本。
+- 这一页把“复杂需求交付”收口到可复核，而不是代码量。
+- 然后切入案例二：同样的方法如何进入 55 万行级 FreeRDP 与 GPU 性能问题。
 
 ### 文档 / 截图
 
-- 文档：`case-materials/mdm/02-方案推导与决策记录.md#方案对比`
-- **【补充素材】**：四方案对比表或白板投票结果。
+- 文档：`case-materials/mdm/00-外设管理证据状态总表.md`
+- 文档：`case-materials/mdm/09-MDM案例整体审阅与落版规则.md`
+- **【补充素材】**：六阶段文档目录、关键代码、E2E FAIL→PASS 和待补视频位组成证据墙。
 
 ---
-
-## 第 14 页｜最小穿刺发现：事件已经到达，完整账号列表却仍是旧的
-
-### PPT 内容
-
-穿刺只验证一个关键假设：账号新增回调与账号列表是否在同一时刻一致。
-
-真实时间线：
-
-```text
-onAccountAdded(accountId=123)
-→ 首次 loadAvailableUserIds() = [100,112,122]
-→ lastApplied signature 仍为 100,112,122
-→ 旧逻辑判断集合没有变化，跳过模式补下发
-→ 账号 123 没有获得当前 policy/预置规则
-```
-
-这条证据否定“事件后读一次就够”，并引出稳定快照条件：只有完整集合包含 `triggerAccountId` 才能继续。
-
-页面右侧放真实函数链，不只放时间线：
-
-```text
-EnterpriseAdminAbility.onAccountAdded(123)
-→ scheduleAccountReconcile('account-added', 123)
-→ AccountChangeCoordinator.schedule(...)
-→ runPending() / runOnce(request)
-→ loadStableSnapshot(request)
-→ SystemUserProvider.loadAvailableUserIds()
-→ getOsAccountLocalIds()
-```
-
-稳定条件对应当前代码：
-
-```text
-source == account-added
-AND triggerAccountId 已定义
-AND currentUserIds 不包含 triggerAccountId
-→ wait 200ms and retry，最多 5 次
-```
-
-### 怎么做 / 怎么判断 / 不对怎么办
-
-- 怎么做：在同一时间轴记录事件 ID、每次完整集合、账号签名、Handler 是否执行和最终系统状态。
-- 怎么判断：事件是触发信号；`SystemUserProvider` 的完整集合是账号真相；系统 policy/规则是最终业务真相。
-- 不对怎么办：不要把 123 手工 append 到列表，不要用 UI 出现新账号证明策略已同步；先冻结稳定条件和失败语义。
-
-### 讲师备注
-
-- 让学员回答：“如果过 200ms 列表出现 123，应该怎么处理？如果 1 秒后仍没有呢？”
-- 再揭示当前方案：400ms 防抖、200ms 间隔、最多 5 次；数字是项目策略，通用思想是条件重试、有上限、失败保持旧真相。
-- 现场打开 `AccountChangeCoordinator.loadStableSnapshot()` 和 `shouldWaitForAddedAccount()`；让学员先指出“退出条件”，再解释三个时间常量。不要把本页讲成 sleep/retry 技巧。
-- 补充当前边界：Provider 的读取异常和真实空列表都会降级为 `users=[]`。当前处理选择保守跳过 prune/重放，但仅靠结果无法区分二者，这是可观测性缺口。
-
-### 文档 / 截图
-
-- 文档：`case-materials/mdm/02-方案推导与决策记录.md#技术穿刺如何改变方案`
-- 源文档：SecurityTool `docs/superpowers/plans/2026-07-02-firewall-account-added-stable-snapshot.md`
-- 代码穿刺：`08-代码级调用链与课堂穿刺.md#3-协调器400ms-防抖单飞执行条件重试`
-- **【补充素材】**：事件 123 与旧集合日志；补入前只展示“待补真实日志”，不生成模拟控制台内容。
-
----
-
-## 第 15 页｜穿刺结束要形成 ADR：真相源、所有权和失败语义一次写清
-
-### PPT 内容
-
-展示 `ADR-FW-ACCOUNT-001` 的核心字段：
-
-```yaml
-question: 账号事件后以什么作为同步输入
-selected: 稳定的完整账号快照
-truth_source: SystemUserProvider.loadAvailableUserIds
-trigger: EnterpriseAdminAbility account event
-rejected:
-  - 直接使用事件 ID
-  - Provider 内执行业务副作用
-  - UI 强刷作为修复
-failure_semantics:
-  empty_or_error: preserve local truth
-  added_not_visible: bounded retry, then incomplete
-```
-
-ADR 的作用：让 RFC 不再重新讨论已解决的问题，让实现 Session 不再偷偷选择另一套方案。
-
-ADR 还要记录重新打开条件，避免把历史决定永久冻结：
-
-```yaml
-reopen_when:
-  - getOsAccountLocalIds 在目标设备上长期不包含新增 ID
-  - handler failure 需要自动重试或补偿队列
-  - 新模块需要与防火墙共享同一账号快照
-  - 设备证据证明 400/200/5 不满足稳定窗口
-verification:
-  - coordinator protocol UT
-  - same-timeline device trace
-  - policy/rules readback
-```
-
-### 怎么做 / 怎么判断 / 不对怎么办
-
-- 怎么做：每个关键决策记录问题、选择、拒绝项、证据、影响和重新打开条件。
-- 怎么判断：后续代码出现 Provider 副作用或 UI 补偿时，可以直接判定违反 ADR，而不是重新争论风格。
-- 不对怎么办：新设备证据否定原假设时，重新打开 ADR、更新 RFC 和 Story；不能只改代码绕过。
-
-### 讲师备注
-
-- ADR 不需要很长，重点是保留“为什么不选另外三个”。
-- 这一页完成“方案推导”阶段，下一页才进入 RFC。
-
-### 现场实操
-
-- 学员为 ADR 补一条 `reopen_when` 和一条能触发它的真实证据。
-- 讲师故意提出“把重试次数改成 10”，让学员判断这是实现参数调整，还是需要重新打开稳定窗口决策；答案取决于是否有新设备证据。
-- 产物：可被后续 RFC 引用的 ADR，而不是一次性会议结论。
-
-### 文档 / 截图
-
-- 文档：`case-materials/mdm/02-方案推导与决策记录.md#生成的决策记录`
-- **【补充素材】**：ADR 渲染截图。
-
----
-
-## 第 16 页｜RFC 不是一张架构图，而是范围、状态、不变量和失败语义的共同契约
-
-### PPT 内容
-
-RFC 必须至少包含六块：
-
-1. 目标与非目标。
-2. 上下游边界与代码责任。
-3. 状态字段、所有者和写入时机。
-4. 正常/失败/并发场景。
-5. 系统能力、权限和跨进程依赖。
-6. 测试边界与验收信号。
-
-本 RFC 的关键不变量：
-
-- 事件只触发，不作为完整账号真相。
-- 空/失败账号集合不 prune、不重放。
-- public/private 对最新集合生效。
-- custom 同步默认 policy，但不扩历史规则作用域。
-- 失败不能保存新签名。
-- UI 只消费稳定结果，不承担修复。
-
-将不变量变成代码审查问题：
-
-| RFC 不变量 | 应检查的函数 | 反例 |
-|---|---|---|
-| 事件不是完整真相 | `onAccountAdded`、`loadStableSnapshot` | 直接 append trigger ID |
-| 空集合不 prune | `FirewallAccountChangeHandler.handle` | `users=[]` 仍清理 intent |
-| public/private 对最新集合生效 | `applyModeToUsers`、`buildRulesForMode` | 新 ID 未进入模板展开 |
-| custom 不扩历史规则 | `buildCustomRules` | 把新增 ID 注入旧 targetUserIds |
-| 失败不保存成功签名 | `saveModeApplyState`、`rollbackToSnapshot` | 部分写后 signature 残留 |
-| UI 不承担修复 | `ApplicationRuntimeManager`、ViewModel | 页面 onShow 触发业务下发 |
-
-### 怎么做 / 怎么判断 / 不对怎么办
-
-- 怎么做：把每个业务规则写成“前置—动作—成功状态—失败保持”。
-- 怎么判断：任意失败分支都能回答“哪些状态绝对不能改变”；每个字段有唯一所有者。
-- 不对怎么办：RFC 只有类图没有失败保持、测试边界和非目标时，不允许进入 Story 拆分。
-
-### 讲师备注
-
-- 这页不展示完整 RFC 全文，只展示目录和六条不变量。
-- 强调“失败保持”是 AI 实现复杂需求最容易漏掉的部分，也是后续测试最重要的 oracle。
-- 这里明确告诉学员：六条是 RFC 目标契约，不代表当前实现已经全部满足；第 22 页会用真实代码反查出本地 apply-state 原子性和回滚缺口。
-
-### 现场实操
-
-- 每组选一条不变量，在代码里找到“满足它的分支”与“最可能违反它的分支”。
-- 输出格式固定为 `invariant → owner → code anchor → counterexample → test oracle`。
-- 如果找不到唯一 owner，不进入 Story 拆分，先回到 RFC 重划责任。
-
-### 文档 / 截图
-
-- 文档：`case-materials/mdm/03-防火墙账号同步RFC.md`
-- 源文档：SecurityTool `docs/02-总体设计/总体设计RFC.md`、`docs/03-模块设计/防火墙管理组件设计说明.md`
-- **【补充素材】**：RFC 目录 + 不变量表。
-
----
-
-## 第 17 页｜RFC 要把抽象责任映射到真实文件，AI 才知道在哪一层修改
-
-### PPT 内容
-
-展示两个真实闭环，避免把业务同步和 UI 刷新画成一条模糊直线：
-
-```text
-后台业务闭环
-onAccountAdded
-→ schedule / loadStableSnapshot
-→ getOsAccountLocalIds
-→ dispatchHandlers
-→ FirewallAccountChangeHandler.handle
-→ pruneUnavailableUsers
-→ custom: applyPolicyForMode + saveModeApplyState
-  public/private: applyModeToUsers + rollback on failure
-
-前台展示闭环
-publishSnapshot
-→ commonEventManager.publish/subscribe
-→ AccountRuntimeService
-→ ApplicationRuntimeManager
-→ FirewallRulesViewModel.refreshForAccountChange
-```
-
-页脚用四个函数锚点连接到系统 API：
-
-```text
-getPolicy  → netFirewall.getNetFirewallPolicy
-setPolicy  → netFirewall.setNetFirewallPolicy
-listRules  → netFirewall.getNetFirewallRules
-addRule    → netFirewall.addNetFirewallRule
-```
-
-同时展示关键状态及写入门：
-
-| 字段 | 所有者 | 什么时候更新 |
-|---|---|---|
-| `previousUserIds` | Coordinator | 快照稳定后、Handler 分发前 |
-| `desiredEnabled` | LocalRepository | 总开关成功后 |
-| `lastAppliedMode` | LocalRepository | 本地提交阶段写入；当前非原子 |
-| `lastAppliedUserIdsSignature` | LocalRepository | 幂等门；当前需检查部分写风险 |
-| intents/deployments | LocalRepository | 系统规则成功建立并保存映射后 |
-
-### 怎么做 / 怎么判断 / 不对怎么办
-
-- 怎么做：RFC 每个架构节点都引用当前文件，每个字段说明读写者和失败时是否更新。
-- 怎么判断：页面不会直连系统 API；Provider 不产生业务副作用；Coordinator 不内置防火墙实现。
-- 不对怎么办：一个规则在两层重复决定，或字段没有唯一写入者时，先重划责任，不直接拆 Story。
-
-### 讲师备注
-
-- 现场按固定顺序点开四个文件：`EnterpriseAdminAbility.ets#onAccountAdded` → `AccountChangeCoordinator.ets#loadStableSnapshot` → `FirewallAccountChangeHandler.ets#handle` → `FirewallModeSwitchService.ets#applyModeToUsers`。
-- 让学员在 Handler 里找出三条分支：空集合、custom、public/private；再回答每条分支成功后写什么、失败时不能写什么。
-- 继续追 `FirewallModeSwitchService` 的十步事务：创建系统快照、清规则、下 policy、建规则、存 deployment、最后存 mode/signature；任一步失败进入 `rollbackToSnapshot()`。明确它是补偿式回滚，回滚本身仍可能失败。
-- 最后再看前台链，说明 `refreshForAccountChange()` 只是重读 `userOptions/policy/rules`，不是后台同步的补丁。
-- 不要把 RFC 不变量直接当实现事实。现场指出当前缺口：`saveCurrentMode()` 失败后仍可能写 apply state；`saveModeApplyState()` 两个 key 非原子；rollback 不恢复 last-applied state；`listRules()` 失败与空规则混淆。这一段正好演示 Reviewer 如何判断“AI 写完了但还不能交付”。
-
-### 文档 / 截图
-
-- 文档：`case-materials/mdm/03-防火墙账号同步RFC.md#总体架构`、`#状态模型`、`#代码映射`
-- 代码手册：`case-materials/mdm/08-代码级调用链与课堂穿刺.md#1-一句话讲清这条-feature` 至 `#7-前台消费页面为什么不直接订阅系统账号事件`
-- **【补充素材】**：代码目录和 RFC 架构节点对应截图。
-
----
-
-## 第 18 页｜Feature 按“可独立证明的能力”拆成六个 Story
-
-### PPT 内容
-
-展示 Story 依赖图：
-
-```text
-S1 账号真相源与资产对齐
-  ↓
-S2 删除账号的本地数据清理
-  ↓
-S3 Coordinator + Handler
-  ↓
-S4 跨进程稳定事实与 UI 运行时消费
-  ↓
-S5 新增账号稳定快照门
-  ↓
-S6 custom 模式签名与全链验收
-```
-
-拆分依据：
-
-- 每个 Story 有独立职责和 oracle。
-- 高风险平台假设先证明。
-- 一轮只需要读取有限文件。
-- 失败能回到明确层级。
-- 后续 Story 复用前一 Story 已证明的事实。
-
-每个 Story 必须落到函数和 oracle，而不是只落到文件：
-
-| Story | 主要函数 | 独立 oracle |
-|---|---|---|
-| S1 Provider | `loadAvailableUserIds / normalizeUserIds` | 去重、排序、前台标识、失败空态 |
-| S2 本地清理 | `pruneUnavailableUsers` | intent/deployment/policy history 同步删失效 ID |
-| S3 协调与 Handler | `schedule / runPending / dispatchHandlers / handle` | 防抖、串行、模块分支与失败汇总 |
-| S4 跨进程消费 | `publishSnapshot / subscribe / refreshForAccountChange` | 稳定事实只经一条运行时链消费 |
-| S5 稳定快照 | `loadStableSnapshot / shouldWaitForAddedAccount` | old→new、never-visible、removed 三组计数 |
-| S6 custom 签名 | `applyPolicyForMode / saveModeApplyState` | 不重放旧规则；保存失败返回 false |
-
-代码审阅产生的新 Story 候选：
-
-```text
-S7 apply-state 原子提交与完整回滚
-S8 rule snapshot 区分 read failure 与 empty
-S9 handler failure 的重试/可观测性
-```
-
-这些不是为了让范围无限增长，而是展示：Reviewer 发现新风险后，应创建独立 Story，不偷偷塞回 S5。
-
-### 怎么做 / 怎么判断 / 不对怎么办
-
-- 怎么做：从 RFC 的节点、状态和风险生成 Story，不按文件数量平均分配。
-- 怎么判断：每个 Story 做完都能得到 PASS/FAIL/UNKNOWN，而不是等 Feature 结束才能知道。
-- 不对怎么办：一个 Story 同时跨 Ability、Provider、Service、ViewModel、UI 和所有测试时，继续拆或先做穿刺。
-
-### 讲师备注
-
-- 展开 S1–S6 时，同步展示真实提交：`9ea957d2`、`09209bb9`、`94ff17e7`、`53751b2e`、`586880a3`、`4b372d0d`、`c0c1bc9f`、`9c7fb186`、`cecf6d17`。
-- 说明一个 Story 不一定等于一个提交；真实提交用于证明这些能力边界确实在项目演进中出现过。
-
-### 现场实操
-
-- 给出 RFC 六条不变量和九个代码文件，让学员先不看答案拆 Story。
-- 评审标准不是“拆得细”，而是每个 Story 是否有独立失败信号、有限上下文和明确回滚点。
-- 最后用 S7–S9 演示需求拆解是可增量修正的：新证据进入 backlog，但不改变已完成 Story 的历史结论。
-
-### 文档 / 截图
-
-- 文档：`case-materials/mdm/04-Feature与Story拆解.md#Story地图`、`#Story明细`
-- **【补充素材】**：Story 依赖图和真实提交时间线对照。
-
----
-
-## 第 19 页｜Worker Packet 把一个 Story 变成新 Session 可以直接执行的任务
-
-### PPT 内容
-
-展示 S5 Worker Packet 的关键字段：
-
-```yaml
-story_id: FW-ACCOUNT-S5-STABLE-SNAPSHOT
-goal: 只分发包含 triggerAccountId 的稳定快照
-allowed_paths:
-  - 防火墙模块设计
-  - AccountChangeCoordinator.ets::loadStableSnapshot/shouldWaitForAddedAccount
-  - account-change-coordinator.test.ets::old→new/never-visible/removed
-forbidden:
-  - FirewallPage.ets
-  - Provider 内业务副作用
-acceptance:
-  - old_then_new: query=2, handler=1, publish=1, signature=100,122,123
-  - never_visible: query=6, handler=0, publish=0, success=false
-  - removed: query=1, handler=1, publish=1
-stop:
-  - repeated_failure_without_new_evidence
-  - need_to_modify_forbidden_path
-```
-
-Worker Packet 同时写验证命令和证据目录，不允许 AI 用“我已修复”作为完成条件。
-
-### 怎么做 / 怎么判断 / 不对怎么办
-
-- 怎么做：Planner 从 RFC 生成目标、范围、AC、命令、保护路径和停止条件。
-- 怎么判断：新 Session 不读取历史聊天，也能正确复述目标、边界、失败保持和 Done。
-- 不对怎么办：实现中确实需要越过禁止路径时标 `NEEDS_REPLAN`，先更新 RFC/Story，而不是静默扩大修改面。
-
-### 讲师备注
-
-- 对比一句“修复账号同步问题”和完整 Worker Packet，让学员说出 AI 少猜了哪些事情。
-- 重点讲禁止路径和 stop：这是复杂需求控制范围的实际机制。
-- 要求学员把 AC 写成“输入序列 + 调用次数 + 输出状态”，不能只写“正确等待”“异常处理正常”。这一步直接决定后面能否写出反证旧实现的测试。
-
-### 文档 / 截图
-
-- 文档：`case-materials/mdm/04-Feature与Story拆解.md#Worker-Packet-示例`
-- **【补充素材】**：Worker Packet Markdown 截图。
-
----
-
-## 第 20 页｜Ralph 不是无限循环，而是“一个 Story、一份外部记忆、一组停止条件”
-
-### PPT 内容
-
-本案例的受控循环：
-
-```text
-取一个 Ready Story
-→ 读取 AGENTS + RFC + Worker Packet + progress
-→ 只在 allowed paths 内执行
-→ 运行该 Story 的测试/检查
-→ Reviewer 对照 AC、Diff、证据
-→ 写回 PASS / FAIL / UNKNOWN 和下一步
-→ 新上下文开始下一 Story
-```
-
-外部记忆：
-
-- RFC：不能重新猜的业务/架构契约。
-- Story：本轮目标和范围。
-- progress：已证明、已否定、下一步。
-- evidence：RED/GREEN、命令输出、设备证据。
-
-一轮 S5 的真实执行脚本：
-
-```text
-1 Read
-  AGENTS.md
-  03-防火墙账号同步RFC.md#核心不变量
-  Worker Packet S5
-
-2 Inspect
-  git show 4b372d0d
-  AccountChangeCoordinator.loadStableSnapshot
-  account-change-coordinator.test.ets
-
-3 Verify
-  python scripts/check_docs_consistency.py
-  hvigorw test --mode module -p product=default -p module=entry@default
-
-4 Review
-  allowed paths 是否越界
-  old→new / never-visible / removed 是否逐条满足
-  是否发现新的 RFC 缺口
-
-5 Write back
-  status / evidence / discovered_gaps / next_story / stop_reason
-```
-
-`progress.yaml` 不写“已优化”“基本完成”，只写可复现事实：
-
-```yaml
-status: PASS_WITH_GAPS
-verified:
-  - stable snapshot protocol UT PASS
-evidence:
-  - test_result.txt: 816/816
-discovered_gaps:
-  - apply-state commit is not atomic
-next_story: S7-APPLY-STATE-ATOMICITY
-device_truth: UNKNOWN
-```
-
-### 怎么做 / 怎么判断 / 不对怎么办
-
-- 怎么做：每轮只领取一个 Ready Story；结束前必须写回状态和证据路径。
-- 怎么判断：新一轮是否产生了新证据、缩小了未知项、没有越界。
-- 不对怎么办：连续两轮无新证据、重复已否定方案或需要改禁止路径时停止自治，进入重规划/人工评审。
-
-### 讲师备注
-
-- 明确标注：当前仓库没有把这套课堂文件命名为正式 Ralph Harness；这里是用真实提交复盘可迁移运行协议。
-- 这样既能讲 Ralph 思想，也不会把培训重构误写成历史事实。
-
-### 现场实操
-
-- 一名学员扮演 Implementer，只能看 Worker Packet 和 allowed paths；另一名学员扮演 Reviewer，只能看 RFC、Diff 和证据。
-- Reviewer 必须给出 `PASS / FAIL / UNKNOWN / NEEDS_REPLAN` 之一，并引用具体 AC 和文件位置。
-- 如果 Reviewer 发现 S7 缺口，正确动作是写入 `discovered_gaps` 和下一 Story，而不是让 Implementer 当场扩大范围。
-
-### 文档 / 截图
-
-- 文档：`case-materials/mdm/05-Ralph迭代运行账.md#Ralph在本案例中的最小循环`
-- **【补充素材】**：Story/progress/evidence 文件树。
-
----
-
-## 第 21 页｜真实项目经历了九轮收敛，每一轮都暴露下一层未知
-
-### PPT 内容
-
-展示真实 Git 迭代：
-
-| 轮次 | 提交 | 本轮结果 | 新暴露的问题 |
-|---:|---|---|---|
-| R1 | `9ea957d2` | 账号枚举统一 | 还没有事件同步 |
-| R2 | `09209bb9` | 本地清理 | 缺统一协调入口 |
-| R3 | `94ff17e7` | Coordinator/Handler | 跨进程消费不完整 |
-| R4 | `53751b2e` | 发布稳定账号事实 | 规则展示仍需收敛 |
-| R5 | `586880a3` | 规则从快照 reconcile | 发现新增事件时序差 |
-| R6 | `4b372d0d` | 先定义稳定快照 | 等待实现和反证测试 |
-| R7 | `c0c1bc9f` | 等待触发 ID 可见 | custom 签名仍缺 |
-| R8 | `9c7fb186` | custom 保存签名 | 运行时职责仍可收口 |
-| R9 | `cecf6d17` | 收口 RuntimeManager | 进入整体验收 |
-
-时间线下方补一条“代码责任如何逐轮长出来”：
-
-```text
-Provider(getOsAccountLocalIds)
-→ Repository(pruneUnavailableUsers)
-→ Coordinator(schedule/loadSnapshot/dispatch)
-→ EventBus(common event)
-→ ViewModel(refreshForAccountChange)
-→ Stable Gate(loadStableSnapshot)
-→ Custom Signature(saveModeApplyState)
-```
-
-### 怎么做 / 怎么判断 / 不对怎么办
-
-- 怎么做：每轮 progress 只记录事实、失败、证据和下一任务，不写泛泛总结。
-- 怎么判断：下一轮来自上一轮真实暴露的问题，而不是 AI 随机继续优化。
-- 不对怎么办：发现修改跨越多个风险层时建立 checkpoint，拆出新 Story，不把所有修复留在同一 Session。
-
-### 讲师备注
-
-- 这是 MDM 案例的真实感核心：复杂需求不是一次 Prompt 成功，而是九个可追踪的收敛动作。
-- 不逐个念 Diff，但必须点出每轮新增的函数责任。学员要看到“下一轮”来自前一轮调用链中的断点，而不是抽象的持续优化。
-
-### 文档 / 截图
-
-- 文档：`case-materials/mdm/05-Ralph迭代运行账.md#真实提交映射成迭代账`
-- **【补充素材】**：Git log 图形化时间线。
-
----
-
-## 第 22 页｜文档先行能把一次错误假设变成五分钟后可验证的实现
-
-### PPT 内容
-
-展开 R6 → R7：
-
-```text
-21:58:55  4b372d0d
-docs: 定义账号新增的稳定快照同步
-  - 更新模块设计
-  - 新增专项方案
-  - 冻结等待条件、重试上限和失败保持
-
-22:03:53  c0c1bc9f
-fix: 等待新增账号快照再 reconcile
-  - 修改 Coordinator
-  - 新增先旧后新、一直旧、removed 单读测试
-```
-
-约五分钟不是重点；重点是顺序：先让行为可审查，再让 AI 执行。
-
-把文档规则和实现逐项对齐：
-
-| 文档契约 | 代码位置 | 可执行断言 |
-|---|---|---|
-| 新增账号必须等触发 ID 可见 | `shouldWaitForAddedAccount()` | 第一次旧集合不能 dispatch |
-| 重试有上限 | `MAX_RETRIES=5` + 首次读取 | 总 query 次数为 6 |
-| 超时不能伪成功 | `stable=false → return false` | Handler=0、publish=0 |
-| 删除不等待被删 ID | source 判断仅命中 added | removed query=1 |
-
-再增加一张 Reviewer 缺口卡：
-
-```text
-设计要求：失败不能保存新 signature
-代码事实：saveCurrentMode 失败后仍可能调用 saveModeApplyState
-回滚事实：rollbackToSnapshot 不恢复 last-applied signature
-当前判定：核心协议 PASS；事务原子性 INCOMPLETE
-下一 Story：本地 apply-state 原子提交 + 回滚断言
-```
-
-### 怎么做 / 怎么判断 / 不对怎么办
-
-- 怎么做：行为、状态、失败或验收口径变化时，先更新模块设计/专项 RFC，再改代码和测试。
-- 怎么判断：代码 Diff 每条关键分支都能找到文档契约；测试断言能映射到 AC。
-- 不对怎么办：AI 已写完代码但无法解释对应设计变化时，不补“事后合理化”文档；先重新评审需求、现状和失败语义。
-
-### 讲师备注
-
-- 现场打开两个 `git show --stat`，左边是真实文档文件，右边是 Coordinator 与测试。
-- 再打开测试中的 `[100,122] → [100,122,123]`，让学员看到文档里的时序如何变成可执行断言。
-- 继续看 `runOnce()`：只有稳定后才更新 `previousUserIds`、dispatch、publish。提醒学员不要只检查“多了一个循环”，而要检查过期快照是否仍可能越过业务门。
-- 最后反向找一个“测试尚未覆盖的契约”：模拟 `saveCurrentMode=false、saveModeApplyState=true`，检查新 signature 是否残留。这样学员能看到 Reviewer 不只确认绿色用例，还要从 RFC 不变量生成新的反例。
-
-### 文档 / 截图
-
-- 文档：`case-materials/mdm/05-Ralph迭代运行账.md#展开一轮-R6-R7`
-- 代码手册：`case-materials/mdm/08-代码级调用链与课堂穿刺.md#8-单元测试怎样证明旧实现会失败`
-- **【补充素材】**：两个 commit 的真实详情和测试片段。
-
----
-
-## 第 23 页｜MCP 把 AI 接到真实环境：本页使用讲师已有材料
-
-### PPT 内容
-
-**【补充素材｜MCP 介绍页】**
-此页正文、示意图和讲解内容由讲师使用已有 MCP 材料替换，本稿不重复编写。
-
-建议本页只完成一个转场：
-
-```text
-前面已经定义“验什么”
-→ MCP / HDC 负责把 Build、Install、Operate、Observe 接到真实环境
-→ 下一页进入 E2E Runner 怎样调用这些能力
-```
-
-### 怎么做 / 怎么判断 / 不对怎么办
-
-- 怎么做：讲师放入已有 MCP 架构、工具清单和演示素材。
-- 怎么判断：学员能区分 MCP 工具执行成功与业务验收成功。
-- 不对怎么办：本页不展开产品历史或完整协议细节，避免挤压后面 E2E 实操时间。
-
-### 讲师备注
-
-- 此页控制在 3–4 分钟，目标只是把 MCP 放到验证链里。
-- 必须保留一句边界：tool success 只证明调用执行，最终业务状态仍需 Assertion/getter/log 判定。
-
-### 文档 / 截图
-
-- **【补充素材】**：讲师已有 MCP 介绍页，整页替换。
-
----
-
-## 第 24 页｜E2E 第一页：一个 Case JSON 如何走到 MCP/HDC，再留下结果与证据
-
-### PPT 内容
-
-主视觉使用用户提供的 E2E 架构图：
-
-![SecurityTool E2E Runner 架构](harmonyos-sdd-workshop-media/e2e/e2e-runner-current-reference.jpg)
-
-图下保留一条真实路由，不再只写三句抽象结论：
-
-```text
-rule_create.json
-→ validate_case_contract
-→ normalize_case_definition(flow/assertions → execution_steps)
-→ E2ERunner.run_case / run_step
-→ SecurityToolFlowExecutor.execute
-→ resolve_operation_binding(entity.create)
-→ template_key=firewall.rule.create.domain
-→ execute_template_action
-→ MCP Driver / Bridge / Backend
-→ AssertionExecutor.assert_text_presence
-→ CaseResult(primary + secondary evidence)
-```
-
-读图结论：Case 描述业务动作；Adapter/Template 决定怎么操作；Driver 只执行；Assertion 和 `result_policy` 才决定 PASS/FAIL/UNKNOWN。
-
-### 现场实操
-
-- 输入：`scripts/e2e/cases/firewall/rule_create.json`。
-- 学员动作：把 `entity.create(domain=firewall, entity=rule, variant=domain)` 展开成 `firewall.rule.create.domain`，再在 `ACTION_TEMPLATES` 中找出 `open_firewall_rules_page` 与 `submit_firewall_rule_form`。
-- 当场产物：一张 `case step → adapter action → driver → assertion → artifact` 路由表。
-
-### 怎么做 / 怎么判断 / 不对怎么办
-
-- 怎么做：先读 Case JSON，再沿 Runner/Adapter/Driver 追到真实工具；不要从 MCP Tool 反推业务用例。
-- 怎么判断：动作和断言分离；MCP/HDC 可替换；每个步骤能找到结果和证据落点。
-- 不对怎么办：工具调用成功但 Assertion 失败时保持用例 FAIL；不要让 Driver 的 success 覆盖业务断言。
-
-### 讲师备注
-
-- 图片尺寸约 1865×382，适合横向铺满页面中部；不要裁掉右侧 `HarmonyOS MCP Tools`，也不要纵向拉伸。当前图仅作结构参考，正式页应重绘执行泳道与证据泳道。
-- 这页讲架构与路由，不重复讲 MCP 产品能力。
-- 如果现场没有设备，仍然可以完成 Case JSON 到 Driver/Assertion 的静态走读。
-- 现场至少打开五个真实位置：`rule_create.json`、`normalizer.py`、`runner.py#run_step`、`operations.py#resolve_operation_binding`、`action_templates.py`。只展示目录树不算代码穿刺。
-
-### 文档 / 截图
-
-- 正式媒体：`harmonyos-sdd-workshop-media/e2e/e2e-runner-current-reference.jpg`
-- 真实代码：SecurityTool `scripts/e2e/core/`、`adapters/security_tool/`、`drivers/`、`reporters/`。
-- 代码手册：`case-materials/mdm/08-代码级调用链与课堂穿刺.md#9-e2e从-case-json-到-mcphdc-和报告的真实代码链`
-
----
-
-## 第 25 页｜E2E 第二页：现场跑一个用例，再判断它证明了什么、还缺什么
-
-### PPT 内容
-
-建议使用真实用例 `FW-STATUS-001`：
-
-```text
-launch_app
-→ reset_previous_page / relaunch_app
-→ open_firewall_page
-→ toggle_firewall(require_auth_prompt=true)
-→ assert “公共网络模式”仍可见
-→ reporter 输出 result + artifacts
-```
-
-用例状态的代码级判定：
-
-```text
-flow_action PASS/FAIL/UNKNOWN
-→ assertion_action PASS/FAIL/UNKNOWN
-→ FAIL：记录 failure_stage，默认 stop_on_failure
-→ UNKNOWN：保留 UNKNOWN；allow_unknown=false 时升级 FAIL
-→ evidence：primary_evidence + secondary_evidence
-→ validate_result_contract(CaseResult)
-```
-
-现场执行分两档：
-
-**有设备**
-
-```bash
-python scripts/e2e/tools/validate_test_assets.py
-python scripts/e2e/run_e2e.py --adapter security_tool --case scripts/e2e/cases/firewall/status_toggle.json
-```
-
-**无设备**
-
-```text
-运行测试资产校验
-→ 静态展开 action plan / resolver
-→ 人工给出预期 Tool、Assertion、Artifact
-→ 设备相关结果标 UNKNOWN
-```
-
-### 现场实操
-
-- 小组读取生成的 JSON/Markdown 报告，给出 `PASS / FAIL / UNKNOWN`。
-- 必须回答：本用例证明了页面操作链，还是证明了系统防火墙 policy？
-- 当场产物：一份 E2E 结果卡和下一条缺失证据。
-
-### 怎么做 / 怎么判断 / 不对怎么办
-
-- 怎么做：先校验资产，再运行 Case，最后读取 Assertion、日志、截图和系统 getter。
-- 怎么判断：当前 `FW-STATUS-001` 主要证明认证后页面回到稳定状态；其 notes 已说明未来仍需 service-backed getter，因此不能单独证明系统 policy。
-- 不对怎么办：页面绿但 getter 缺失时标 `UNKNOWN/INCOMPLETE`；下一轮领取设备业务验收 Story，不继续扩业务代码。
-
-### 讲师备注
-
-- 预留第二张真实材料：Case JSON、运行命令、报告和截图，讲师可用之前页面直接替换。
-- 可在页脚保留本轮基线：docs PASS、E2E assets PASS、UT 816/816；设备/业务门未执行时 overall 仍为 INCOMPLETE。
-- 最后让学员投票：Runner 成功、页面可见、系统 getter 未采集，是否能宣布完成？正确答案不是 PASS。
-- 打开 `AssertionExecutor.execute()` 的 `assert_text_presence` 分支：Backend 不能判定返回 UNKNOWN；文本状态与预期不符返回 FAIL；只有相符才 PASS。让学员看到三态不是课件概念，而是 Runner 的真实分支。
-- 如果演示 `FW-RULE-001`，明确列表出现 `www.baidu.com` 只给 UI E2E PASS；缺少 `getNetFirewallRules(userId, ...)` 的逐字段 readback 时，系统规则结论仍为 UNKNOWN。
-
-### 文档 / 截图
-
-- 真实用例：SecurityTool `scripts/e2e/cases/firewall/status_toggle.json`
-- 验收边界：`case-materials/mdm/06-测试验收报告.md#E2E与业务事实的边界`
-- 代码手册：`case-materials/mdm/08-代码级调用链与课堂穿刺.md#9-e2e从-case-json-到-mcphdc-和报告的真实代码链`
-- **【补充素材】**：讲师已有 E2E 执行页、真实报告、截图和系统状态回读。
-
----
-
-## 第 26 页｜实践：把验收写成可执行的系统契约
-
-<!--
-type: LAB
-section: MDM_ACCEPTANCE
-layout: contract
-time: 5m
-progress: 证据
--->
-
-### 画面
-
-**T03 / Structured Acceptance Readback — TARGET**
-
-```json
-{
-  "result": "PASS|FAIL|UNKNOWN",
-  "accounts": [100, 112, 123],
-  "mode": "public",
-  "signature": "100,112,123",
-  "users": [{"id": 123, "isOpen": true, "ruleCount": 4}],
-  "failures": [],
-  "evidence": {"device": "...", "timestamp": "..."}
-}
-```
-
-操作链：`build → install → activate admin → trigger → logs → getter → screenshot`
-
-**课堂任务不是 5 分钟现场开发 getter，而是先冻结证据契约和 PASS 规则。**
-
-### 讲师备注
-
-仓库已经有 App 内部 system repository getter；本页要补的是“自动验收如何稳定调用并结构化返回”的边界。课前最佳做法：准备一个测试专用、只读、最小权限的 app bridge，直接调用现有 getter，返回每用户 policy、受管规则、local apply record 和读取错误；不要通过 UI 文字二次解析。
-
-契约必须保留：设备 ID、包版本/commit、账号快照、每用户结果、原始错误码、采集时间。读取任一关键真相源失败时 `result=UNKNOWN`，不能返回空数组并 PASS。
-
-### 演示动作
-
-给学员 UI 文案、成功日志和一份缺字段的 runtime JSON，让他们先设计 JSON Schema、PASS 判定和 UNKNOWN 条件。只有课前已经准备预构建 getter 时才运行真实回读；主课堂不在 5 分钟内临时开发 bridge。
-
-### 通过条件
-
-PASS 必须同时满足：系统账号集合、各用户 policy、预期规则、local signature/mapping 一致；截图只做辅证。
-
-### 素材
-
-- 附录 F 验收结果模板
-- `FirewallSystemRepository.ets`
-- `FirewallLocalRepository.ets`
-- `evidence/mdm/firewall-runtime-readback.md`
-
----
-
-## 第 27 页｜MDM Checkpoint：交付一条完整证据链
-
-<!--
-type: CHECKPOINT
-section: MDM_ACCEPTANCE
-layout: deliverable-pack
-time: 4m
-progress: 证据
--->
-
-### 画面
-
-**同伴验收只问六件事**
-
-1. `spec.md` 是否冻结账号事实、失败语义与提交点？
-2. `design.md` 是否区分 intent、local apply、system truth、UI？
-3. T01 是否真的出现过可解释 RED 与 GREEN？
-4. T02 故障后是否恢复 identity，而非只恢复数量？
-5. 设备证据是否来自真机，UNKNOWN 是否被诚实保留？
-6. diff 是否完全落在任务允许边界？
-
-结果只允许：`PASS / FAIL / UNKNOWN`。
-
-| Eval 层 | 检查什么 | 反例 |
-|---|---|---|
-| Trace | Prompt、工具调用、diff、测试、是否越界 | 过程规范，但底层调用仍失败 |
-| Outcome | 系统账号、policy、rules、signature、mapping | 页面偶然正确，但 AI 伪造账号事实 |
-
-最终结论由 Outcome 决定；Trace 用于解释可信度、复现过程和发现越界行为。
-
-![Evaluator–Optimizer：生成、独立评估、拒绝反馈与接受](harmonyos-sdd-workshop-media/anthropic/evaluator-optimizer.png)
-
-<sub>讲师读图：Implementer 不能独自给自己打分。Reviewer 返回的必须是可执行反馈与缺失证据；只有达到预先冻结的 AC 才接受。图源：Anthropic《Building Effective Agents》。</sub>
-
-### 讲师备注
-
-评分建议：规格 20，设计与不变量 20，执行 Trace 20，真机 Outcome 30，GPU 迁移 10。不要按代码行数、Prompt 长度或 AI 生成速度评分。
-
-扩展题放到课后：删除账号对称稳定条件、mode/signature 原子保存、全局 writer serializer、结构化 compensation phase、读取失败不降级为空。它们是真实 GAP，但不应在主实践中继续扩张任务。
-
-**Anthropic 方法锚点**：Anthropic 的长任务实践建议在长时间或高风险执行后加入 fresh-context adversarial review，让没有参与实现的 Reviewer 只根据计划、diff、测试和证据寻找缺口。Reviewer 不是所有小任务的固定仪式：单文件、强测试、低风险任务可以由确定性检查完成；跨进程、事务、权限、GPU 或接近模型可靠边界的任务才值得承担独立评估开销。课堂中的相邻小组互审就是人工版本：不读取实现者的长聊天和自我解释，只读取 spec、task、diff、progress 与 evidence pack，报告需求遗漏、越界修改和证据不足，不评价个人代码风格。
-
-### 演示动作
-
-相邻小组交换 evidence pack，4 分钟内只按六问给结论，并指出一条最早缺失证据。
-
-### 通过条件
-
-每组拥有可独立检查的完整包；没有“我本机应该是好的”这种口头通过。
-
-### 素材
-
-- 附录 A Runbook
-- 附录 G 评分表
-
----
-
-# 第五幕：案例二——在 55 万行级开源库中拆解 HarmonyOS 远控硬解需求
-
-> 本幕所有结果陈述以 `case-materials/gpu/00-证据状态总表.md` 为准。没有绑定同一 commit/runId 的运行数据时，页面保持空白或 `PENDING / UNKNOWN`。
 
 ## 第 28 页｜案例二背景：在 55 万行级 FreeRDP 上验证视频卡顿问题
 
@@ -2928,157 +2304,171 @@ flowchart TD
 | DevEco / SDK 不可用 | 使用课前 RED/GREEN 录制输出，结论标环境 UNKNOWN | 手写绿色输出 |
 | 无真机 | 使用真实采集的只读 evidence bundle，标“回放证据” | 使用 mock 冒充本次真机 |
 | Admin 激活失败 | 保留构建/安装证据，系统行为 UNKNOWN | 用 UI 页面可打开判 PASS |
-| Getter 未准备 | 完成 contract 与现有 UI/log 证据，最终系统状态 UNKNOWN | 声称已有 `firewall.get_runtime_state` |
+| MDM Getter 未准备 | 完成 contract 与现有 UI/log 证据，最终系统状态 UNKNOWN | 用 UI tree 顶替 restrictions / usbManager 回读 |
 
 ---
 
-# 附录 B｜MDM 课堂冻结规格
+# 附录 B｜MDM 外设管理课堂冻结规格
 
 ## B1. TEACHING Requirements
 
-### FR-ACC-001｜新增账号稳定快照
+### FR-USB-001｜全局 USB 真源
 
-WHEN 收到 `account-added(triggerAccountId)`，THE SYSTEM SHALL 最多读取 5 次系统账号集合；只有包含触发账号时才 dispatch。若仍不可见，SHALL 不 dispatch、不 publish 旧快照，并记录 timeout evidence。
+WHEN 页面初始化或刷新，THE SYSTEM SHALL 从 restrictions `usb` 回读设备级全局状态；SHALL NOT 使用 Preferences/RDB 保存全局镜像。
 
-### FR-ACC-002｜账号集合幂等
+### FR-USB-002｜策略优先级
 
-WHEN 稳定账号集合的排序 signature 与最后成功 apply signature 相同，THE SYSTEM SHALL 跳过 public/private 模式重放；只有系统 apply 成功后才保存新 signature。
+FOR EACH USB device，THE SYSTEM SHALL 按 `global disabled > explicit desiredPolicy > usbDefaultPolicy` 求有效策略；USB_STORAGE 还必须服从上层 USB 存储访问模式。
 
-### FR-MODE-001｜保留总开关
+### FR-USB-003｜默认策略
 
-WHEN 在任意账号上切换 public/private/custom，THE SYSTEM SHALL 保留该账号旧 policy 的 `isOpen`，只改变规格规定的默认动作与受管规则。
+WHEN 管理员切换默认 allow/deny，THE SYSTEM SHALL 只保存 `usb_default_policy`，SHALL NOT 枚举、下发或修改已有设备记录；缺失或非法值 SHALL 回退 allow。
 
-### FR-MODE-002｜模式事务
+### FR-USB-004｜首次 allow
 
-IF 任一用户的 policy、rule 或 local commit 失败，THE SYSTEM SHALL 不提交目标 apply state，并尝试恢复快照中的 policy、rules 与 deployment mapping；恢复后 mapping SHALL 使用系统重新分配的 rule ID。
+WHEN 新设备没有显式记录且默认 allow，THE SYSTEM SHALL 不下发 deny，但 SHALL 保存 `desired=allow/active=none/present=true` 的白名单资产状态。
 
-### FR-TOGGLE-001｜总开关部分失败
+### FR-USB-005｜首次 deny
 
-WHEN 对全部用户设置 `isOpen` 且部分用户失败，THE SYSTEM SHALL 保留成功用户结果，返回每用户失败明细，并且不保存目标 `desiredEnabled`。
+WHEN 新设备没有显式记录且默认 deny，THE SYSTEM SHALL 先下发系统 deny；ONLY IF 系统下发成功，才保存 `desired=deny/active=deny`。失败不得产生假黑名单。
 
-### FR-OBS-001｜结构化失败证据（TARGET）
+### FR-USB-006｜动态规则
 
-WHEN forward 或 compensate 系统调用失败，THE SYSTEM SHALL 记录 `transactionId / userId / operation / phase / code / localRuleId / systemRuleId`，不得只返回模糊消息。
+WHEN 管理员修改在线 USB 的 allow/deny，THE SYSTEM SHALL 在系统下发成功后提交本地状态；离线、非法 fingerprint、全局禁用或存储冲突 SHALL 拒绝并保持旧值。
 
-### NFR-SAFE-001｜未知不等于空
+### FR-USB-007｜全局禁用与补偿
 
-IF 系统 policy/rules、账号集合或 local mapping 读取失败，THE SYSTEM SHALL 在任何破坏性写入前停止；禁止把读取失败降级为空集合后继续 clear。
+BEFORE 全局禁用，THE SYSTEM SHALL 暂停 active deny；IF 暂停或全局下发失败，SHALL 补偿已改变项并且 UI 不提交新状态。全局禁用不得改写 `desiredPolicy`。
+
+### FR-USB-008｜全局恢复
+
+AFTER 全局启用成功，THE SYSTEM SHALL 重放所有 `present=true && desired=deny` 的设备策略；部分失败 SHALL 留下 warning/失败依据，不伪造全部恢复成功。
+
+### FR-USB-009｜还原策略
+
+WHEN 执行还原，THE SYSTEM SHALL 先清理 EDM 当前全部 disallowed USB type 策略，再把本地卡片恢复 `allow/none`；系统清理失败时不得先改本地。
+
+### FR-USB-010｜证据边界
+
+验收 SHALL 分别记录 UI、本地状态、MDM 回读与实物行为；任一必要层缺失 SHALL 标 UNKNOWN/PENDING，不得用较低层证据代替。
 
 ## B2. 完整行为矩阵
 
-| 场景 | CURRENT / 课堂冻结行为 | 本地状态 | 证据重点 |
-|---|---|---|---|
-| 已开启再次开启 | Page 层 no-op；Service 本身无此保证 | 不变 | 系统 set 调用数 0 |
-| 已关闭再次关闭 | Page 层 no-op | 不变 | 系统 set 调用数 0 |
-| 总开关全成功 | 各用户只改 `isOpen`，保留 action | 保存 desired | 每用户 getter |
-| 总开关部分失败 | 成功用户保留，失败用户明细 | 不保存 desired | mixed state + failedItems |
-| public/private + 新账号 | 等 trigger 可见后在最新集合重放 | 成功后 mode/signature | 账号 123 policy/rules |
-| custom + 新账号 | 同步默认 policy，不扩大旧规则 scope | 成功后更新 signature | intent targetUsers 不变 |
-| 新增账号超时 | 不用旧快照 dispatch | 不提交 | retry + timeout |
-| 删除账号 | CURRENT：读一次；空/失败不 prune | 安全时裁剪 mapping | removed user 不残留 |
-| 重复 signature | 跳过重放 | 不变 | 系统写调用数 0 |
-| 模式应用失败 | 快照补偿；恢复 ID 重映射 | 不提交目标 state | forward + rollback |
-| 多用户 Create 部分失败 | CURRENT：继续收集所有失败后统一回滚 | 不写 intent/mapping | 所有 target 尝试过 |
-| 普通 Edit | retained update + added add + removed remove | 全成功才保存 | bucket + reverse compensation |
-| 目标类型 DNS | remove old + add new | 保存新 system ID | DNS replace |
-| DNS→IP | CURRENT：retained deployment 原地 update | ID 保持 | update target ID |
-| Delete 部分失败 | 重新 add 已删除规则 | 保留 intent | 恢复后 ID 对齐 |
-| Local save 失败 | 视为事务失败并补偿系统 | 不形成半提交 | system/local 一致 |
+| 全局 | 存储 | 显式状态 | 默认 | 动作/结果 | 状态提交 |
+|---|---|---|---|---|---|
+| 禁用 | 任意 | allow/deny/无 | 任意 | 全部有效 deny；名单置灰 | desired 保留，active 应为 none |
+| 启用 | DISABLED | USB_STORAGE 任意 | 任意 | 拒绝单设备 allow/deny | 不变 |
+| 启用 | READ_WRITE/ONLY | deny | 任意 | 在线时确保类型 deny | 成功后 active=deny |
+| 启用 | READ_WRITE/ONLY | allow | 任意 | 不保留类型 deny | 成功后 active=none |
+| 启用 | READ_WRITE/ONLY | 无 | allow | 不 dispatch，建白名单 | allow/none |
+| 启用 | READ_WRITE/ONLY | 无 | deny | 先 dispatch deny | 成功 deny/deny，失败不新增 |
+| 禁用失败 | READ_WRITE | 有 active deny | 任意 | 恢复已暂停 deny | UI 保持旧全局状态 |
+| 恢复成功 | 任意 | present+desired deny | 任意 | 重放 deny | 逐项提交 active |
+| 还原 | 非全局禁用 | 任意 | 任意 | 先清系统残留 | 全部 allow/none，卡片保留 |
 
 ## B3. 不变量与当前 GAP
 
-| ID | 不变量 / 风险 | 状态 |
+| ID | 不变量 | 当前状态 |
 |---|---|---|
-| I1 | 写入基于显式账号快照 | CURRENT 主要具备 |
-| I2 | 模式切换保留 `isOpen` | CURRENT，`deaf8f27` 修复 |
-| I3 | intent 可追踪到每用户 deployment | CURRENT |
-| I4 | 补偿后 mapping 使用新 systemRuleId | CURRENT 主要具备 |
-| I5 | 新增账号 trigger 可见才 dispatch | CURRENT |
-| G1 | 读取失败可能被降级为空 | GAP |
-| G2 | mode/signature 双 key 可能半提交 | GAP |
-| G3 | account-removed 无对称稳定等待 | GAP |
-| G4 | UI 与 Extension writer 无全局串行 | GAP |
-| G5 | rollback phase 缺少结构化字段 | GAP |
+| I1 | 全局状态只来自 restrictions | CURRENT |
+| I2 | global > desired > default | CURRENT |
+| I3 | desired 与 active 分离 | CURRENT |
+| I4 | 系统成功后才提交 active | CURRENT |
+| I5 | 默认值不批量修改已有设备 | CURRENT |
+| I6 | 还原先系统后本地 | CURRENT |
+| I7 | Trace 不作为 Policy State 真源 | CURRENT |
+| G1 | 系统按 baseClass 而非 fingerprint 下发 | PLATFORM GAP / 产品需知情 |
+| G2 | 全局恢复部分 deny 重放失败只告警 | OPERATIONAL GAP / 需设备复核 |
+| G3 | 完整 D6/D7 设备矩阵未归档 | EVIDENCE GAP |
+| G4 | E2E JSON artifacts 为空 | TELEMETRY GAP |
 
 ## B4. `spec.md` 空白模板
 
 ```markdown
-# <Feature> Specification
+# Feature: <name>
 
-## Context
-- 用户 / 设备 / 账号范围：
-- 当前行为与证据：
-- 本轮目标：
-- 不在范围内：
+## Business Goal
+- User / device scope：
+- Security value：
 
-## Terms
-| Term | Exact meaning | Truth source |
-|---|---|---|
+## Policy Layers
+- Global policy：
+- Type/account policy：
+- Explicit device policy：
+- Default policy：
 
-## Open Decisions
-| ID | Question | Options | Owner | Status |
-|---|---|---|---|---|
+## Truth Sources
+| State | Owner | Read API | Write API |
+|---|---|---|---|
 
-## Functional Requirements
-### FR-XXX
-WHEN ...
-WHILE ...
-THE SYSTEM SHALL ...
-IF ... THEN SHALL ...
+## Priority
+effectivePolicy = ...
 
-## Behavior Matrix
-| Initial | Trigger | System effect | Local commit | Failure |
-|---|---|---|---|---|
+## EARS Requirements
+- WHEN ... THE SYSTEM SHALL ...
+- IF ... THE SYSTEM SHALL ...
 
-## Invariants
-- I1：
+## State Matrix
+| Global | Device | Default | Expected |
+|---|---|---|---|
+
+## Failure Semantics
+- Precondition failure：
+- System write failure：
+- Local save failure：
+- Compensation failure：
 
 ## Acceptance
-- Direct fact required：
-- PASS：
-- FAIL：
-- UNKNOWN：
+- UI oracle：
+- Local state oracle：
+- System readback：
+- Physical behavior：
+- PASS / FAIL / UNKNOWN rule：
+
+## Non-goals
+- ...
 ```
 
 ## B5. `design.md` 空白模板
 
 ```markdown
-# <Feature> Design
+# Design: <name>
 
-## Requirement Trace
-| Requirement | Decision | Boundary | Test | Device evidence |
-|---|---|---|---|---|
+## MVVM Responsibilities
+| Layer/Class | Owns | Must not own |
+|---|---|---|
 
-## State and Truth Sources
-| State | Owner | Read failure | Write / commit point |
-|---|---|---|---|
+## State Model
+- desired：
+- active：
+- present：
+- global：
 
-## Process Boundaries
-- Extension：
-- Service / Handler：
-- UIAbility / ViewModel：
-- Cross-process event：
+## Main Flows
+### Global disable
+1. ...
 
-## Transaction
-- Snapshot：
-- Forward order：
+### Global restore
+1. ...
+
+### First connect
+1. ...
+
+### Dynamic policy
+1. ...
+
+### Restore all
+1. ...
+
+## Transaction / Compensation
+- Snapshot or pre-state：
 - Commit point：
-- Compensation order：
-- Identity remap：
-- Compensation failure evidence：
+- Compensation：
+- Irreversible side effects：
 
-## Concurrency
-- Serialized writers：
-- Still-unprotected writers：
-- Stale callback / generation rule：
-
-## Observability
-- correlationId：
-- mandatory fields：
-- sampling / privacy：
-
-## Current Gaps and Deferred Tasks
-- GAP：
+## Verification Mapping
+| Invariant | UT | E2E | System | Physical |
+|---|---|---|---|---|
 ```
 
 ---
@@ -3252,122 +2642,135 @@ UI 文案只能证明 UI；mock 只能证明测试逻辑；
 
 ## D3. 两轮课堂示例
 
-### Round 1 / T01
+### Round 1 / S3
 
-- Hypothesis：账号事件先于 OS 查询结果可见。
-- RED：旧快照 `[100,112]` 被 dispatch。
-- Minimal diff：新增事件按 trigger 可见性重试；timeout 拒绝旧快照。
-- New fact：stable=trigger present，不是 consecutive equal reads。
-- Next：在最新快照上注入模式下发失败。
+- Hypothesis：默认 allow 不下发系统策略，因此不需要保存设备状态。
+- RED：设备可用，但 Policy VM 没有白名单记录。
+- Minimal diff：allow 分支保存 `desired=allow/active=none/present=true`，仍不 dispatch。
+- New fact：系统未禁止与资产已纳管是两种不同事实。
+- Next：给默认 deny 注入系统下发失败。
 
-### Round 2 / T02
+### Round 2 / S5
 
-- Hypothesis：账号 123 第 2 条 add 失败会污染目标 signature 或旧 mapping。
-- RED：rollback 后 deployment 仍指向旧 systemRuleId。
-- Minimal diff：收集 re-add 返回 ID，并 remap deployment；目标 apply state 不提交。
-- Remaining risk：rollback phase 不结构化；mode/signature 原子性未解决。
-- Stop：窄测/回归绿，设备 getter 仍待课前能力；最终为 UNKNOWN 或 PASS 取决于证据。
+- Hypothesis：暂停设备 deny 后可以直接下发全局 USB 禁用。
+- RED：全局调用失败后，已暂停的设备规则没有恢复。
+- Minimal diff：在 `UsbGlobalPolicyService` 失败分支调用 `restorePresentDeniedPolicies()`；成功后才提交 UI。
+- Remaining risk：补偿自身可能失败；系统按 baseClass 下发，需要实物矩阵。
+- Stop：窄测/回归绿，MDM getter 与实物证据仍待补；最终保持 PARTIAL/PENDING。
 
 ---
 
-# 附录 E｜构建、测试与 MCP 验收手册
+# 附录 E｜构建、测试与 MDM 外设验收手册
 
 ## E1. 本地验证命令
 
-在 `repos/security_tool` 按项目 README 与本机 DevEco 工具链执行：
-
 ```powershell
+# 单元测试
 hvigorw test --mode module -p product=default -p module=entry@default
+
+# 主 HAP
 hvigorw assembleHap --mode module -p product=default -p module=entry@default
-```
 
-设备侧测试示例：
-
-```powershell
+# ohosTest 编译
 hvigorw test --mode module -p product=default -p module=entry@ohosTest
 hvigorw assembleHap --mode module -p product=default -p module=entry@ohosTest
-hdc shell aa test -b com.huawei.securitytool -m entry \
-  -s unittest OpenHarmonyTestRunner -w 60000
 ```
 
-命令必须按实际 OS、SDK 与签名环境调整；讲师课前把最终可用命令写进 task card，不在现场猜工具路径。
+报告：`entry/.test/default/outputs/test/reports/coverageReport.json`。先看目标测试是否执行，再看 coverage；coverage 不替代系统验收。
 
-## E2. MCP 可执行链（CURRENT）
+## E2. 设备执行链
 
-`harmonyos-dev-mcp` 当前可组合：
+```powershell
+hdc list targets
+hdc install hapsigner/signApp.hap
+hdc shell edm enable-admin -n com.huawei.securitytool -a EnterpriseAdminAbility -t super
+hdc shell aa start -a EntryAbility -b com.huawei.securitytool -m entry
+```
+
+每次验收记录：
 
 ```text
-list_devices
-→ build_app(project_path, target="hap", module_name="entry")
-→ install_app(hap_path, device_id)
-→ run_app(bundle_name, device_id)
-→ find_elements / click / input_text
-→ logs_query(package_name, marker_keywords, save_path)
-→ get_ui_tree
-→ screenshot(local_path)
+runId / commit / HAP hash / deviceId / OS version
+admin state / USB VID:PID / baseClass / SN / storage mode
 ```
 
-建议把一次验收固定为一个 `runId`，在应用日志、文件名与 `acceptance.md` 中复用。冷构建给足 120 秒工具超时；UI mutation 在同一设备串行，不要并发点击制造假失败。
+## E3. E2E 可执行链（CURRENT）
 
-## E3. 系统 Getter（TARGET）
+```powershell
+python scripts/e2e/run_e2e.py --list-suites
+python scripts/e2e/run_e2e.py --case scripts/e2e/cases/peripheral/interfaces.json
+python scripts/e2e/run_e2e.py --case scripts/e2e/cases/peripheral/usb_policy.json
+python scripts/e2e/run_e2e.py --case scripts/e2e/cases/peripheral/usb_whitelist.json
+python scripts/e2e/run_e2e.py --case scripts/e2e/cases/peripheral/usb_blacklist.json
+```
 
-只读 getter 至少返回：
+以真实 Runner 参数为准；先 `--list-suites`/查看 help，不在课堂手写虚构参数。
+
+已有结果：`PER-IF-001/002`、`PER-POL-001`、`PER-POLICY-002`、`PER-REC-001`、`PER-WL-USB-001` PASS；`PER-BL-USB-001` 是保留的旧 FAIL。
+
+## E4. 系统 Getter 与实物 Oracle（TARGET）
+
+建议验收 bridge 输出结构化结果，不用 UI 文本猜系统状态：
 
 ```json
 {
-  "schemaVersion": 1,
-  "runId": "mdm-20260831-001",
-  "deviceId": "<device>",
-  "bundleVersion": "<version-or-commit>",
-  "readAt": "<iso-time>",
-  "accounts": {"status": "OK", "ids": [100, 112, 123]},
-  "applyState": {"mode": "public", "signature": "100,112,123"},
-  "users": [
-    {"id": 123, "policyStatus": "OK", "isOpen": true,
-     "inAction": "...", "outAction": "...",
-     "rulesStatus": "OK", "managedRuleIds": [9417, 9418]}
-  ],
-  "mappingStatus": "OK",
-  "errors": []
+  "runId": "usb-20260901-001",
+  "globalUsb": {"status": "OK", "disabled": false},
+  "storagePolicy": {"status": "OK", "value": "READ_WRITE"},
+  "disallowedTypes": {"status": "OK", "baseClasses": [8]},
+  "localState": {
+    "status": "OK",
+    "records": [
+      {"fingerprint": "USB-SN:...", "desired": "deny", "active": "deny", "present": true}
+    ]
+  },
+  "physical": {"status": "PENDING", "deviceUsable": null}
 }
 ```
 
-任何 `status != OK` 都使最终判定至少为 UNKNOWN。禁止使用 `rules=[]` 同时表达“确实无规则”和“读取失败”。
+任何必需 `status != OK` 都使系统结论至少为 UNKNOWN。`baseClasses=[]` 必须与“读取失败”使用不同状态。
 
-## E4. `acceptance.md` 模板
+## E5. `acceptance.md` 模板
 
 ```markdown
 # Acceptance — <runId>
 
 ## Identity
-- Device / HDC endpoint：
-- Bundle / version / commit：
-- Build artifact hash：
-- Time range：
+- Commit：
+- HAP hash：
+- Device / OS：
+- Admin：
+- USB VID:PID / class / SN：
 
 ## Preconditions
-- SDK / permission / ACL：admin：PASS | FAIL | UNKNOWN
-- Accounts before：
-- Mode / desired before：
+- Global USB before：
+- Storage policy before：
+- Disallowed types before：
+- Local state before：
 
 ## Action
-- Trigger / UI flow：
-- Injected failure：
+- User action：
+- Expected policy transition：
 
 ## Evidence
-- unit-test-red.txt：
-- unit-test-green.txt：
-- build.txt：
-- device-log.txt：
-- runtime-state.json：
-- screenshot.png：
+| Layer | Evidence | Status |
+|---|---|---|
+| UI | screenshot/video | PASS/FAIL/UNKNOWN |
+| Local state | state dump | PASS/FAIL/UNKNOWN |
+| MDM system | structured readback | PASS/FAIL/UNKNOWN |
+| Physical | attach/use behavior | PASS/FAIL/UNKNOWN |
 
-## Requirement Verdicts
-| Requirement | Direct evidence | Verdict | Reason |
-|---|---|---|---|
+## Cleanup
+- Restore action：
+- System after cleanup：
 
-## Final
-PASS | FAIL | UNKNOWN
+## Verdict
+PASS | FAIL | UNKNOWN | PENDING
+
+## Why
+- What is proven：
+- What is not proven：
+- Next action：
 ```
 
 ---
@@ -3504,30 +2907,26 @@ PASS | FAIL | UNKNOWN
 
 | 教学问题 | 真实锚点 |
 |---|---|
-| 全用户总开关 | `FirewallPolicyService.setFirewallEnabledForAllUsers` |
-| 稳定账号快照 | `AccountChangeCoordinator.loadStableSnapshot/runOnce` |
-| 账号对账 | `FirewallAccountChangeHandler.handle` |
-| 模式事务 | `FirewallModeSwitchService.createSnapshot/applyModeToUsers/rollbackToSnapshot` |
-| Identity remap | `FirewallModeSwitchService.remapDeployments` |
-| 规则事务 | `FirewallRuleMutationService.applyUpdateTransaction` |
-| DNS replace | `FirewallRuleMutationService.applyDnsReplaceUpdateTransaction` |
-| UI 互斥 | `FirewallPage`、`FirewallOverviewViewModel` |
+| MVVM 父级协调 | `PeripheralViewModel.toggleInterface/handlePeripheralPolicyChange` |
+| USB 全局事务 | `UsbGlobalPolicyService.setDisabled` |
+| 默认 allow/deny | `PeripheralDevicePolicyRepository.get/setUsbDefaultPolicy` |
+| 首次连接规则 | `UsbDevicePolicyStateService.handleConnect` |
+| 拔出内部恢复 | `UsbDevicePolicyStateService.handleDisconnect` |
+| 动态单设备规则 | `PeripheralPolicyViewModel.setDevicePolicy` |
+| 系统 MDM 下发 | `PeripheralDevicePolicyDispatchService.dispatch` |
+| 还原与残留清理 | `clearAllUsbDeviceTypePolicies/clearAllPolicies` |
+| UI 受控状态 | `InterfaceControlTab`、`PolicyList` |
 
 推荐提交故事：
 
-- `deaf8f27`：模式切换错误地重新开启防火墙。
-- `ddff7a5f`：拆分 Policy / Mode / Rule 等职责。
-- `0b5edc5f`：快照、补偿、systemRuleId remap。
-- `f6886182`：UI / ViewModel 模式与开关互斥。
-- `063ac1ab`：Create / Edit / Delete 事务补偿。
-- `76e7f6e6`：目标 DNS 的 remove+add 与新 ID。
-- `94ff17e7`：账号变化对账、desiredEnabled、mode/signature。
-- `53751b2e`：handler registry 与 CommonEvent。
-- `c0c1bc9f`：account-added 200ms×5 等 trigger 可见。
-- `9c7fb186`：custom 模式保存 signature。
-- `cecf6d17`：handler 失败仍发布账号事实。
-- `4906f7d3 → 06864339 → 78fca089`：401、undefined payload、错误证据闭环。
-- `72cd7d47`：正式 E2E 删除 mock/scripted 结果通道。
+- `63dda4b4`：外设 USB 策略状态独立建模。
+- `a2f0128b`：策略清理职责收敛。
+- `093cb6e4`：还原时保留设备卡片。
+- `786e370c`：修正还原按钮状态真源。
+- `6e7702cd`：全局 USB 与设备策略的暂停、补偿和重放。
+- `23c4a046`：默认 allow 设备也建立白名单记录。
+- `0d26c92e`：全局恢复后的 USB 重枚举采用有界重试。
+- `f95c5109`：USB 存储策略成功后同步名单可编辑状态。
 
 ## G2. GPU 代码锚点
 
@@ -3546,12 +2945,12 @@ PASS | FAIL | UNKNOWN
 
 ## G3. 每 2–3 页插入的真实素材
 
-1. MDM 首页与账号列表截图。
-2. `rg` 勘察结果与调用链。
-3. T01 红测 / 绿测对照。
-4. 模式事务关键代码与 fault injection 输出。
-5. Extension / Coordinator / UI 同 eventId 日志。
-6. MCP build/install/log/screenshot 输出。
+1. MDM 外设页三个 Tab 与黑白名单截图。
+2. `rg` 勘察结果与 MVVM 调用链。
+3. 默认 allow 漏名单的 RED / GREEN 对照。
+4. USB 全局暂停/补偿/恢复重放关键代码。
+5. E2E `PER-BL-USB-001` FAIL 与 `PER-POL-001` PASS。
+6. MDM 系统回读、USB 插拔视频与同类型双设备结果。
 7. AVC420 opaque import、dirty rect、owner 日志。
 8. AVC444 planes、LC、readiness 日志。
 9. Surface destroy/recreate 与 owner transition。
@@ -3564,12 +2963,12 @@ PASS | FAIL | UNKNOWN
 ## H1. 讲师必须提前准备
 
 - 锁定两个仓库的演示 commit，确认所有代码锚点仍存在。
-- 准备训练分支：T01/T02 可产生真实 RED；不要直接在已经修复的 HEAD 上假演示失败。
-  - T01：GREEN=`c0c1bc9f`，基线 parent=`4b372d0d`；在训练分支上只加入目标 RED 测试，不提前带入生产修复。
-  - T02：GREEN=`0b5edc5f`，基线 parent=`46819417`；故障注入必须能区分 forward 与 compensate。
+- 准备训练分支：默认 allow 漏名单、全局禁用补偿两个场景可产生真实 RED；不要在已修复 HEAD 上假演示失败。
+  - 场景 1：默认 allow 新设备可用但名单为空；GREEN 对应 `23c4a046` 的状态保存修正。
+  - 场景 2：暂停 device deny 后全局下发失败；故障注入必须能区分主操作与 compensate。
 - 在授课设备跑通 Hvigor test/build、签名、安装、admin 激活与 HDC。
-- 准备账号 `[100,112,123]` 或等价真机条件。
-- 若要最终 PASS，课前实现并验证只读 firewall runtime getter；否则在材料中固定展示 UNKNOWN。
+- 准备至少两只同 baseClass 的 USB 设备、一只不同类型设备和可读 SN/VID/PID 的采集记录。
+- 若要最终 PASS，课前补齐 restrictions、USB storage、disallowed device types 的只读回读；否则固定展示 UNKNOWN/PENDING。
 - 预采集一份真机 evidence bundle，作为设备故障时的“回放证据”，标明设备与时间。
 - 为 GPU 准备 AVC420/AVC444 可复现片段、卡顿录屏、已脱敏 frame trace 与色块 Buffer。
 - 提前验证 39 页所有 `time:` 合计 120 分钟。
@@ -3580,22 +2979,22 @@ PASS | FAIL | UNKNOWN
 
 | 资产 | 当前状态 | 授课要求 |
 |---|---|---|
-| `harmonyos-sdd-workshop-media/mdm/firewall-domain-rule-created.jpeg` | READY | 第 1 页只用于证明 UI 可见，明确不能证明系统下发 |
+| `harmonyos-sdd-workshop-media/e2e/peripheral-policy-current.png` | READY | 只用于证明外设策略页面可见，明确不能证明系统下发 |
 | `harmonyos-sdd-workshop-media/gpu-*` 与 `freerdp-*` | READY | 结合 runId/frame trace 使用，不以单图判 PASS |
-| T01 `unit-test-red/green` 输出 | EVIDENCE READY | `evidence/mdm/t01-red-green.md` 已保留 commit、命令、目标断言与退出码陷阱；课前只需转成截图 |
-| P24 两进程四阶段日志 | EVIDENCE READY / TELEMETRY GAP | `evidence/mdm/account-cross-process-log.md` 已脱敏；历史无 eventId，课件不得补造 |
-| P25 structured acceptance readback | TARGET | App 内部 getter 已存在，验收 bridge 未实现；固定演示 UNKNOWN，不用 UI tree 顶替 |
+| 默认 allow/deny 与全局补偿 UT | EVIDENCE READY | 真实测试位于 `entry/src/test/peripheral`；课前截取目标断言和结果 |
+| P24 E2E FAIL→PASS | EVIDENCE READY | `PER-BL-USB-001` 与 `PER-POL-001` 均为真实 JSON；artifacts 为空，不补造视频 |
+| P25 structured acceptance readback | TARGET | 需补 MDM 回读与实物结果；固定演示 PENDING，不用 UI tree 顶替 |
 
 ```text
 assets/
-├── 01-opening-device-vs-tests.png       # 可由 READY 真机图 + 测试输出组合
-├── 04-mdm-domain-model.svg
-├── 15-t01-red.png
-├── 16-t01-green.png
-├── 18-mdm-401-log.png
-├── 21-rollback-fault.png
-├── 24-cross-process-log.png
-├── 25-mcp-current-target.png
+├── 01-opening-device-vs-tests.png       # 外设页面 + 测试输出
+├── 04-mdm-peripheral-policy-model.svg
+├── 15-default-allow-red.png
+├── 16-default-allow-green.png
+├── 18-usb-global-transaction.png
+├── 21-usb-compensation-fault.png
+├── 24-e2e-fail-pass.png
+├── 25-mdm-readback-pending.png
 ├── 29-dual-codec-path.svg
 ├── 34-buffer-inspection.png
 ├── 35-avc420-takeover.png
@@ -4053,35 +3452,34 @@ evidence/gpu-<runId>/
 
 本附录保存可进入课堂的真实问题片段。它不是聊天记录归档：只保留能够改变工程判断的原始提示词、初始假设、反证、修正和迁移规则。投屏时隐藏个人路径、设备标识、账号、地址和无关上下文。
 
-## L1. 账号变化：从延迟补丁到跨进程事实
+## L1. USB 默认策略：从“设备可用”到“资产已被管理”
 
 | 阶段 | 证据 |
 |---|---|
-| 原始问题 | “新增规则为什么不会重新读取账号信息” |
-| 约束升级 | “先不要改，先看看要怎么改，怎么实时拿到账号信息” |
-| 错误假设 | 系统账号事实只是刷新慢，增加 2 秒延迟即可 |
-| 用户反证 | “延迟 2S 还是拿不到，你分析得不对吧” |
-| 最小观测 | Provider raw、snapshot signature、handler count、进程身份 |
-| 边界发现 | Extension 与 UI 是两个进程，进程内静态状态不能传事实 |
-| 局部 GREEN | CommonEvent 后卡片刷新，但已有规则和记录没有刷新 |
-| 职责修正 | 事实发布、业务 reconcile、UI refresh 分开判定；规则收敛进入 Service |
-| 真机链路 | 删除 115 → raw `[100,114]` → signature `100,114` → firewall handler success |
-| 新缺口 | `previous=` 导致首次 diff 基线失真；历史日志无统一 eventId；UI 阶段没有完整日志 |
+| 原始问题 | 默认 allow 时设备可以使用，但黑白名单没有资产卡片 |
+| 错误假设 | allow 不需要系统下发，所以也不需要保存策略状态 |
+| 反证 | 产品要求白名单可见、可导出、后续可动态切换 deny |
+| 最小观测 | fingerprint、existing、default、dispatchResult、shouldSave |
+| 边界发现 | “系统没有禁止”是执行事实，“管理员已管理该资产”是业务事实 |
+| 修正 | 首次 allow 不 dispatch，但保存 `desired=allow/active=none/present=true` |
+| 独立 oracle | 新设备仍可用，同时 State Repo 与 Policy VM 出现白名单记录 |
+| 提交证据 | `23c4a046 fix(peripheral): restore usb policy records` |
+| 新缺口 | 系统按 baseClass 下发，仍需同类型双设备实物验证 |
 
-课堂用途：P5、P16、P18、P24；完整脱敏日志见 `evidence/mdm/account-cross-process-log.md`。迁移问题：权限、应用卸载、日志页面还有哪些消费者依赖同一账号事实？
+课堂用途：P6、P17、P21、P25；迁移问题：还有哪些“功能能用但资产/意图没有进入管理真源”的案例？
 
-## L2. MCP：工具返回成功不等于业务成功
+## L2. MDM：工具/UI 返回成功不等于 USB 真实生效
 
 | 阶段 | 证据 |
 |---|---|
-| 原始问题 | “之前发现 MCP 工具基本都失败了，请帮我看看为什么” |
-| 范围扩大 | 使用真实 SecurityTool 测试全部工具，并保存完整测试结果 |
-| 关键分层 | 外部客户端 Schema、工具调用、业务返回、设备最终状态 |
-| 代码事实 | App 内部已有 `getNetFirewallPolicy` / `getNetFirewallRules` 系统读取 |
-| 暴露问题 | E2E action map 没有 `firewall.get_runtime_state`，内部 getter 尚未变成验收侧结构化事实 |
-| 结论 | 协议成功、Tool成功、Business成功、System成功必须分别记录 |
+| 原始问题 | USB 选择器往返成功，能否宣布全局总控已经生效 |
+| 自动化事实 | `PER-IF-002` 的 UI 操作步骤 PASS |
+| 关键分层 | UI 受控状态、应用状态、MDM 回读、实物行为 |
+| 代码事实 | 全局状态使用 restrictions 回读，设备规则使用 usbManager 类型策略 |
+| 暴露问题 | 当前 E2E artifacts 为空，完整系统回读与实物矩阵尚未入证据包 |
+| 结论 | UI PASS、MDM PASS、Physical PASS 必须分别记录 |
 
-课堂用途：P25–P27；证据边界见 `evidence/mdm/firewall-runtime-readback.md`。学员任务：对一个 `tool returned ok` 的结果给出四层判定，并指出最小缺失证据。
+课堂用途：P23–P27；证据边界见 `case-materials/mdm/00-外设管理证据状态总表.md`。学员任务：对 `PER-IF-002 PASS` 给出四层判定，并指出最小缺失证据。
 
 ## L3. 开关机事件：真实生命周期推翻静态分析
 

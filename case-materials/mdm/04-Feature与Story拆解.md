@@ -2,138 +2,191 @@
 
 ## 1. Feature 定义
 
-```yaml
-feature_id: FW-ACCOUNT-RECONCILE
-goal: 系统账号变化后，防火墙系统状态和本地状态收敛到最新账号集合
-entry: EnterpriseAdminAbility account event
-truth_source: SystemUserProvider.loadAvailableUserIds
-done: public/private/custom/removed/empty/concurrent 场景均有证据
-```
+**Feature：USB 外设分层策略管理**
 
-## 2. 为什么这样拆
+管理员可以设置设备级 USB 总控、USB 存储模式、未配置设备默认 allow/deny，并对已识别在线 USB 动态切换黑白名单；系统在全局切换、插拔、失败和还原场景中保持意图、执行态和真实系统状态一致。
 
-Story 不按“一个人写页面、一个人写 Service”拆，也不按文件数量平均切。拆分依据是：
+## 2. 为什么不能按页面拆
 
-- 每一块能力有独立职责和独立 oracle。
-- 高风险平台假设先穿刺。
-- 每轮修改范围能放进一个新鲜上下文。
-- 失败时知道退回哪一层。
-- 后续 Story 可以复用前一 Story 已证明的事实。
+按“接口页 / 名单页 / 记录页”拆会把一个事务切断：全局 USB 开关发生在接口页，却必须暂停、恢复并刷新名单页的设备策略。Story 应按“可独立证明的不变量”拆，而不是按 UI 文件拆。
 
 ## 3. Story 地图
 
+| Story | 能力 | 主要修改面 | 独立验收点 |
+|---|---|---|---|
+| S1 | USB 身份与策略状态真源 | Resolver + RDB Repo | SN/弱指纹稳定；Hub 过滤；trace 清理不删策略 |
+| S2 | 默认 allow/deny | Preferences Repo + Policy VM | 缺值/坏值回退 allow；切换不影响已有设备 |
+| S3 | 首次连接策略 | USB Consumer + State Service | allow 建白名单；deny 成功才建黑名单 |
+| S4 | 在线设备动态黑白名单 | PolicyList + VM + Dispatch | 离线拒绝；系统成功后才提交本地状态 |
+| S5 | USB 全局禁用/恢复 | Global Service + Interface VM | 暂停、补偿、恢复重放；desired 不变 |
+| S6 | 存储策略冲突 | Interface/Policy VM + Dispatch | DISABLED 时 UI 置灰且后端拒绝 |
+| S7 | 还原与系统残留清理 | State Service + Dispatch | 先清 EDM，再恢复本地 allow；卡片保留 |
+| S8 | 证据闭环 | UT/E2E/设备脚本 | D1–D7 分层、PASS/FAIL/UNKNOWN/PENDING |
+
+### 课堂截图卡｜不按页面拆，按不变量拆
+
+> **截图结论（CURRENT）：** 一个 Story = 一个可独立证明的能力 + 一组失败分支 + 一个 Done 证据。
+
 ```text
-S1 账号真相源与资产对齐
-  ↓
-S2 删除账号的本地数据清理
-  ↓
-S3 公共协调器与防火墙 Handler
-  ↓
-S4 跨进程稳定事实与 UI 运行时消费
-  ↓
-S5 新增账号稳定快照门
-  ↓
-S6 custom 模式签名与全链验收
+S1 身份/状态真源 ─┐
+                      ├→ S3 首次连接 → S4 动态规则 → S5 全局事务 ─┐
+S2 默认策略 ──────┘                          └→ S6 冲突 → S7 还原 → S8 证据
 ```
+
+| 拆分检查 | 通过标准 |
+|---|---|
+| 范围 | 可以列出允许/禁止文件 |
+| 正确性 | 至少先写一个失败测试 |
+| 独立性 | 不依赖“顺便把另一页也改了”才能验收 |
+| 交接 | 新 Session 仅凭 Worker Packet 能开始 |
+| Done | 文档/代码/UT/E2E/设备证据分层登记 |
+
+**不能过门的例子：** “完成外设管理页”同时包含全局、默认、单设备、回退和验收，任何失败都无法定位到一个不变量。
 
 ## 4. Story 明细
 
-### S1｜读取真实账号集合
+### S1｜USB 身份与状态真源
 
-- 目标：所有用户列表统一从 `SystemUserProvider` 获取并标准化。
-- 允许路径：Provider、权限/签名配置、对应测试和设计文档。
-- 禁止：Provider 内下发防火墙策略。
-- AC：去重、排序、前台用户标识、失败返回空态；权限配置一致。
-- 证据：`system-user-provider.test.ets`、提交 `9ea957d2`。
+**As a** 策略引擎，**I want** 用稳定 fingerprint 保存设备意图与在线/执行态，**so that** 拔插、清记录和跨页面刷新不会丢规则。
 
-### S2｜删除账号时清理本地引用
+验收：
 
-- 目标：从 intent targetUserIds、deployments、用户历史策略中删除失效账号。
-- 允许路径：`FirewallLocalRepository`、对应 Service/ViewModel、UT。
-- 禁止：对被删除账号调用系统防火墙 API。
-- AC：多用户规则只移除该 ID；仅该 ID 的规则删除；空/失败集合不 prune。
-- 证据：`local-repository.test.ets`、提交 `09209bb9`。
+- 有 SN 使用 `USB-SN:<serial>`；无 SN 使用 VID/PID/description 弱指纹。
+- Hub 不产生名单状态。
+- 状态表包含 `desiredPolicy/present/activePolicy`。
+- 清空连接 trace 不删除策略状态。
 
-### S3｜协调账号事件并分发模块 Handler
+### S2｜默认策略
 
-- 目标：事件只触发；协调器读取完整集合，计算签名/差量，按注册表分发。
-- 允许路径：`services/account/**`、`FirewallAccountChangeHandler`、Ability 接入、UT、模块设计。
-- 禁止：`EnterpriseAdminAbility` 直接写防火墙；UI 作为 Handler。
-- AC：400ms 防抖、single-flight、pending 再跑；public/private/custom/empty 分支明确。
-- 证据：`account-change-handler.test.ets`、提交 `94ff17e7`。
+- 默认值为 allow。
+- 非法持久化值 normalize 为 allow。
+- allow→deny 只保存设置，不扫描当前设备。
+- 已有设备仍按自己的 `desiredPolicy`。
+- 全局 USB 禁用时拒绝修改默认策略。
 
-### S4｜跨进程传递稳定账号事实
+### S3｜首次连接
 
-- 目标：系统事件进程完成业务 reconcile 后，把稳定账号事实送到 UI 运行时；页面重读模型数据。
-- 允许路径：EventBus、AccountRuntimeService、ApplicationRuntimeManager、ViewModel、UT。
-- 禁止：`MainPage` 按路由硬编码业务刷新；弹窗各自读取系统账号。
-- AC：EventBus/运行时只有一条消费链；rules/userOptions/policy 使用同一快照刷新。
-- 证据：提交 `53751b2e`、`586880a3`、`cecf6d17`。
+- 默认 allow：不调用 deny，保存 `allow/none/present=true`。
+- 默认 deny：先下发，成功保存 `deny/deny`。
+- deny 下发失败：不新增成功黑名单，但连接诊断仍保留。
+- 已有显式策略：忽略默认值。
+- USB 存储 DISABLED：跳过设备级 deny，避免策略叠加。
 
-### S5｜新增账号必须等待稳定快照
+### S4｜动态黑白名单
 
-- 目标：account-added 只有在完整集合包含触发 ID 后才分发。
-- 允许路径：模块设计、专项方案、Coordinator、Coordinator UT。
-- 禁止：把 trigger ID 直接 append 到集合；超时仍更新 previous。
-- 代码锚点：`schedule()`、`runPending()`、`runOnce()`、`loadStableSnapshot()`、`shouldWaitForAddedAccount()`。
-- AC：首次 `[100,122]`、后续 `[100,122,123]` 时 query=2、Handler=1、publish=1、signature=`100,122,123`；持续旧集合时 query=6、Handler=0、publish=0、success=false；removed 时 query=1。
-- 证据：文档提交 `4b372d0d`；代码/测试提交 `c0c1bc9f`。
+- 只接受规范 fingerprint，不接受旧 VID/PID 字符串。
+- 只允许在线 USB 修改。
+- 行级 `updatingKeys` 防重复提交。
+- MDM 成功后才保存状态并写快照。
+- 失败保持旧值并返回可行动 reasonCode。
 
-### S6｜custom 模式保存已处理账号签名
+### S5｜全局禁用与恢复
 
-- 目标：custom 默认 policy 同步成功后保存 `custom + signature`，但不扩规则作用域。
-- 允许路径：Handler、模块设计、Handler UT。
-- 禁止：把旧 rules 的 targetUserIds 自动加入新用户。
-- 代码锚点：`FirewallAccountChangeHandler.handle()` custom 分支、`FirewallPolicyService.applyPolicyForMode()`、`FirewallLocalRepository.saveModeApplyState()`。
-- AC：policy 成功 + 保存 `custom/signature`；`FirewallModeSwitchService.applyModeToUsers()` 调用次数为 0；保存失败返回 false；intent/deployment 不新增。
-- 证据：`account-change-handler.test.ets`、提交 `9c7fb186`。
+- 禁用前 USB 存储必须为 READ_WRITE。
+- 暂停 active deny 失败时不下发全局策略。
+- 全局下发失败时恢复已经暂停的 deny。
+- 全局禁用不改 `desiredPolicy`，名单仍展示但不可编辑。
+- 全局恢复后重放在线显式 deny。
+- 重枚举使用 500ms + 空结果时再 1000ms 的有界等待。
 
-## 5. Worker Packet 示例（S5）
+### S6｜存储策略冲突
 
-```yaml
-story_id: FW-ACCOUNT-S5-STABLE-SNAPSHOT
-goal: account-added 只分发包含 triggerAccountId 的稳定账号快照
-inputs:
-  - 03-防火墙账号同步RFC.md#核心不变量
-  - firewall-account-added-stable-snapshot.md
-allowed_paths:
-  - docs/03-模块设计/防火墙管理组件设计说明.md
-  - entry/src/main/ets/services/account/AccountChangeCoordinator.ets
-  - entry/src/test/firewall/account-change-coordinator.test.ets
-forbidden:
-  - FirewallPage.ets
-  - SystemUserProvider 内业务副作用
-acceptance:
-  - old_then_new: query=2, handler=1, publish=1, signature=100,122,123
-  - never_visible: query=6, handler=0, publish=0, success=false
-  - removed: query=1, handler=1, publish=1
-commands:
-  - python scripts/check_docs_consistency.py
-  - hvigorw test --mode module -p product=default -p module=entry@default
-stop:
-  - repeated_failure_without_new_evidence
-  - need_to_modify_forbidden_path
+- DISABLED 时 USB_STORAGE 行 `editable=false`。
+- 绕过 UI 调用仍由 Dispatch 拒绝。
+- 失败提示明确是黑白名单与存储模式冲突，并指向“还原策略”。
+- 写入后 UI 使用已确认目标状态刷新，不被短暂旧回读覆盖。
+
+### S7｜还原
+
+- 即使本地无 deny、但 EDM 有残留，按钮也可用。
+- 清理 EDM 失败时不改变本地记录。
+- 成功后所有卡片 `desired=allow/active=none`，不删除。
+- 全局 USB 禁用时禁止还原，避免层级冲突。
+
+### S8｜证据闭环
+
+- 每个 AC 绑定至少一个代码/UT 证据。
+- 涉及系统事实必须绑定 MDM 回读。
+- 涉及用户价值必须绑定实物插拔行为或视频。
+- E2E 报告保留旧 FAIL 与新 PASS。
+
+## 5. Worker Packet 示例｜S5 全局 USB
+
+```markdown
+# Worker Packet: S5 USB 全局禁用与恢复
+
+## Goal
+实现全局 USB 总控与设备显式策略的协同，不丢失 desiredPolicy。
+
+## Read first
+- docs/03-模块设计/外设管理组件设计说明.md §2.1
+- docs/superpowers/plans/2026-07-11-peripheral-usb-global-control-story.md
+- InterfaceControlViewModel.ets
+- UsbGlobalPolicyService.ets
+- UsbDevicePolicyStateService.ets
+
+## Invariants
+1. global > desired > default
+2. 全局禁用不改 desired
+3. 系统成功后才提交 active
+4. 失败必须补偿已暂停 deny
+
+## Allowed files
+- services/peripheral/interface-control/UsbGlobalPolicyService.ets
+- services/peripheral/device-policy/UsbDevicePolicyStateService.ets
+- viewmodels/peripheral/interface-control/InterfaceControlViewModel.ets
+- 对应测试
+- 外设模块设计文档
+
+## Forbidden
+- 不把事务写进 View
+- 不新增本地 globalDisabled 持久化
+- 不把 trace 当策略真源
+- 不改 PPT 或其它业务模块
+
+## Tests
+- 禁用成功
+- 存储模式冲突
+- suspend 失败
+- 全局下发失败并恢复 deny
+- 启用后重放 present deny
+- 部分重放失败
+
+## Done evidence
+- UT 结果
+- build 结果
+- 设备系统回读（若环境可用）
+- 未执行项标 PENDING
 ```
 
-## 6. Ready / Done 门
+## 6. 依赖与并行边界
+
+```text
+S1 ─┬─> S3 ─> S4 ─┬─> S5 ─┐
+    └─> S2 ────────┘       ├─> S8
+S4 ────────────────> S6 ─> S7 ─┘
+```
+
+- S1/S2 可部分并行：状态库与 Preferences 相互独立。
+- S3 依赖身份/状态真源和默认策略。
+- S5 必须在设备策略语义稳定后做，否则无法定义暂停/恢复。
+- S8 从第一轮就建证据表，但最终验收依赖所有业务 Story。
+
+## 7. Ready / Done 门
 
 ### Ready
 
-- RFC 已批准，真相源和失败语义明确。
-- 依赖 Story 已 PASS。
-- 允许/禁止路径已列出。
-- RED 测试或手工反证步骤可执行。
+- Story 只包含一个可证明能力。
+- 真源、优先级和失败语义已引用 RFC。
+- 修改文件和禁止文件明确。
+- 至少一个失败测试先写出。
+- 设备依赖和权限已知。
 
 ### Done
 
-- AC 有逐条证据。
-- 文档、代码、测试映射一致。
-- Diff 未越界。
-- 必需验证门 PASS；未执行门明确 UNKNOWN。
-- 结果与下一 Story 写回运行账。
-
-## 7. PPT 截图位
-
-- **【补充素材】**：Story 地图。
-- **【补充素材】**：S5 Worker Packet 真实 Markdown 截图。
-- **【补充素材】**：对应 Git 提交文件列表。
+- 代码与模块设计一致。
+- 所有系统调用都有成功/失败分支。
+- UT 不只测 happy path。
+- UI 状态来自回读或已确认提交，不是无条件乐观更新。
+- 证据写入运行账，未跑设备项标 PENDING。
+- 下一 Session 可仅凭 Worker Packet 和 progress 继续。

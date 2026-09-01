@@ -1,112 +1,178 @@
 # 阶段 5｜Ralph 迭代运行账
 
-> `TEACHING RECONSTRUCTION`：下面用真实 Git 提交复盘“小 Story → 新上下文 → 执行 → 验证 → 写回”的 Ralph 思想，不声称这些历史提交当时由同名自动 Runner 自动完成。
+> Ralph 在这里不是“让 AI 一直跑”，而是每轮只收敛一个可验证未知：读取外部记忆 → 实现/修正 → 独立验证 → 记录证据 → 决定停止、继续或升级。
 
-## 1. Ralph 在本案例中的最小循环
-
-```text
-从 Story 队列取一个 Ready 任务
-→ 读取 Worker Packet + RFC + 上轮 Progress
-→ 只在允许范围内修改
-→ 运行该 Story 的确定性验证
-→ Reviewer 对照 AC、Diff、证据判定
-→ 写回 PASS / FAIL / UNKNOWN、发现和下一任务
-→ 新上下文开始下一 Story
-```
-
-循环不负责决定业务真相。它依赖外部的 RFC、Story AC、测试、设备状态和停止条件。
-
-## 2. 每轮读取什么
+## 1. 单轮协议
 
 ```text
-AGENTS.md                    项目硬规则
-03-防火墙账号同步RFC.md       业务与架构契约
-04-Feature与Story拆解.md      当前任务边界和 AC
-progress.md                  已证明/已否定/下一步
-evidence/<story-id>/          RED、GREEN、构建、设备证据
+READ
+  RFC + 当前 Story + progress + 上轮失败证据
+PLAN
+  一个未知、最小文件面、一个独立 oracle
+IMPLEMENT
+  文档先行（若行为变更）+ 代码 + 测试
+VERIFY
+  UT → build → E2E/UI → 系统回读 → 实物
+RECORD
+  结论、证据路径、剩余未知、下一轮入口
+STOP / CONTINUE / ESCALATE
 ```
 
-当前仓库没有把这套课堂文件命名为正式 Ralph Harness，因此培训中必须明确：这里展示的是可迁移运行协议，真实事实来自现有文档、代码、测试和 Git。
+每轮最多解决一个主失败。如果同时出现系统能力、UI 回显和数据迁移三个问题，拆成三轮。
 
-## 3. 真实提交映射成迭代账
+## 2. 真实演进账
 
-| 轮次 | 真实提交 | 本轮解决的问题 | 产出/证据 | 下一轮为何存在 |
-|---:|---|---|---|---|
-| R1 | `9ea957d2` | 账号枚举刷新与权限配置 | Provider、权限、UT | 只有读取，没有账号变化业务同步 |
-| R2 | `09209bb9` | 失效账号本地清理 | Repository 清理、UT | 仍缺少统一事件协调入口 |
-| R3 | `94ff17e7` | 建立 Coordinator、Handler 和总体 reconcile | 专项方案、account service、Handler UT | 跨进程 UI 消费和规则刷新仍不完整 |
-| R4 | `53751b2e` | 跨进程发布账号事实 | EventBus、Handler registry、ViewModel 调整 | 页面规则数据仍要从同一快照收敛 |
-| R5 | `586880a3` | 规则展示从账号快照 reconcile | Display service / ViewModel UT | 新增账号事件与列表仍有时序窗口 |
-| R6 | `4b372d0d` | 先定义稳定快照行为 | 模块设计 + 专项方案 | 设计通过后才能改 Coordinator |
-| R7 | `c0c1bc9f` | 等待 trigger ID 可见 | Coordinator + RED/GREEN UT | custom 分支还需保存处理签名 |
-| R8 | `9c7fb186` | custom policy 成功后保存签名 | Handler + UT | 运行时消费职责仍需进一步收口 |
-| R9 | `cecf6d17` | 收敛到 ApplicationRuntimeManager | Runtime service + UT + 文档 | 进入整体回归和真机验收 |
+| 轮次 | 发现的未知/错误 | 证据 | 修正 | 新不变量 |
+|---|---|---|---|---|
+| R1 | USB Hub 被当成可管理设备 | 运行时 payload/baseClass | 过滤 0x09 | Hub 不进 trace/名单/策略 |
+| R2 | “USB 接口”被当成默认策略入口 | 旧 2026-05-14 计划与需求冲突 | 后续恢复为 restrictions 全局总控，默认策略移到名单页 | 全局与默认分离 |
+| R3 | 名单从连接记录反推，清 trace 会丢候选 | 代码路径与清理行为 | 建 `usb_device_policy_states` | Trace ≠ Policy State |
+| R4 | 拔出 deny 设备后系统类型规则残留 | 同类型 MDM 下发语义 | `activePolicy` + 同 baseClass 在线计数 + 内部 allow | desired 与 active 分离 |
+| R5 | “还原”删除卡片，资产和意图丢失 | UI/状态测试 | 保留记录，恢复 allow/none | 还原不是删除 |
+| R6 | 还原按钮只看本地 deny，无法清 EDM 残留 | 系统残留场景 | `hasDisallowedUsbDeviceTypePolicies()` 也计入 | 本地空不等于系统空 |
+| R7 | 全局 USB 与单设备 deny 直接叠加，恢复易冲突 | 最小穿刺 | `UsbGlobalPolicyService` 暂停/补偿/重放 | 全局事务独立编排 |
+| R8 | 全局禁用/启用没有留下真实在场设备策略证据 | trace 审阅 | 禁用前捕获；启用后重枚举写快照 | 不能从历史推断“当前在场” |
+| R9 | 默认 allow 设备未进入白名单 | UT/页面空列表 | allow 首次连接也保存状态，不下发 deny | allow 也需要显式业务记录 |
+| R10 | USB 存储写入后立即回读旧值导致名单仍可编辑 | 真机/状态同步问题 | 成功后用已确认目标状态刷新 | 已提交目标可作为短期 UI 刷新依据 |
 
-## 4. 展开一轮：R6 → R7
+对应真实提交包括：
 
-### R6 文档轮
+- `63dda4b4 refactor peripheral usb policy state`
+- `a2f0128b refactor peripheral policy state cleanup`
+- `093cb6e4 fix peripheral policy restore cards`
+- `786e370c fix peripheral policy restore state`
+- `6e7702cd feat(peripheral): coordinate usb global disable with per-device policies`
+- `23c4a046 fix(peripheral): restore usb policy records`
+- `0d26c92e fix(peripheral): retry usb enable snapshots`
+- `f95c5109 fix(peripheral): sync USB storage policy state`
 
-- 21:58:55，提交 `4b372d0d`。
-- 更新模块设计，新增 `firewall-account-added-stable-snapshot.md`。
-- 冻结：等待包含触发 ID、约 1 秒上限、超时不分发、不更新 previous。
+## 3. 课堂截图卡｜五个转折如何变成工程不变量
 
-### R7 实现轮
+> **截图结论（CURRENT）：** 迭代的价值不是“AI 多跑几轮”，而是每个反例都被写回设计、测试和下一轮的约束。
 
-- 22:03:53，提交 `c0c1bc9f`。
-- 只修改 `AccountChangeCoordinator.ets` 和 `account-change-coordinator.test.ets`。
-- RED/GREEN 关注：先旧后新、一直旧、removed 不等待。
+| 症状/反例 | 根因 | 固化的新不变量 | 下一轮 oracle |
+|---|---|---|---|
+| USB 接口变成默认策略 | 两种作用域共用入口 | 全局与默认分离 | restrictions 回读 + 首插策略 |
+| 清 trace 后名单丢失 | 把历史事件当策略真源 | Trace ≠ Policy State | 清 trace 后规则仍在 |
+| 拔出后 deny 残留 | `desired=active` 且忽略类型粒度 | 意图/执行态/在线态分离 | 同 baseClass 双设备 |
+| 还原后卡片消失 | 把还原等于删除 | 先清 EDM，卡片恢复 allow/none | 系统残留 + UI 对照 |
+| 默认 allow 设备不在名单 | 把“不下发 deny”当作“不需记录” | allow 也是管理意图 | RDB 记录 + Policy VM 卡片 |
 
-本轮不是“加一个重试循环”，而是增加并保护四个代码行为：
+**截图时要保留的链条：** 症状 → 根因 → 新不变量 → 下一轮 oracle。只截 commit 列表不能说明为什么 AI 修对了。
 
-1. `runOnce()` 先调用 `loadStableSnapshot()`，`stable=false` 立即停止。
-2. `shouldWaitForAddedAccount()` 只对 `account-added + triggerAccountId 不可见` 返回 true。
-3. 只有稳定后才更新 `previousUserIds`、分发 Handler、发布 EventBus。
-4. UT 同时断言 query、Handler、publish 和 signature，防止旧快照从其他路径泄漏。
+## 4. 展开一轮｜R7 全局 USB 协同
 
-这两轮之间只有约 5 分钟，但顺序很重要：先让方案成为可审查契约，再让 AI 进行受控执行。
+### 4.1 失败假设
 
-## 5. progress.md 示例
+最初直觉：先下发全局禁用，恢复时再按名单重新下发 deny 即可。
 
-```yaml
-feature: FW-ACCOUNT-RECONCILE
-completed:
-  - S1 account provider
-  - S2 local prune
-  - S3 coordinator and handler
-current: S5 stable snapshot
-facts:
-  - account event can arrive before full list visibility
-  - provider full list is truth source
-rejected:
-  - append trigger id manually
-  - refresh UI as repair
-last_evidence:
-  - first query [100,122]
-  - second query [100,122,123]
-next:
-  - implement bounded wait
-stop_if:
-  - trigger id never visible in device trace
-  - fix requires forbidden UI or provider side effect
+### 4.2 反例
+
+- 系统已有按类型 deny 时，全局 restrictions 可能发生冲突。
+- 如果先清 deny 后全局下发失败，原黑名单真实执行态被破坏。
+- 如果禁用时把 `desiredPolicy` 改成 allow，恢复后无法知道谁应继续 deny。
+
+### 4.3 红灯测试
+
+- suspend 第二个策略失败时，第一个必须补偿为 deny。
+- 全局下发失败时，所有在线显式 deny 被恢复。
+- 全局成功时 desired 不变、active 归 none。
+- 全局恢复时只重放 `present && desired=deny`。
+
+### 4.4 实现
+
+新增 `UsbGlobalPolicyService`，把事务从接口 ViewModel 中抽离；State Service 提供 suspend/restore/compensate 原语；父 VM 只在成功后刷新名单。
+
+### 4.5 验证
+
+- UT：编排分支与状态服务分支。
+- 代码审阅：ViewModel 不直接访问 Policy VM 内部状态做事务。
+- E2E：`PER-IF-002` 证明 UI 往返可执行。
+- 系统/实物：完整矩阵仍为 PENDING。
+
+### 4.6 下一轮未知
+
+全局恢复后 USB 重新枚举存在延迟，立即捕获可能得到空集合，于是进入 R8 的有界重试。
+
+## 5. 展开一轮｜R9 默认 allow 漏记录
+
+### 症状
+
+默认 allow 时设备可用，但黑白名单为空。若只看“设备能用”，很容易判为完成。
+
+### 根因
+
+早期逻辑把“没有下发 deny”误等同于“不需要保存状态”，导致允许设备没有业务身份记录。
+
+### 修正
+
+```ts
+const shouldSave = desiredPolicy === 'allow' ||
+  existing !== null ||
+  dispatchResult?.success === true
 ```
 
-## 6. 每轮 Reviewer 问五个问题
+### 独立 oracle
 
-1. 本轮只改变了 Story 允许的行为吗？
-2. 测试是否能反证旧实现，而不是迎合新代码？
-3. 失败分支有没有保持旧的可信状态？
-4. 文档、代码、测试和实际日志是否一致？
-5. 当前证据允许 PASS，还是只能 FAIL/UNKNOWN？
+- 新 allow 设备不触发 dispatch；
+- RDB 出现 `desired=allow/active=none/present=true`；
+- Policy VM 能构建白名单记录。
 
-## 7. 停止与升级
+这轮特别适合课堂讲：“功能可用”不等于“需求完成”，因为验收标准还要求资产可管理。
 
-- 连续两轮没有新增证据：停止，检查规格或工具可见性。
-- 需要修改禁止路径：标 `NEEDS_REPLAN`，更新 RFC/Story。
-- UT 通过但设备事实不可见：标 `UNKNOWN`，进入设备穿刺，不继续扩代码。
-- 发现设计与代码事实冲突：先改文档并重新评审。
+## 6. progress.md 示例
 
-## 8. PPT 截图位
+```markdown
+# Progress: USB layered policy
 
-- **【补充素材】**：9 个提交组成的迭代时间线。
-- **【补充素材】**：`4b372d0d` 与 `c0c1bc9f` 两个真实 Git 详情。
-- **【补充素材】**：一轮 progress + evidence 目录。
+## Current story
+S5 USB global disable/restore
+
+## Completed
+- global state reads restrictions usb
+- suspend active deny with compensation
+- preserve desiredPolicy during global disable
+- restore present explicit deny after enable
+
+## Evidence
+- UT: usb-global-policy-service.test.ets PASS
+- UT: usb-device-policy-state-service.test.ets PASS
+- E2E: PER-IF-002 PASS (UI roundtrip only)
+- device system readback: PENDING
+
+## Known limits
+- MDM deny dispatch is baseClass-level, not serial-level
+- partial deny replay after global enable logs warning; device matrix pending
+
+## Next
+Run two same-class USB devices and record system readback + video.
+
+## Stop reason
+Code loop stops; remaining work requires physical device matrix.
+```
+
+## 7. 每轮 Reviewer 必问
+
+1. 本轮改变的是意图、执行态、UI 状态还是系统真源？
+2. 系统调用失败时，哪个字段保持旧值，哪个副作用需要补偿？
+3. 测试的 fake 是否和真实系统 API 粒度一致？
+4. E2E 的 PASS 到底断言了什么，是否被过度解读？
+5. 下一轮的未知能否通过一个更小穿刺解决？
+
+## 8. 停止与升级条件
+
+### Stop
+
+- Story 的 AC 均有对应证据。
+- 重复运行结果稳定。
+- 没有新增未知。
+- 剩余项明确移交给后续 Story 或实物验收。
+
+### Escalate
+
+- 三轮都遇到同一系统冲突且无新证据。
+- 需要真实 USB 设备、企业管理员权限或系统日志才能继续。
+- 系统 API 粒度无法满足产品“单硬件设备”语义，需要产品/架构决策。
+- 补偿失败后系统与本地可能不一致，需要人工清理与重新同步。
+
+升级不是失败；在没有设备证据时继续让 AI 改代码，才是失控循环。

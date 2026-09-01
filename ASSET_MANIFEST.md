@@ -4,9 +4,9 @@
 
 | 文件 | 类型 | 主要用途 | 注意事项 |
 |---|---|---|---|
-| `mdm/firewall-domain-rule-created.jpeg` | 真机截图 | 第 1 页建立“UI 可见不等于系统事实”的开场冲突 | 能证明域名规则出现在页面；不能证明所有账号的系统 policy/rules 已正确下发 |
-| `mdm/firewall-duplicate-rule-failure.jpeg` | 真机截图 | MDM Story 验收、失败语义与幂等性讨论 | 真实展示“已存在完全相同的规则”的失败弹窗；只证明 UI 捕获到重复规则结果，不单独证明底层规则表与错误码映射完整 |
-| `e2e/peripheral-policy-current.png` | 真机截图 | E2E 结果页与跨模块验收样例 | 证明外设策略页面在该次运行中的可见状态；系统策略事实仍需 readback 或 HDC/MCP 证据 |
+| `e2e/peripheral-policy-current.png` | 真机截图 | 第 1/6/8/9 页建立“外设策略 UI 可见不等于 MDM 与实物事实”的冲突 | 证明外设策略页面在该次运行中的可见状态；系统策略事实仍需 restrictions/usbManager 回读和 USB 实物证据 |
+| `mdm/firewall-domain-rule-created.jpeg` | 历史真机截图 / LEGACY | 不再用于当前 MDM 主案例 | 保留旧案例资产，不进入外设管理页稿 |
+| `mdm/firewall-duplicate-rule-failure.jpeg` | 历史真机截图 / LEGACY | 不再用于当前 MDM 主案例 | 保留旧案例资产，不进入外设管理页稿 |
 | `e2e/security-log-menu-open.jpeg` | 真机截图 | 可观测性、审计日志与菜单交互样例 | 含真实审计日志行，投屏前仍应检查设备名、账号和时间信息 |
 | `e2e/e2e-runner-current-reference.jpg` | 架构参考图 | E2E 两页预留内容的结构输入 | 用户提供的当前版本；结构可用但版式需重绘，不作为最终视觉或运行事实证据 |
 | `gpu-failure-black-screen-13s.mp4` | 视频 | 第 28/32 页黑屏故障带入 | 只证明该媒体中可见黑屏，不直接证明根因或与卡顿报告属于同一 run |
@@ -56,9 +56,14 @@
 
 | 文件 | 对应页面 | 状态 | 用途 |
 |---|---:|---|---|
-| `evidence/mdm/t01-red-green.md` | 15–17 | READY | 真实 RED/GREEN、commit、命令、用例结果与退出码陷阱；课前可直接转图 |
-| `evidence/mdm/account-cross-process-log.md` | 18、24 | READY / eventId GAP | 真机日志已脱敏；明确历史无统一 eventId，不补造四段完整链路 |
-| `evidence/mdm/firewall-runtime-readback.md` | 25–26 | READY / bridge TARGET | 证明 App 内部 getter 已存在、验收 bridge 缺失、系统结论仍为 UNKNOWN |
+| `case-materials/mdm/00-外设管理证据状态总表.md` | 9–27 | READY | 当前外设结论、证据等级、E2E 结果与必须补拍的 D6/D7 证据 |
+| `evidence/mdm/peripheral-e2e-summary.md` | 23–25 | READY / artifacts GAP | 外设 E2E PASS 与旧 FAIL 的自包含摘要，明确 UI 证据边界 |
+| `evidence/mdm/peripheral-code-test-evidence.md` | 10–25 | READY / device GAP | 关键代码锚点、覆盖率、提交演进与不能证明的事实 |
+| SecurityTool `scripts/e2e/results/PER-*.json` | 23–25 | READY / artifacts GAP | 多条外设 UI E2E PASS 与一条旧 FAIL；JSON 的 artifacts 为空，不补造截图或视频 |
+| SecurityTool `entry/.test/default/outputs/test/reports/coverageReport.json` | 21–25 | READY | 2026-09-01 本地覆盖率；只证明执行面，不等于系统验收 |
+| `evidence/mdm/t01-red-green.md` | LEGACY | 历史旧案例证据，不进入当前外设主线 |
+| `evidence/mdm/account-cross-process-log.md` | LEGACY | 历史旧案例证据，不进入当前外设主线 |
+| `evidence/mdm/firewall-runtime-readback.md` | LEGACY | 历史旧案例证据，不进入当前外设主线 |
 | `evidence/gpu/01-codebase-map.md` | 28–29 | READY | 记录 55.9 万行级源码规模、分层地图、入口和按需上下文策略 |
 | `evidence/gpu/02-platform-research-and-spike.md` | 30–32 | READY / device evidence GAP | 对照软件、Windows、Android 与 HarmonyOS H.264 后端，并定义最小穿刺证据 |
 | `evidence/gpu/03-task-acceptance-and-debug.md` | 33–38 | READY / performance video GAP | 任务树、验收矩阵、AI 正误判定、故障处理与最终证据包 |
