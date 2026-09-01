@@ -4,11 +4,14 @@
 
 ## 从这里开始
 
-- [完整课程讲师稿（Rich V4 / Session Evidence 版）](harmonyos-sdd-ralph-workshop.md)
+- [完整课程讲师稿（Rich V5 / 双案例工程闭环版）](harmonyos-sdd-ralph-workshop.md)
 - [媒体资源清单](ASSET_MANIFEST.md)
 - [T01 真实 RED/GREEN 证据](evidence/mdm/t01-red-green.md)
 - [账号变化跨进程日志证据](evidence/mdm/account-cross-process-log.md)
 - [Firewall 运行时回读证据边界](evidence/mdm/firewall-runtime-readback.md)
+- [案例二：大代码库快速认知地图](evidence/gpu/01-codebase-map.md)
+- [案例二：跨平台调研与最小穿刺](evidence/gpu/02-platform-research-and-spike.md)
+- [案例二：任务、验收与排障证据链](evidence/gpu/03-task-acceptance-and-debug.md)
 - [原始大纲](archive/harmonyos-sdd-ralph-workshop-original.md)
 - [Rich V2 归档](archive/harmonyos-sdd-ralph-workshop-rich-v2.md)
 
@@ -24,7 +27,7 @@
 ```
 
 - MDM 主实践采用 Feature-first：先冻结多用户、状态、事务和失败语义，再实现。
-- GPU 方法迁移采用 Evidence-first：先建立同帧证据，再决定修改解码、队列、合成还是输出。
+- 远控案例采用 Context-first + Evidence-first：先用分层地图控制 55 万行级代码库的上下文，再沿其他平台的 H.264 子系统契约映射 HarmonyOS `OH_AVCodec`，通过最小能力穿刺、任务拆解和设备证据逐步收口。
 - MCP 负责构建、安装、设备操作、日志、截图与证据保存，不负责替代工程判断。
 
 每项能力都按同一教学闭环展开：
@@ -63,6 +66,7 @@
 - 8 张 Anthropic 官方方法论配图及逐图中文讲解；
 - 6 组真实 Session 证据卡：延迟补丁、跨进程、MCP 四层结果、乐观 UI、截图误判与修改越界；
 - 四线闭环审计：方法论、具体需求、演示证据和问题处理必须在同一案例链路相遇；
+- 案例二完整工程叙事：30 万行级以上开源库背景、CPU 视频卡顿、代码认知、跨平台调研、HM 方案、最小穿刺、任务验收、开发排障与最终证据；
 - 28、45、60–75 分钟三种讲授模式。
 
 ## 目录
@@ -77,6 +81,10 @@
 │   ├── t01-red-green.md
 │   ├── account-cross-process-log.md
 │   └── firewall-runtime-readback.md
+├── evidence/gpu/
+│   ├── 01-codebase-map.md
+│   ├── 02-platform-research-and-spike.md
+│   └── 03-task-acceptance-and-debug.md
 ├── archive/
 │   ├── harmonyos-sdd-ralph-workshop-original.md
 │   └── harmonyos-sdd-ralph-workshop-rich-v2.md

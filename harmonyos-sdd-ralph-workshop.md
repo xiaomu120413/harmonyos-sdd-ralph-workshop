@@ -2,7 +2,7 @@
 
 > 以真实 HarmonyOS MDM 与 FreeRDP GPU 送显问题为载体，跑通需求拆解、上下文组织、Agent 协作、开发、验证、问题定位与证据交付
 
-> **Rich V4 / Session Evidence 版**：保留原 39 页与 120 分钟结构；在 V3 方法论和媒体基础上，把真实 AI Session 中的错误假设、用户纠偏、日志反证、范围失控与局部成功嵌入正文。每项进阶能力都必须经过“问题暴露 → 学员操作 → 证据判定 → 迁移复用”，不能只停留在概念介绍。配套素材见 `harmonyos-sdd-workshop-media/`，Session 证据卡见附录 L。
+> **Rich V5 / 双案例工程闭环版**：保留 39 页与 120 分钟结构，不压缩 V4 的事实、媒体与 Session 证据；重新把“AI 如何完成复杂需求”放回主角位置。案例一用 MDM 跑通需求到验收，案例二基于 55 万行级 FreeRDP 源码，完整演示 CPU 视频卡顿如何经过代码认知、跨平台调研、HarmonyOS 对接、最小穿刺、任务拆解、开发排障和设备验收收口。
 
 ## 课程定位
 
@@ -39,19 +39,34 @@ Agent 组织方式按风险升级，不把“Agent 更多”误当成“能力�
 | 跨进程、事务、权限、GPU 状态 | Planner / Implementer 分离 |
 | 高风险或接近模型可靠边界 | 增加独立 Reviewer / Evaluator |
 
-课程主线只有一条：
+课程主线不是一次瀑布交付，而是两个案例重复同一个受控循环：
 
 ```mermaid
 flowchart LR
-    A[模糊需求] --> B[可测试规格]
-    B --> C[有边界任务]
-    C --> D[红绿迭代]
-    D --> E[设备事实]
+    A[真实问题] --> B[需求与边界]
+    B --> C[代码与平台事实]
+    C --> D[最小穿刺]
+    D --> E[任务化开发]
+    E --> F[工程验收]
+    F --> G{证据支持吗}
+    G -->|YES| H[交付与复用]
+    G -->|NO / UNKNOWN| I[最小反证与修正]
+    I --> D
 ```
 
 - **MDM 主实践**：Feature-first。先冻结多用户、状态、事务和失败语义，再让 AI 实现。
-- **GPU 方法迁移**：Evidence-first。先建立帧级证据，再决定修改解码、队列、合成还是输出。
+- **远控第二案例**：Context-first + Evidence-first。先控制 55 万行级代码库的上下文，再研究现有平台契约并映射 HarmonyOS；先让一帧走通硬解，再扩展到生命周期、队列、AVC420/AVC444 和最终验收。
 - **MCP 的位置**：不是第三套方法，只负责受控循环中的 Verify——构建、安装、操作、日志、截图和验收取证。
+
+判断 AI 是否正确不靠“它解释得很像”，固定做三层检查：
+
+| 判断层 | 问题 | 合格证据 |
+|---|---|---|
+| 方案正确 | 是否沿用了协议和成熟平台已经存在的契约，而非重写一套想象中的架构 | 原生调用链、平台 API、Architecture Decision |
+| 实现正确 | 代码是否只改变允许边界，并让同一输入在目标路径产生预期状态转换 | diff、单测、构建、路径日志、故障注入 |
+| 结果正确 | 用户问题是否在真实设备和同一场景下改善，同时没有破坏回退、交互与稳定性 | before/after、CPU/FPS、真机视频、长稳、回归矩阵 |
+
+任何一层缺证据都不能宣布完成：先标记 `UNKNOWN`，再补一条能推翻当前判断的最小观测；如果证据已经否定方案，就停止扩大修改，回到最近一个可信 checkpoint。
 
 ## 学员最终交付
 
@@ -83,7 +98,7 @@ workshop/
 | 00–26 | 需求闭合 | 领域建模、歧义选择、EARS、行为矩阵 | `spec.md` |
 | 26–70 | 设计与受控迭代 | 真相源、任务卡、RED→GREEN、故障注入 | `design.md`、patch、`progress.md` |
 | 70–88 | 平台与验收 | 权限预检、跨进程、MCP 设备证据 | `acceptance.md`、evidence |
-| 88–116 | GPU 迁移 | 还原帧链、420/444 分路、证据诊断 | `gpu-diagnosis.md` |
+| 88–116 | 远控第二案例 | 大库认知、跨平台调研、HM 方案、最小穿刺、任务与验收、开发排障 | codebase map、ADR、spike evidence、`gpu-diagnosis.md` |
 | 116–120 | 收束 | 同伴审阅与七问迁移 | 最终交付包 |
 
 每个模块结束固定做一次辨别力检查：**当前结论最可能错在哪里？我们看到的是表面输出、执行轨迹，还是最终系统事实？还缺哪一条证据？**
@@ -1494,814 +1509,666 @@ progress: 证据
 
 ---
 
-# 第五幕：把同一方法迁移到 AVC420 / AVC444
+# 第五幕：案例二——在 55 万行级开源库中完成 HarmonyOS 远控硬解闭环
 
-## 第 28 页｜GPU 问题先走 Evidence-first
+## 第 28 页｜案例二背景：在 55 万行级 FreeRDP 上解决视频卡顿
 
 <!--
 type: CLAIM
-section: GPU_METHOD
-layout: transition
+section: CASE2_CONTEXT
+layout: video-hero
 time: 2m
 progress: 需求
 -->
 
 ### 画面
 
-**能力回扣**：Eval 与反证｜先冻结现象和缺失证据，不让 AI 从“黑屏”直接跳到 decoder/shader。
+**任务背景**
 
-**MDM：Feature-first**
+> 基于 30 万行级以上开源库实现 HarmonyOS 远控应用。连接、输入与基础画面已经可用，但播放远端视频时，当前 CPU/软件解码路径出现明显卡顿，需要接入 HarmonyOS 硬件解码并形成可交付的工程方案。
 
-`需求 → 规格 → 设计 → RED → 实现 → 系统回读`
+```text
+本地 FreeRDP 快照：2014 个相关源文件 / 约 559,355 行
+用户现象：远端视频播放卡顿
+第一目标：证明当前路径、建立 before 基线
+最终目标：硬解路径可用、可回退、可验收、可维护
+```
 
-**GPU：Evidence-first**
+<!-- VIDEO SLOT: harmonyos-sdd-workshop-media/gpu-cpu-stutter-before.mp4 -->
 
-`现象 → 帧级证据 → 可证伪假设 → 设计 → 最小修改 → 同帧验收`
+当前用 `freerdp-stutter-scenario.jpeg` 做场景占位。正式授课应替换为 20–30 秒 before 视频，并同时录入 CPU/FPS 与 codec path；拍摄脚本见 `harmonyos-sdd-workshop-media/VIDEO_TODO.md`。
 
-> 当“卡顿”还不能对应到某个边界时，直接让 AI 优化代码只会扩大搜索空间。
-
-![真实远程桌面播放场景：只用于建立 workload，不直接证明卡顿原因](harmonyos-sdd-workshop-media/freerdp-stutter-scenario.jpeg)
-
-![故障录屏关键帧：连接后远程窗口持续黑屏](harmonyos-sdd-workshop-media/gpu-failure-black-screen-contact.jpg)
-
-**先让学员选，不先公布答案**：看到黑屏，你的第一步是改 shader、换 decoder、加线程，还是冻结现象并采证？要求每组选一项，并写出它能被什么证据推翻。
+![FreeRDP 视频播放卡顿场景](harmonyos-sdd-workshop-media/freerdp-stutter-scenario.jpeg)
 
 ### 讲师备注
 
-GPU 不是第二门 48 分钟原理课，而是方法迁移：学员要学会把“视频卡、拖拽卡、白帧”变成 frameId 可追踪的问题，并判断是 decode、queue、compose、present 还是上游内容。
+先介绍为什么这是一个“较为复杂的需求”，而不是直接说“调用 `OH_AVCodec`”：
 
-交付只有一张 `gpu-diagnosis.md`：现象、路径、最早异常、被排除的层、下一轮唯一修改边界、反证、验收字段。
+- 55 万行代码不可能全部读进上下文；
+- 视频数据经过协议、codec、buffer、合成、Surface 多个边界；
+- 软件路径能显示不代表硬解路径只需替换一个函数；
+- 一张正常截图不能证明持续流畅，也不能证明走了硬件 decoder；
+- 即使平均 CPU 下降，黑屏、色块、resize 或 fallback 失效仍然算失败。
 
-#### 讲师带入话术
+这里要区分“现象”和“根因”。如果没有 runtime path 日志，就只能说“视频卡顿”，不能先写成“CPU 解码导致卡顿”。本案例第一步不是改代码，而是把这个推断变成可验证事实。
 
-> “大家现在看到的是一个黑色远程窗口。先别告诉我怎么修，只告诉我：哪些是摄像机能拍到的事实，哪些是你脑中自动补出来的解释？”
+### 演示动作
 
-把现场答案写成三栏：
+播放卡顿视频槽位，要求学员写下它能证明和不能证明什么。翻牌：视频可证明持续现象；CPU/FPS、协商 codec 和 decoder subsystem 需要独立采样。
 
-| 直接事实 | 可能解释 | 还缺什么 |
+### 通过条件
+
+学员能说出：**用户问题是卡顿，CPU 软件解码只是待证假设；第一份产物应是可重复的 before 基线。**
+
+### 素材
+
+- `freerdp-stutter-scenario.jpeg`
+- `harmonyos-sdd-workshop-media/VIDEO_TODO.md`
+- `evidence/gpu/01-codebase-map.md`
+
+---
+
+## 第 29 页｜第一步：让 AI 快速熟悉代码，但不吞下整个仓库
+
+<!--
+type: LAB
+section: CASE2_CONTEXT
+layout: layered-map
+time: 3m
+progress: 设计
+-->
+
+### 画面
+
+**从“读全库”改成“回答五个问题”**
+
+```text
+协议：H.264 从哪里进入？
+选择：运行时选了哪个 decoder subsystem？
+输出：格式、stride、plane 是什么？
+显示：谁拥有 Surface，何时 present？
+证明：怎样排除 software/GDI fallback？
+```
+
+```mermaid
+flowchart LR
+    A[RDPGFX command] --> B[H264 subsystem]
+    B --> C[platform decoder]
+    C --> D[decoded planes / buffer]
+    D --> E[composition / owner]
+    E --> F[NativeWindow present]
+```
+
+右侧放上下文预算：`1 个问题 + 1 条调用链 + 3–7 个接口 + 1 个假设 + 1 条下一步命令`。
+
+### 讲师备注
+
+AI 熟悉大库的产物不是“仓库总结”，而是 `codebase-map.md`：
+
+| 层 | 本轮只读入口 | 先不读什么 |
 |---|---|---|
-| 连接后远程内容区持续黑色 | decoder 没输出 | command/decode callback 与 PTS |
-| 外层 HarmonyOS 窗口仍可操作 | GPU 没有挂死 | RenderService、owner、present 事实 |
-| 黑色持续超过一个刷新周期 | target 被清黑 | first remote update、retained readiness |
+| 协议 | `libfreerdp/gdi/gfx.c`、`codec/h264.c` | 无关 channel |
+| 平台 codec | `h264_ffmpeg/openh264/mf/mediacodec/ohos_*` | 编码端与非 H.264 codec |
+| OHOS bridge | `client/OHOS/ohos_rdpgfx_*`、`rdpgfx_pipeline.*` | ArkTS 页面业务 |
+| 输出 | `surface_bridge.*`、`render_output_owner.*` | 尚未触发的优化分支 |
 
-然后揭示本课约束：本轮只交付诊断，不以“画面暂时恢复”作为成功。学员会立刻意识到，需求不是“让它不黑”，而是“找出第一处违反显示契约的边界”。
+每个发现只保存 `path:line + 输入/输出 + 为什么相关 + 可信度`。AI 下一轮通过 evidence index 按需检索，而不是把整段历史 Session 再喂一遍。
 
-#### 学员现场产出
+#### 课堂 Prompt
+
+```text
+只读。不要修改代码，不要总结全库。
+输出 SurfaceCommand → decoder → present 的调用链；
+每一段只列 path:line、输入、输出、owner；
+列出仍缺的运行时证据，以及下一轮最多打开的 5 个文件。
+```
+
+### 演示动作
+
+让学员用 `rg` 从 `RDPGFX_CODECID_AVC420` 或 `h264_context_new` 开始，三分钟内画出第一版路径。讲师用 `evidence/gpu/01-codebase-map.md` 翻牌。
+
+### 通过条件
+
+- 调用链上的每个符号都能定位；
+- 文件名推断不能标成运行时事实；
+- 输出明确哪些事实仍为 `UNKNOWN`。
+
+### 素材
+
+- `evidence/gpu/01-codebase-map.md`
+- `harmony/third_party/FreeRDP/libfreerdp/codec/h264.c`
+- `harmony/third_party/FreeRDP/client/OHOS/README.md`
+
+---
+
+## 第 30 页｜第二步：研究其他平台，复制契约而不是复制代码
+
+<!--
+type: MAP
+section: CASE2_RESEARCH
+layout: comparison
+time: 3m
+progress: 设计
+-->
+
+### 画面
+
+| 已有后端 | 作用 | AI 应该学习什么 |
+|---|---|---|
+| FFmpeg / OpenH264 | 通用软件路径 | 正确性 fallback、YUV 输出语义 |
+| Windows Media Foundation | Windows 硬解 | 平台 decoder 生命周期与失败传播 |
+| Android MediaCodec | 移动平台硬解 | buffer 输入输出、format change、释放 |
+| HarmonyOS `OH_AVCodec` | 目标平台 | 能力查询、AVBuffer/Surface、stride/plane |
+
+中央结论：
+
+```text
+共同契约：Create → Configure → Start → Input → Output → Validate → Release
+平台差异：API、buffer ownership、output format、Surface/lifecycle
+```
+
+### 讲师备注
+
+这一步不是让 AI 上网找一篇“HarmonyOS 硬解教程”然后照抄。优先研究同一仓库已经认可的扩展点：`H264_CONTEXT_SUBSYSTEM` 如何隔离 FFmpeg、OpenH264、Media Foundation 和 MediaCodec。
+
+AI 输出一张“同与不同”表：
+
+- **必须保持**：上层 H.264 调用契约、错误语义、AVC420/444 协议语义、fallback；
+- **必须适配**：能力查询、pixel format、异步 callback、stride/plane、NativeWindow 生命周期；
+- **不能照抄**：Android 的 buffer ID、Windows COM 生命周期、其他平台的 Surface 所有权假设。
+
+判断调研是否可信：每个“其他平台怎么做”都必须落到当前仓库的源文件或官方平台 API；二手文章只能提供关键词，不能直接成为 Architecture Decision。
+
+### 演示动作
+
+左右对照 `h264_mediacodec.c` 与 `h264_ohos_decoder.c`，只比较 Init/Decompress/Uninit 和 buffer 状态，不展开全部实现。
+
+### 通过条件
+
+学员能够说明：**我们复用的是 FreeRDP 的 subsystem 和协议契约，不是把 Android API 名称替换成 HarmonyOS API 名称。**
+
+### 素材
+
+- `evidence/gpu/02-platform-research-and-spike.md`
+- `h264_mediacodec.c` / `h264_mf.c` / `h264_ohos_decoder.c`
+
+---
+
+## 第 31 页｜先给出 HarmonyOS 对接方案，再决定改哪些文件
+
+<!--
+type: MAP
+section: CASE2_RESEARCH
+layout: architecture
+time: 2m
+progress: 设计
+-->
+
+### 画面
+
+```mermaid
+flowchart LR
+    A[FreeRDP H264 subsystem] --> B[OH_AVCodec adapter]
+    B --> C[hardware decoder]
+    C --> D[AVBuffer / decoded planes]
+    D --> E{codec path}
+    E -->|AVC420| F[buffer composition / GDI-compatible output]
+    E -->|AVC444| G[GPU luma + chroma state]
+    F --> H[render output owner]
+    G --> H
+    H --> I[EndFrame / NativeWindow]
+```
+
+Architecture Decision：
+
+```text
+先在既有 H264 subsystem 内接入 OH_AVCodec；
+先做 AVC420 单路 buffer 硬解穿刺；
+保留软件/GDI fallback；
+AVC444、零拷贝、队列与 resize 分任务推进。
+```
+
+### 讲师备注
+
+方案评审只回答四个问题：
+
+1. 新 backend 是否仍从 FreeRDP 的协议入口被选择？
+2. 平台输出能否转换为上层理解的格式与状态？
+3. 新路径失败时谁接管，是否可观测？
+4. App、FreeRDP OHOS layer 与通用库的职责是否清楚？
+
+AI 容易给出“OH_AVCodec → Surface 直接显示”的漂亮方案，但这可能绕开 dirty rect、AVC444 LC、EndFrame 和原生 fallback。只有调用链与失败语义完整，方案才进入穿刺。
+
+### 演示动作
+
+让两组学员互审 ADR：一组找“绕开原生契约”的风险，另一组找“无法验收”的风险。
+
+### 通过条件
+
+方案同时写明 Decision、Why、First slice、Deferred、Fallback 和 Evidence；不以架构图漂亮作为通过标准。
+
+### 素材
+
+- `evidence/gpu/02-platform-research-and-spike.md`
+- `client/OHOS/README.md`
+
+---
+
+## 第 32 页｜第三步：最小能力穿刺，只证明一帧能走通
+
+<!--
+type: LAB
+section: CASE2_SPIKE
+layout: vertical-slice
+time: 3m
+progress: 代码
+-->
+
+### 画面
+
+```text
+SP-01 编译并链接 OHOS backend
+  ↓
+SP-02 真机选择 hardware decoder
+  ↓
+SP-03 一个 AVC420 sample 产生合法 output
+  ↓
+SP-04 同一 frame 到达正确 owner / present
+  ↓
+SP-05 注入失败时回到可解释 fallback
+```
+
+每个节点下固定显示一条证据：build symbol、decoder name、frameId + stride/planes、owner + EndFrame、fallback reason。
+
+### 讲师备注
+
+穿刺的价值是把五类风险分开：
+
+- 编译和动态链接能否成立；
+- 平台能力与 decoder 是否真实可用；
+- compressed sample 是否能产生正确 output；
+- output 是否能接回现有显示边界；
+- 失败是否仍有正确性兜底。
+
+“屏幕出现一帧”还不能证明连续视频性能，但已经能否定很多错误方向。反过来，只有 `OH_AVCodec_CreateByName` 成功也不够：如果输出格式、stride 或 owner 不明，穿刺仍是 `UNKNOWN`。
+
+#### 学员产出
 
 ```markdown
-Symptom: 连接后远程内容区连续 13.7s 黑色
-Known: 外层 UI 可响应；尚无完整同帧 trace
-Unknown: command 是否到达、decoded content 是否有效、谁持有输出
-First probe: command(codecId/frameId) + owner + EndFrame/present
-Forbidden: 换 decoder、改 shader、加线程
+Spike verdict: PASS | FAIL | UNKNOWN
+Selected decoder:
+Input frame identity:
+Output format/stride/planes:
+Display owner/present boundary:
+Fallback injected/result:
+Missing evidence:
 ```
 
 ### 演示动作
 
-播放 13 秒黑屏录屏，先做三列记录：`直接观察 / 推测 / 尚缺证据`。第一轮不允许回答“上硬解”“改 GPU”或“加线程”。
-
-[▶ 播放：连接后持续黑屏（13.7 秒）](harmonyos-sdd-workshop-media/gpu-failure-black-screen-13s.mp4)
+展示一组“API 返回成功但黑屏”的日志，让学员指出 SP-03 还是 SP-04 失败；随后播放 `gpu-failure-black-screen-13s.mp4`，禁止直接猜 shader。
 
 ### 通过条件
 
-每个判断都能说出需要哪条日志或指标来证明 / 推翻。
+学员不把 build success、decoder create success 或单张截图当成整个 spike 的 PASS。
 
 ### 素材
 
-- 黑屏故障录屏与关键帧联系表
-- AVC420 / AVC444 各一段真实 HiLog
+- `gpu-failure-black-screen-13s.mp4`
+- `evidence/gpu/02-platform-research-and-spike.md`
+- `gpu-failure-black-screen-contact.jpg`
 
 ---
 
-## 第 29 页｜先分开两条真实数据路径
-
-<!--
-type: MAP
-section: GPU_METHOD
-layout: dual-pipeline
-time: 3m
-progress: 设计
--->
-
-### 画面
-
-**能力回扣**：上下文工程｜只加载当前 command 实际经过的 codec、consumer 与 owner，不把所有 GPU 代码塞进上下文。
-
-```mermaid
-flowchart TB
-    A[FreeRDP SurfaceCommand] --> B{Codec path}
-    B -->|AVC420| C[OH_AVCodec → opaque NativeBuffer]
-    C --> D[EGLImage / External OES → RGBA retained FBO]
-    B -->|AVC444| E[单 Decoder → mapped NV12/NV21]
-    E --> F[LC 更新 → retained Y/U/V textures]
-    D --> G[XComponent / NativeWindow]
-    F --> G
-```
-
-- GDI snapshot/base 只参与 AVC420 的可信 base / retained 合成；但 GPU 未消费当前命令时，420 与 444 都可能回到原生 GDI 路径，不能把“背景参与方式”和“失败回退路径”混为一谈。
-- 420 的核心是 **opaque import + dirty rect + RGBA retained**。
-- 444 的核心是 **mapped planes + LC + Y/U/V retained**。
-
-![NativeBuffer 阶段色块样本](harmonyos-sdd-workshop-media/nativebuffer-test-pattern.png)
-![RGBA renderer 阶段色块样本](harmonyos-sdd-workshop-media/rgba-renderer-test-pattern.png)
-
-**课堂追问**：两张图肉眼几乎一致，能否据此证明它们走了同一条 Buffer 路径？答案必须回到代码入口、Buffer 类型和日志，而不是“看起来一样”。
-
-### 讲师备注
-
-这是必须纠正的架构事实：AVC420 retained surface 不是“4:2:0 composite”，而是 GL RGBA Texture + FBO；解码输出经 `OH_NativeBuffer → EGLImage → GL_TEXTURE_EXTERNAL_OES` 写入 dirty rect。
-
-AVC444 才会把解码输出映射为 NV12/NV21 planes，并更新独立 Y/U/V texture state。不要把 stride / sliceHeight / plane offset 作为两个 codec 的共同 compositor 入口。
-
-#### 逐步揭示：三个“看起来一样、实际不同”的事实
-
-1. **协商事实**：服务器/客户端确认支持 AVC444，只能说明能力成立。
-2. **命令事实**：每条 `SurfaceCommand.codecId` 才决定本条命令走 420 还是 444。
-3. **输出事实**：`RenderOutputOwner` 决定谁有权向 XComponent 写入。
-
-课堂先展示 `confirmed=avc444`，让学员举手判断；再展示历史同一时段计数 `avc420:389 avc444:0`。翻牌答案不是“协商错了”，而是：**能力确认、命令分流、输出所有权是三个不同层级的真相源。**
-
-#### 小组任务：画出一条命令的身份证
-
-```text
-sessionId → frameId → codecId → consumer → retained state → owner → target
-```
-
-每个箭头必须写代码符号或日志字段。任何一格只能写“推测”的组，不允许进入实现阶段。
-
-### 演示动作
-
-在代码中分别定位 `Avc420GpuCompositorImpl` 与 `Avc444GpuCompositorImpl::State`，画出每条路径的“协议对象→Buffer→retained state→present”。
-
-### 通过条件
-
-学员能说明为什么不能写一个“通用 NV12 upload”同时替换 420 与 444。
-
-### 素材
-
-- `surface/avc420_gpu_compositor_internal.cpp`
-- `surface/avc444_gpu_compositor_internal.cpp`
-
----
-
-## 第 30 页｜实践：用同一个 frameId 还原一帧
+## 第 33 页｜穿刺以后再拆任务，并把验收点写进任务卡
 
 <!--
 type: LAB
-section: GPU_METHOD
-layout: trace-lab
+section: CASE2_EXECUTION
+layout: task-board
 time: 3m
-progress: 调试
+progress: 任务
 -->
 
 ### 画面
 
-**能力回扣**：工具契约｜日志工具必须返回能串起同一帧的身份字段；学员产出 `last-good / first-abnormal`。
-
-**G01 / Instrument only**
-
-本轮禁止改变 renderer、queue policy 与 codec fallback，只补一条公共事件结构：
-
-```text
-runId sessionId frameId seq tsUs path event pts
-queueDepth queueAgeMs durationUs owner targetEpoch result reason
-```
-
-其中 `targetEpoch` 是 **TARGET telemetry**：当前实现还没有完整的 task-carried surface generation 契约，课堂中必须标 GAP，不能伪装成现成字段。
-
-必须串出：
-
-`command → enqueue/decode → retained update → EndFrame → swap/present`
-
-分别为 AVC420、AVC444 找到第一处缺失或异常事件。
-
-![连接与诊断采集界面：用于说明采集入口，不作为队列正确性的证据](harmonyos-sdd-workshop-media/freerdp-render-queue.jpeg)
-
-### 讲师备注
-
-AI 任务卡要限制日志开销：采样策略、周期聚合、错误全量、禁止打印 bitstream 和敏感画面数据。当前仓库已有 avg/max/count、queue depth、max EndFrame gap 等诊断；不要在课程中声称已有 P95，除非这轮真的实现并验证。
-
-MCP 可负责构建、安装、启动、日志查询与保存，但帧级字段必须由应用 HiLog / diagnostics 提供。先建立可关联 schema，后续每轮都复用，不要每次发明新日志。
-
-当前本地 `harmony/out` 日志只能证明若干阶段事件，例如 AVC444 prewarm 与 mapped-plane 路径，**还没有一条完整的同帧 command→decode→retained→EndFrame→present 证据**。因此这页的课堂目标是补观测，不是拿残缺日志宣布 PASS。
-
-**真实协同片段**：
-
-> 人：来的本来就是区域的，不要跟全屏绑定，要自己合成哈。
->
-> AI：据此撤回“把当前 Buffer 当完整 Surface”的假设，把修改边界收窄到 retained RGBA FBO：SurfaceCommand 只更新 dirty rect，EndFrame 再提交完整 composite。
-
-这段对话适合先遮住 AI 回答，只展示人的一句纠偏，让学员写出“需求语义发生了什么变化”。
-
-#### 课堂重构示例：完整帧与断链帧
-
-下面是**教学用目标格式**，不是声称本地已有完整日志：
-
-```text
-seq=101 frame=714 path=420 event=command       queueDepth=3 owner=gdi
-seq=102 frame=714 path=420 event=decodeOutput  durationUs=3810 result=ok
-seq=103 frame=714 path=420 event=retainedRect  rect=640,220,320,180 result=ok
-seq=104 frame=714 path=420 event=endFrame      matched=true
-seq=105 frame=714 path=420 event=present       owner=avc420Gpu result=ok
-```
-
-再删除第 103 行，并把第 105 行改成 `result=skipped reason=notReady`。让学员回答：
-
-- 最早异常是 present skipped，还是 retainedRect 缺失？
-- 下一轮探针应放在 decoder callback、renderer，还是 EndFrame？
-- 什么日志出现后会推翻“retained update 没执行”的假设？
-
-翻牌原则：**最终失败负责描述现象，最早断链负责选择修改层。**
-
-### 演示动作
-
-四人协同实操：A 控制复现场景，B 用 MCP 构建/安装/抓日志，C 让 AI 只做同 frameId 排序与缺口标注，D 负责反证。保存 `gpu-frame-trace.txt`，禁止让 AI 在这一轮改 renderer。
-
-### 通过条件
-
-同一帧至少能跨越 command、decode、compose/present 三层；缺失层被明确写成下一轮观测任务。
-
-### 素材
-
-- `Avc420GpuCompositor::Diagnostics`
-- `Avc444GpuCompositor::Diagnostics`
-- MCP `logs_query`
-
----
-
-## 第 31 页｜指标只负责选择下一层，不替你下结论
-
-<!--
-type: DEBUG
-section: GPU_METHOD
-layout: diagnosis-matrix
-time: 2m
-progress: 调试
--->
-
-### 画面
-
-**能力回扣**：Eval 与反证｜指标只路由下一步调查，不能替代可证伪假设和同帧 Outcome。
-
-| 证据组合 | 最可能边界 | 下一轮只验证 |
+| Task | 一个可观察结果 | Stop 条件 |
 |---|---|---|
-| decode 高、queue 低 | codec / 输入格式 | 硬解输出与 PTS |
-| decode 低、queue age 高 | worker / 背压 | 排队与顺序 |
-| compose 高 | texture / dirty rect | import、shader、rect |
-| 全段低但画面白 | 上游内容 / readiness | first abnormal frame |
-
-页尾：FPS 是结果指标；**最早异常 + 分段耗时 + queue age** 才能选择修改层。
-
-![远程视频与窗口交互场景](harmonyos-sdd-workshop-media/freerdp-frame-pacing.jpeg)
-
-**带入问题**：CPU 低、decode 低，但画面仍卡，下一条日志应该放在 decoder 里，还是 queue→EndFrame/present 边界？先说反证，再选层。
+| T00 | 保存 CPU 卡顿 before 基线 | 路径不明则不归因 |
+| T01 | 真机选择 OHOS hardware decoder | 运行时仍 fallback |
+| T02 | AVC420 一帧输出合法 | format/stride/plane 未证实 |
+| T03 | 一帧进入正确 display owner | GDI/GPU 双写 |
+| T04 | 连续播放队列有界 | backlog 持续增长 |
+| T05 | resize/后台/重连恢复 | stale generation |
+| T06 | AVC444 LC 与单 decoder 闭合 | 复用 420 假设 |
+| T07 | 同场景 A/B 与回归验收 | 缺 CPU/FPS/path evidence |
 
 ### 讲师备注
 
-矩阵是训练样例，不是自动根因分类器。必须同时记录设备、分辨率、codec、drag 场景和样本窗口。平均值会隐藏尖峰；仓库当前没有完整 P95 时，应写“建议新增 percentile telemetry”，不能伪造数字。
+穿刺以前只能确定探索任务，不能假装完整实现计划已经可靠。穿刺以后，关键接口和真实平台限制才足够清楚，可以把工作拆成有依赖的 Task Graph。
 
-白帧不一定是 GPU 输出错误。先判断 primary / decoded content 是否已经白，再检查 retained state、readiness、owner 与 swap。
+每张任务卡必须包含：Requirement、Current Evidence、Allowed、Forbidden、RED/Probe、Minimal Change、Verify、Stop。特别强调 `Forbidden` 写到对象和行为，例如：T02 不允许顺手重写 AVC444 compositor，也不允许为了“干净”删除原生 fallback。
 
-#### 三个真实历史片段，训练“指标只选层”
+验收标准分三层：
 
-| 历史现象 | 已有事实 | 不应得出的结论 | 下一步 |
-|---|---|---|---|
-| 登录阶段长时间停顿 | location redirection 曾引入同步 60s 等待 | GPU 太慢 | 先验证 channel 初始化与同步等待 |
-| 常态约 21.6fps，随后远端更新约 6.9fps | 本地 RenderService 无明显 hitch、CPU 低 | 本地 GPU 必然正常 | 继续比较上游 update rate 与 present rate |
-| resize 阶段 RDPGFX 输入约 24fps，输出一度约 2.8fps | 同时出现 clear/progressive/GDI background surge | 解码器性能不足 | 查 target/retained 重建和背景灌入 |
-
-这里故意把一个“非 GPU 根因”混入 GPU 章节：学员如果看到卡顿就只改 compositor，说明还没有真正掌握 Evidence-first。
-
-#### 讲师翻牌
-
-平均 decode 低只能排除“持续解码耗时高”，不能排除输出频率低、队列老化、一次长尾、上游没送内容或生命周期错位。每次只允许选一个下一层，并写出推翻自己的日志。
+- Task 层：这一张卡的状态转换是否成立；
+- Path 层：协议→decoder→output→owner→present 是否连续；
+- Outcome 层：同一用户场景是否真实改善且回归可控。
 
 ### 演示动作
 
-先播放修复后 16 秒动态录屏，让学员观察“视频连续播放、窗口切换、遮挡恢复”分别验证了什么；再给两组指标样例：A `decode=3ms, queueAge=95ms`；B 各段都低但首个 decoded sample 全白。让学员分别写下一条证伪日志。
-
-[▶ 播放：视频播放与窗口交互验证（16 秒）](harmonyos-sdd-workshop-media/gpu-validation-video-playback-16s.mp4)
+给学员一张错误任务卡：“完成 HarmonyOS FreeRDP 硬解优化”。要求拆成上表任务，并为每项补一个 FAIL/UNKNOWN 判定。
 
 ### 通过条件
 
-答案只选择一个边界，且给出能推翻该假设的反证。
+任何 Task 都只有一个可观察结果；验收点在开发前写出，不由实现结果反向定义。
 
 ### 素材
 
-- GPU 训练日志 A/B
-- 附录 F 诊断卡
+- `evidence/gpu/03-task-acceptance-and-debug.md`
+- 附录 D Task Card / Progress Ledger
 
 ---
 
-## 第 32 页｜HarmonyOS 适配难在 Buffer 与 Surface 生命周期
+## 第 34 页｜第四步：AI 开发不是一条聊天，而是一条可审查流水线
 
 <!--
 type: MAP
-section: GPU_PLATFORM
-layout: platform-differences
+section: CASE2_EXECUTION
+layout: swimlane
 time: 3m
-progress: 设计
+progress: 代码
 -->
 
 ### 画面
-
-**能力回扣**：需求与边界冻结｜把“支持 GPU 送显”拆成对象身份、所有权、生命周期和重建后的不变量。
-
-| 移植问题 | HarmonyOS 需要显式处理 | 验证证据 |
-|---|---|---|
-| Codec 输出 | OH_AVCodec 异步输入/输出、NativeBuffer 生命周期 | callback、PTS、format |
-| GPU 导入 | EGLImage / External OES 或 MapPlanes | format、stride、planes |
-| 输出目标 | XComponent / NativeWindow create、resize、destroy | generation、size、owner |
-| 失败回退 | 释放 owner、恢复 GDI producer/presenter | transition reason |
-
-![缩放与 compositor 场景：引出 retained 尺寸和 target 尺寸必须同步](harmonyos-sdd-workshop-media/freerdp-compositor-scale.jpeg)
-
-### 讲师备注
-
-“Qt 已经鸿蒙化”并不等于 Windows/Android 的媒体与渲染路径可以原样搬过来。Qt 解决 UI/框架适配，远控视频仍要面对 HarmonyOS 的 OH_AVCodec、OH_NativeBuffer、EGL 与 XComponent 生命周期。
-
-不要泛化为“Windows 一定用 Media Foundation”。课堂只比较当前项目的真实边界：原 FreeRDP native GDI fallback 与应用侧 GPU compositor。Surface destroy/recreate 是高频真实故障源，必须用 generation 或 target identity 防止旧回调写新窗口。
-
-**CURRENT / GAP 必须分开**：当前代码能观察 target create/resize/destroy 与 owner reset，但还没有完整的“任务携带 surfaceGeneration，提交前再次校验”的闭环。`targetEpoch` 是下一轮设计任务，不是现状能力。
-
-本地历史还出现过 resize 后旧的 `2432×1360` composite 被提交到新的 `3120×1885` target，而新内容实际是 `3120×1872`，最终在任务栏上方残留旧内容。这是典型的“每一帧都解码成功，但 target/retained 生命周期错位”。
-
-#### Resize 故障时间线
 
 ```mermaid
 sequenceDiagram
-    participant S as Surface/XComponent
-    participant Q as Worker Queue
-    participant R as Retained Composite
-    S->>S: target 2432×1360 active
-    Q->>R: commands for old size
-    S->>S: recreate target 3120×1885
-    Q-->>S: old callback arrives
-    R-->>S: present old 2432×1360 composite
-    S->>S: remote content settles at 3120×1872
-    Note over S,R: 任务栏上方残留旧内容
+    participant H as Human / Planner
+    participant E as Explorer
+    participant I as Implementer
+    participant T as Tool / MCP
+    participant R as Reviewer
+    H->>E: 只读调用链与 GAP
+    E-->>H: codebase map + evidence index
+    H->>I: 单张 Task Card
+    I-->>T: 最小 diff + verify commands
+    T-->>R: build/device/log/video evidence
+    R-->>H: Trace + Outcome verdict
 ```
 
-让学员在四处选一个最小防线：入队时、decode callback、retained update、present 前。推荐答案是任务携带 target identity，并在真正写 target 前再次校验；只在入队时检查不足以阻止晚到回调。
-
-#### 生命周期验收问题
-
-- 谁拥有 NativeBuffer，什么时候 release？
-- target destroy 后，队列里的旧 task 是清空、标 stale 还是允许完成但禁止 present？
-- retained state 的尺寸变化是重建、裁剪还是迁移？
-- owner reset 与 compositor 资源释放是否在同一生命周期闭环？
-
-### 演示动作
-
-旋转、切后台或销毁 XComponent，观察 target changed、owner transition 与 retained state 日志；确认旧 frame 不再 present。
-
-### 通过条件
-
-设计中明确 Buffer 所有权、释放方、Surface generation 与旧回调处理规则。
-
-### 素材
-
-- `surface/xcomponent_native_host.cpp`
-- `surface/surface_bridge.cpp`
-- `surface/render_output_owner.cpp`
-
----
-
-## 第 33 页｜项目里其实是两层、三套 OH_AVCodec 接入
-
-<!--
-type: MAP
-section: GPU_PLATFORM
-layout: decoder-boundaries
-time: 2m
-progress: 设计
--->
-
-### 画面
-
-**能力回扣**：任务边界｜AI 必须先证明当前命令进入哪套接入，再获得修改对应文件的权限。
-
-| 接入 | 所在层 | 角色 |
-|---|---|---|
-| `h264_ohos_decoder*.c` | FreeRDP codec subsystem | 原生 GDI decode / fallback |
-| `Avc420HardwareDecoder` | App AVC420 compositor | opaque NativeBuffer → EGL |
-| `Avc444HardwareDecoder` | App AVC444 compositor | mapped planes → LC 合成 |
-
-公共生命周期：`create → configure → callbacks → start → push input → consume output → release/reset`
-
-> 公共的是 codec 生命周期，不是 420/444 的合成语义。
-
 ### 讲师备注
 
-如果 AI 只搜索 `h264_ohos_decoder.c`，它会把优化写到 FreeRDP GDI fallback，却不影响应用侧 GPU compositor；反过来也一样。T00 勘察必须先确定用户看到的卡顿路径当前由哪个 owner 与 decoder 消费。
+这里把“怎么协同”演出来，而不是只放一张 Agent 架构图：
 
-真实日志曾出现 `confirmed=avc444`，但实际命令计数却是 `avc420:389 avc444:0`。这说明“协商能力确认”不等于“当前每条 SurfaceCommand 的实际 codec 路径”；真正的分流事实要看命令里的 `codecId` 与实际 consumer。
+- Planner 冻结任务和验收，不写实现细节；
+- Explorer 只读，不靠记忆声称某条路径存在；
+- Implementer 只能改 Allowed，并在 stop 条件触发时停手；
+- MCP/脚本执行确定性动作并保存原始证据；
+- Reviewer 不看“我已经完成”的总结，先看 diff、运行路径和 outcome。
 
-解码成功只证明拿到输出 Buffer；还必须验证 format、PTS、buffer ownership、retained update、EndFrame 与 present。不要把 callback 返回当成“画面已显示”。
+一个人也可以分时扮演五个角色，但不能让同一段自我陈述同时充当方案、实现和验收证据。
 
-#### 三套接入的课堂路径卡
-
-| 路径 | 入口问题 | 输出对象 | 最终需要的直接事实 |
-|---|---|---|---|
-| FreeRDP `h264_ohos_decoder*.c` | native GDI fallback 是否消费？ | GDI 可用像素/primary | `HarmonyEndPaint` 与 GDI presenter |
-| App `Avc420HardwareDecoder` | 当前命令是否为 AVC420？ | opaque `OH_NativeBuffer` | EGLImage import、dirty rect retained、owner |
-| App `Avc444HardwareDecoder` | 当前命令 LC 是多少？ | mapped NV12/NV21 planes | plane layout、luma/chroma readiness、EndFrame |
-
-建议让三组分别扮演一条路径。讲师只给一条日志，各组必须说“这是不是我的证据”。这样比讲师连续解释三遍更容易让大家记住边界。
-
-#### 常见误判
-
-- 改了 FreeRDP fallback decoder，却用 App compositor 的 FPS 宣称优化成功。
-- 看到了 decoder output callback，就把状态写成“已显示”。
-- 因为类名都有 `HardwareDecoder`，就抽出一个共享的 Buffer upload 实现。
-
-### 演示动作
-
-先只给学员 `confirmed=avc444`，让其预测实际路径；再揭示 `avc420:389 avc444:0`。随后用 `rg` 搜三套 decoder，分别标注调用入口、输出对象和最终 presenter；让 AI 解释本轮修改为什么只属于其中一套。
-
-### 通过条件
-
-代码 diff 落在真实数据路径；没有“改了 fallback，却拿 GPU compositor 日志宣称生效”。
-
-### 素材
-
-- `FreeRDP/libfreerdp/codec/h264_ohos_decoder.c`
-- `surface/avc420_gpu_compositor_internal.cpp`
-- `surface/avc444_gpu_compositor_internal.cpp`
-
----
-
-## 第 34 页｜实践：420 验证 import，444 验证 plane math
-
-<!--
-type: LAB
-section: GPU_PLATFORM
-layout: split-buffer
-time: 3m
-progress: 代码
--->
-
-### 画面
-
-**能力回扣**：Workflow 与 Agent｜固定小样本验证走 Workflow；AI 只解释失败位于 import、layout 还是 shader。
-
-**AVC420 / opaque output**
-
-- `OH_NativeBuffer` 能否创建 EGLImage？
-- External OES 纹理采样方向、裁剪与色彩是否正确？
-- dirty rect 外像素是否由 RGBA retained FBO 保留？
-
-**AVC444 / mapped output**
-
-- `MapPlanes` 返回的 Y / UV offset、rowStride、pixelStride？
-- NV12 与 NV21 的 U/V 顺序？
-- sliceHeight / 对齐是否导致越界或错色？
-
-![420：NativeBuffer import 色块](harmonyos-sdd-workshop-media/nativebuffer-test-pattern.png)
-![420：RGBA retained 输出色块](harmonyos-sdd-workshop-media/rgba-renderer-test-pattern.png)
-
-图片只能证明“输出视觉一致”；420 的 import 成功必须由 EGLImage/OES 日志证明，444 的 plane math 必须由 runtime planes 与边界检查证明。两张漂亮图都不能替代结构化证据。
-
-### 讲师备注
-
-这页必须分栏，不能再把 NV12 plane 计算当作 AVC420 compositor 的公共步骤。420 当前走 opaque NativeBuffer import；444 需要 mapped-plane 校验并上传到纹理。
-
-为 444 准备一个 8×4 小 Buffer 练习，要求学员根据 runtime planes 而不是 `width*height` 猜偏移。为 420 准备色块和局部 dirty rect，验证 retained 区域不被清空。所有检查先在小样本完成，再回到 1080p/4K 性能。
-
-#### 8×4 AVC444 plane math 实操
-
-给定 runtime 返回：
+#### 怎么判断 AI 写的代码“看起来对”还是“真的对”
 
 ```text
-width=8 height=4 format=NV12
-Y:  offset=0  rowStride=16 pixelStride=1 sliceHeight=4
-UV: offset=64 rowStride=16 pixelStride=2 sliceHeight=2
-bufferSize=96
+方案：与原生/其他平台契约一致吗？
+实现：diff 只覆盖任务授权吗？
+路径：真机真的运行了新代码吗？
+结果：用户场景和工程回归都通过吗？
 ```
-
-学员计算：
-
-- `Y(5,2) = offsetY + 2*16 + 5 = 37`
-- 对应 chroma block：`uvRow=(2/2)*16=16`，`uvCol=(5/2)*2=4`
-- NV12：`U=64+16+4=84`，`V=85`
-- 若 runtime 报 NV21，U/V 顺序交换，但 rowStride、offset 仍以 runtime 为准。
-
-故意给一个错误答案 `UV offset = width*height = 32`。让学员指出它忽略了 Y rowStride 与 sliceHeight；即使 8×4 小图“碰巧没崩”，放到对齐更大的 Buffer 也会错色或越界。
-
-#### AVC420 dirty-rect 实操
-
-1. 用 8×4 棋盘格 seed 完整 RGBA FBO。
-2. 只更新 rect `(2,1)-(6,3)` 为红色。
-3. 对 rect 内外分别计算像素 hash。
-4. PASS：rect 内变化，rect 外 hash 不变；并有 EGLImage/OES import 成功事实。
-
-这里不比较 420 与 444 谁“更快”，只验证各自最容易被错误抽象掉的契约。
 
 ### 演示动作
 
-让 AI 生成只读 Buffer inspector 与色块 test pattern，不允许改正式 shader；分别保存 import result 和 plane layout。
+展示“只要求删除 cache，却删除整条实现路径”的真实 Session 卡。让 Reviewer 即使看到 build green 也判 Trace FAIL，并说明如何只回滚越界部分。
 
 ### 通过条件
 
-420 的证据包含 EGLImage import + rect 结果；444 的证据包含真实 planes、格式与无越界检查。任一路都不能用另一条路径的证据代替。
+学员能区分实现者自评、工具结果、业务路径和独立验收四种不同事实。
 
 ### 素材
 
-- `OH_NativeBuffer` / EGL 日志
-- `Avc444HardwareDecoder::MapDecodedFrame`
-- 色块与 dirty-rect 测试帧
+- 附录 L6 越界修改 Session Evidence Card
+- `evidence/gpu/03-task-acceptance-and-debug.md`
+- `anthropic/evaluator-optimizer.png`（讲师备注可选）
 
 ---
 
-## 第 35 页｜AVC420 先有可信背景，才能接管输出
-
-<!--
-type: MAP
-section: GPU_420
-layout: takeover-flow
-time: 3m
-progress: 代码
--->
-
-### 画面
-
-**能力回扣**：最小实现｜对象存在不等于内容 ready；接管前先用不变量阻止 AI 通过“强制显示”制造假 GREEN。
-
-```mermaid
-flowchart TD
-    A[AVC420 command] --> B{覆盖完整 Surface？}
-    B -- 是 --> C[同步 decode / composite]
-    B -- 否 --> D{有同尺寸可信 GDI snapshot？}
-    D -- 是 --> E[seed RGBA retained FBO]
-    D -- 否 --> F[不 suppress，继续 GDI]
-    E --> C
-    C --> G[claim Avc420Gpu owner]
-```
-
-首次 takeover 同步消费借用的 command 数据；进入 Active 后才深拷贝 stream / rect 并异步入队。
-
-### 讲师备注
-
-AVC420 retained state 是 RGBA FBO：GDI base 与 AVC dirty rect 在同一 retained composite 中更新。局部更新没有可信背景时，不能以黑底或空纹理接管，否则拖拽后会出现缺块。
-
-这里加入一段真实“错误方向→语义纠偏→设计收敛”的案例：早期方案把 dirty-region AVC420 输出当完整帧直接 OES present，日志出现 `lastFullSurface=no`，绿块、黑块与暴露区域无法避免；人的一句“来的本来就是区域的，不要跟全屏绑定，要自己合成哈”冻结了需求语义，随后才转向 retained RGBA FBO。
-
-另一条白帧案例也可对照：GDI primary buffer 在 resize/init 后已存在，但尚无真实远端更新，内容本身是白像素；native 又请求 repaint，于是白帧被正确地“显示”出来。最终修复不是改 ArkTS Stack、clear color 或 shader，而是在真实 `HarmonyEndPaint` 后才标记 primary renderable。
-
-#### 白帧案例：让学员跟着证据排除
-
-| 轮次 | 观察/实验 | 结论 |
-|---:|---|---|
-| 1 | 改 ArkTS 首帧 gate | 不能解释 native 已提交的白像素 |
-| 2 | 去掉外层 Stack/wrapper | 白帧仍在，排除页面叠层为主因 |
-| 3 | Surface create 时 clear black | 只能改变底色，后续 repaint 仍覆盖为白 |
-| 4 | 检查 GDI primary | buffer 已存在，但尚未收到真实 remote update，像素本身为白 |
-| 5 | 追到 repaint 请求 | rdpgfx connected 后主动请求当前帧，readiness 尚未建立 |
-| 修复 | 只有真实 `HarmonyEndPaint` 后置 ready | 未 ready 时跳过 current-frame repaint |
-
-讲师在第 3 轮暂停，让学员投票：“继续查 GLES，还是检查被提交内容本身？”这能非常直观地训练“显示正确不等于内容正确”。
-
-#### 与 AVC420 takeover 的共同原则
-
-白帧 readiness gate 和 partial command 的可信背景要求，本质都是：**对象存在不等于内容可用；接管输出前必须证明 retained/base 已经具备业务意义上的完整性。**
-
-可信 GDI snapshot 至少要满足 target 可用、尺寸匹配、时间新鲜、像素有效。当前日志会报告 snapshot 失败与 `maxAgeMs=500`，但不会输出真实 `snapshot age=...`；若需要年龄，标为 TARGET telemetry，不能把示例 920ms 当现有字段。
-
-0 dirty rect、inter-frame command 与 synthetic EndFrame 也要进入测试。`frameOpen=false` 时 FreeRDP bridge 会构造 synthetic matched callback，解释了部分帧为何可以立即走完边界。
-
-### 演示动作
-
-依次输入：full update、partial+fresh snapshot、partial+no snapshot；观察 owner 是否只在前两种接管。随后让学员用遮罩盖住右半屏，只拖动左侧窗口，检查 rect 外旧像素是否保留。
-
-### 通过条件
-
-无可信背景的 partial command 不抑制 GDI；接管后 rect 外旧像素保持不变。
-
-### 素材
-
-- `Avc420GpuCompositor::OnSurfaceCommand`
-- `SeedBackgroundBeforeTakeover`
-- commit `a9c05d2`、`a6918ba1`
-
----
-
-## 第 36 页｜AVC420 的稳定性来自状态与顺序
+## 第 35 页｜开发遇到黑屏、色块或仍卡顿：先停，再找最早异常
 
 <!--
 type: DEBUG
-section: GPU_420
-layout: state-risk
+section: CASE2_DEBUG
+layout: evidence-ladder
 time: 3m
 progress: 调试
 -->
 
 ### 画面
 
-**能力回扣**：Harness 与范围控制｜队列、owner 与 fail-open 需要明确状态和停止条件；清 cache 不授权删除整条路径。
+左侧循环播放黑屏片段；右侧逐层点亮：
 
-状态：`Detached → Active ↔ TargetPaused`；致命失败进入 `Failed`，后续成功可再次直接接管。
+```text
+1 command received
+2 codec/subsystem selected
+3 compressed input queued
+4 decoded output valid
+5 format / stride / planes valid
+6 command state applied
+7 render owner correct
+8 EndFrame present
+9 next frame continues
+```
 
-三条审查提醒：
-
-- `failures >= 3` 与 `ignoredUpdates >= 6` 是生命周期累计计数，不是“连续 N 次”。
-- Active 队列深度达到 24 后会先压缩 backlog，尽量保留最新匹配 EndFrame；若压缩后仍达到硬上限 720，enqueue 失败，当前 command 转同步处理，可能越过旧队列工作，属于顺序 GAP。
-- fail-open 释放 GPU owner 并恢复 GDI pipeline，不代表 GDI 能在同一帧立即完整恢复。
+底部写：**第一处与预期不一致的位置，才是本轮修改边界。**
 
 ### 讲师备注
 
-当前状态枚举是 `Detached / Active / TargetPaused / Failed`。不要画一个不存在的 Bootstrapping 状态；bootstrap 是接管过程，不一定是公开 state。
-
-普通 AVC pending 需要匹配 EndFrame 再 present，但 AVC420 存在明确例外：无 AVC pending 的 GDI-only 更新可立即提交；deferred GDI-only 可在匹配 EndFrame 提交；target 恢复可重呈现 retained composite。不要讲成“所有 present 必须 EndFrame”。
-
-历史排查中曾因“降低延迟”丢弃 25 个旧 SurfaceCommand。对全帧视频这听起来合理，但 dirty-region AVC420 的旧命令可能包含未被后帧覆盖的像素，删除它们等于破坏画面状态。课堂让学员先回答：**局部更新队列能否套用 latest-frame-wins？**
-
-**SESSION FACT｜范围失控不是技术细节**
-
-> “我只让你把 cache 清除掉，你给我全删除了，反思一下，不要改代码了。”
-
-这条反馈用于检查 Agent 的授权边界：用户授权的是移除一个未提交的 cache 尝试，不是删除整条 NativeBuffer/EGLImage 路径。即使删除后能够编译，也属于 Trace FAIL。学员必须从 Task Card 中指出 Allowed object、Forbidden changes 和触发停手的用户指令。
-
-#### 队列桌面推演
+AI 第一反应经常是列出十个可能原因并连续改代码。本课固定执行：
 
 ```text
-C100: 更新左上角 A       E100
-C101: 更新右下角 B       E101
-C102: 更新窗口标题 C     E102
+Stop → Preserve → Locate → Falsify → Repair → Re-evaluate
 ```
 
-如果只保留 C102/E102，最终 composite 并不等于“最新完整帧”，因为 C102 没有覆盖 A/B。当前安全压缩逻辑在 depth≥24 时丢 prewarm 与旧 EndFrame，保留所有 SurfaceCommand，并优先保留最新 matched EndFrame；若没有 matched，再保留最新 EndFrame。
+典型问题：
 
-但这仍没有消除所有风险：压缩后若深度仍达到 720，当前 command 可能 enqueue 失败并转同步处理，于是它有机会越过旧队列。学员要把这个结论写成 **ordering GAP**，而不是简单写“有上限所以安全”。
-
-#### 故障注入判定表
-
-| 注入 | 希望看到 | 不能承诺 |
+| 现象 | 容易误改 | 最小观测 |
 |---|---|---|
-| target 暂不可用 | `TargetPaused`，保留可重呈现状态 | 当前帧仍立即显示 |
-| 累计 failures≥3 | `Failed` / fail-open / owner 释放 | GDI 同帧无缝接管 |
-| queue 接近 720 | compaction 统计与 ordering 告警 | command 永不乱序 |
+| 仍卡顿 | 加更多线程 | selected decoder + CPU/FPS + queue depth |
+| 黑屏 | 改 shader | same frame input/output/owner/present |
+| 白帧 | 改 UI 背景 | upload 前像素 + remote paint readiness |
+| 粉/绿块 | 猜色彩矩阵 | output format/stride/planes/rect |
+| 闪烁 | 增加 repaint | command consumed + EndFrame + owner |
+| resize 后失效 | 重建 session | surface/target generation + stale queue |
+
+没有日志时，正确动作不是继续猜，而是增加一条只回答当前假设的结构化日志。日志加到能区分两个分支的边界，不做全链路高频刷屏。
 
 ### 演示动作
 
-先给出 cache 清理前后的 diff 摘要，让学员在 60 秒内判定是否越界以及应该回滚哪一部分；再进行 target 暂不可用、累计失败、队列接近 720 三种故障推演。
+先播放 `gpu-failure-black-screen-13s.mp4`，让学员选择下一条日志。随后给一张正确截图，追问：它能否证明第 9 步持续成立？
 
 ### 通过条件
 
-诊断报告区分状态、owner、累计计数和 queue ordering；没有把 fail-open 写成无缝恢复保证。
+学员提出的是可推翻当前判断的观测，而不是另一个无法证实的根因故事。
 
 ### 素材
 
-- `avc420_gpu_compositor.h/.cpp`
-- `avc420_gpu_compositor_internal.cpp`
-- commit `93c6207`、`d789bb5`
+- `gpu-failure-black-screen-13s.mp4`
+- `gpu-failure-black-screen-contact.jpg`
+- `docs/archive/rdp-white-frame-case-study.md`
 
 ---
 
-## 第 37 页｜AVC444 的关键是 LC 与单 Decoder
+## 第 36 页｜AI 不对时，用同一 frame 的事实推翻它
 
 <!--
-type: MAP
-section: GPU_444
-layout: lc-state
+type: DEBUG
+section: CASE2_DEBUG
+layout: trace-table
 time: 2m
-progress: 代码
+progress: 调试
 -->
 
 ### 画面
 
-**能力回扣**：参考实现与契约｜先对齐 FreeRDP 的帧语义，再决定哪些 HarmonyOS 接口实现可以不同。
+| frameId | codec | decoder | output | owner | present | verdict |
+|---:|---|---|---|---|---|---|
+| 842 | AVC420 | OHOS HW | NV12 valid | GDI-compatible | EndFrame | PASS |
+| 843 | AVC444 | OHOS HW | luma only | GPU claimed | none | FAIL |
+| 844 | AVC444 | fallback | unknown | unknown | screenshot ok | UNKNOWN |
 
-| LC | 要解码的内容 | retained 更新 |
-|---:|---|---|
-| 0 | stream1=luma，stream2=chroma | Y + U/V |
-| 1 | stream1=luma | Y，并初始化/保留 base chroma |
-| 2 | stream1=chroma | U/V，保留 Y |
+下方两句：
 
-**一个硬件 decoder 顺序消费 luma / chroma**，按流准备 SPS/PPS 与 reset/resync；不是两路普通视频并行播放。
+> “API 调用成功”只证明一个边界。
 
-**先问再揭晓**：为什么不用两个 decoder 并行解 luma 与 chroma？让学员从“参考状态、SPS/PPS、reset/resync、LC=1/2 retained readiness”四个词中选两个组成反证。
+> “截图看起来正确”只证明一个采样瞬间。
 
 ### 讲师备注
 
-解码输出经 MapPlanes 得到 NV12/NV21，再由 shader 按 dirty rect 更新 retained Y/U/V textures。v1/v2 chroma 的变换要以 FreeRDP CPU 路径作为 oracle 做已知帧对照，“接近参考模型”不能写成 bit-exact，除非测试已经证明。
+Reviewer 对 AI 的结论做两次审查：
 
-`CURRENT GAP`：AVC444 的 `kMaxWorkerTasks=720` 当前主要累加 `queueOverLimit` 后仍继续 push，不是真正硬上限；Surface destroy 时外层 owner 会重置，但 compositor 资源与 active 生命周期没有像 420 一样完整闭合。两项都应进入风险与验收，而不是当成已实现特性。
+- **Trace Eval**：这条 frame 是否按预期经过 command、decoder、state、owner 和 present？
+- **Outcome Eval**：持续视频是否流畅、颜色正确、交互可用、CPU 改善、fallback 稳定？
 
-#### LC 顺序推演
+如果 Trace FAIL，就修第一处异常边界；如果 Trace PASS 但 Outcome FAIL，才继续看队列、时延、帧节奏与更长时间行为。如果两者证据不足，结论是 `UNKNOWN`，不能让模型用解释填空。
 
-```mermaid
-sequenceDiagram
-    participant C as SurfaceCommand
-    participant D as Single Decoder
-    participant R as Retained Y/U/V
-    C->>D: LC=0 stream1(luma)
-    D->>R: update Y
-    C->>D: LC=0 stream2(chroma)
-    D->>R: update U/V
-    C->>R: EndFrame → present if ready
-    C->>D: LC=2 chroma only
-    D->>R: update U/V, preserve Y
-```
-
-课堂准备三张 readiness 卡：`Y ready`、`UV ready`、`pending EndFrame`。学员每处理一条 LC 命令就翻卡：
-
-- LC=0：本轮需要更新 Y 与 UV。
-- LC=1：更新 Y，并要求 base chroma 已初始化/可保留。
-- LC=2：更新 UV，必须已有可保留的 Y。
-
-如果第一条可见命令就是 LC=2 且 `lumaReady=false`，正确动作是拒绝错误接管或保持 UNKNOWN，不是用黑色 Y plane 勉强 present。
-
-#### 为什么单 Decoder 更重要
-
-这里的 luma/chroma 不是两段互不相关的视频。两个 decoder 会各自维护参数集和参考状态；在 reset/resync、SPS/PPS 与跨命令参考关系上产生分叉。并行看似更快，却可能先破坏协议语义。
+AVC444 的真实教训是：两个 decoder、过早 suppress GDI、在 SurfaceCommand 直接 present 等方案都“局部合理”，但不符合原生 LC、单 `H264_CONTEXT` 与 EndFrame 语义。正确性来自契约和同帧证据，不来自代码复杂度。
 
 ### 演示动作
 
-用 LC=0、1、2 各一条命令，检查 decoder 调用顺序、retained luma/chroma readiness 与 EndFrame present。
+给出 frame 843，只允许学员选择一个最小修正：释放 owner、补 chroma、恢复 fallback 或移动 present；选择必须引用第一处 FAIL。
 
 ### 通过条件
 
-没有为 luma/chroma 创建两个互相失去参考状态的 decoder；LC 更新后未更新的 plane 保持旧值。
+修正建议与证据指向同一边界，不借机重写整条渲染链。
 
 ### 素材
 
-- `Avc444GpuCompositorImpl::State`
-- `Avc444GpuRenderer::ApplyLuma/ApplyChroma*`
-- commit `5370d34`、`227c1a9`
+- `gpu-e2e-interaction-public.jpg`
+- `docs/archive/avc444-gpu-compositor-retrospective.md`
+- 附录 F GPU Diagnosis 模板
 
 ---
 
-## 第 38 页｜420 / 444 共守输出契约，但不能共用实现假设
+## 第 37 页｜穿刺成功以后，工程化能力决定它能不能交付
 
 <!--
 type: CHECKPOINT
-section: GPU_ACCEPTANCE
-layout: contract-and-challenge
+section: CASE2_HARDENING
+layout: matrix
 time: 2m
 progress: 证据
 -->
 
 ### 画面
 
-**能力回扣**：Outcome Eval｜两条路径分别验证，但最终都要提交 owner、frame、target 与可见结果一致的证据包。
-
-**公共输出契约**
-
-1. 任一时刻只有一个 `RenderOutputOwner` 写 XComponent。
-2. 首次接管前 retained state 必须完整可信。
-3. 普通 pending frame 只在匹配 real / synthetic EndFrame present。
-4. **TARGET / GAP**：Surface generation 变化后，旧 task/callback 必须因 `targetEpoch` 不匹配而被拒绝；当前实现尚未完整闭环。
-
-**诊断挑战**
-
-- Case 420：decode 4ms，queue age 110ms，队列满后同步 fallback。
-- Case 444：decode/compose 都低，LC=2 到达但 luma readiness=false。
-
-![修复后动态验证关键帧：视频、窗口切换与遮挡恢复](harmonyos-sdd-workshop-media/gpu-validation-video-playback-contact.jpg)
+| 工程能力 | 必须回答 | 失败表现 |
+|---|---|---|
+| 生命周期 | create/start/flush/stop/destroy 与 Surface generation 如何对齐 | resize 黑屏、旧 target |
+| 队列/背压 | 输入、输出、present 队列是否有界 | 延迟增长、内存上涨 |
+| 所有权 | GDI、AVC420、AVC444 谁能写 XComponent | 闪烁、旧帧覆盖 |
+| 回退 | 硬解失败能否回软件/原生路径 | 静默黑屏 |
+| 可观测性 | 能否证明 decoder、frame、owner、present | 只能靠肉眼猜 |
+| 回归 | 输入、resize、后台、重连是否仍工作 | 局部 GREEN |
 
 ### 讲师备注
 
-必须拆开 AVC420 的两套状态：应用侧 `RenderOutputOwner::Avc420Gpu` 决定谁可写 XComponent；FreeRDP 侧 `avc420GpuOutputActive` 决定原生 GDI decode / presenter 是否 suppress。二者不同步会出现“双写”或“无人写”。
+“接通 `OH_AVCodec`”只是能力穿刺，工程化还包括：
 
-Case 420 的第一假设是 backpressure 与队列顺序，不是继续换 decoder；Case 444 的第一假设是首次接管 readiness / 命令序列，不是色彩转换。详细答案与反证见附录 F。
+- 有界等待，不让同步调用永久阻塞；
+- queue depth、drop、fallback reason 可观测；
+- Surface/target generation 改变后不消费旧 buffer；
+- AVC420 与 AVC444 共享输出契约，但不共享未经证明的实现假设；
+- 先保留可靠 fallback，再逐步优化 zero-copy；
+- 每个风险都有故障注入，而不是只跑成功路径。
 
-#### 最终验收矩阵
-
-| 契约 | 420 直接证据 | 444 直接证据 | 当前可判 |
-|---|---|---|---|
-| 唯一输出 owner | owner transition + GDI suppress 对齐 | owner transition + GDI skip | 有完整同 runId 日志才 PASS |
-| 首次接管完整可信 | full command 或 fresh GDI seed | Y/UV readiness 与 LC 序列 | 缺 readiness 字段则 UNKNOWN |
-| 匹配帧边界 present | command/EndFrame/present 同 frameId | LC update/EndFrame/present 同 frameId | 本地现有日志尚不完整 |
-| dirty/retained 正确 | rect 外 hash 不变 | 未更新 plane 保留旧值 | 小样本 + 真机画面共同证明 |
-| target 重建安全 | targetEpoch 拒绝旧 task | targetEpoch 拒绝旧 callback | **TARGET/GAP** |
-| 背压有界且保序 | compaction + 720 后顺序证明 | 当前 720 只是软计数 | 仍有 GAP，不能总 PASS |
-
-最终视频只回答“用户可见交互是否恢复”；协议和生命周期是否满足，仍由日志、状态与反证决定。
-
-![连接后多步交互：打开内容、页面变化、右键操作](harmonyos-sdd-workshop-media/gpu-e2e-interaction-public.jpg)
-
-#### 学员一分钟汇报模板
-
-> 现象是____；实际路径是____；最早异常在____；我们只修改____；反证是____；当前 PASS 项为____，UNKNOWN/GAP 为____；下一轮不应继续改____。
+这一页把原 32–37 页的技术深挖收束成工程验收维度；Buffer、plane math、LC、单 decoder 和队列推演的完整材料仍保留在附录 F、J、K 与本地复盘文档中，讲师按学员水平展开。
 
 ### 演示动作
 
-每组任选一个 Case，写出：最早异常、下一轮唯一修改边界、反证、需要保存的同 frameId 日志。最后播放正向录屏，但只允许对契约逐项判定：视频动了不等于全 PASS；没有同帧日志与 targetEpoch 证据的条目仍是 UNKNOWN。
-
-[▶ 播放：修复后动态验证（16 秒）](harmonyos-sdd-workshop-media/gpu-validation-video-playback-16s.mp4)
+让学员从矩阵中选一个最容易被遗漏的维度，为它补一条故障注入和一条恢复验收。
 
 ### 通过条件
 
-诊断没有跨 codec 套用错误假设；输出 owner、readiness、EndFrame、Surface generation 均有证据。
+方案不只覆盖 happy path；至少具有 fallback、生命周期、背压和可观测性四个工程闭环。
 
 ### 素材
 
-- `render_output_owner.h/.cpp`
-- `ohos_rdpgfx_surface.c`
-- `gpu-diagnosis.md`
+- `freerdp-render-queue.jpeg`
+- `freerdp-compositor-scale.jpeg`
+- 附录 F1–F7
 
 ---
 
+## 第 38 页｜最后结果：不仅展示“能播放”，还要证明为什么可信
+
+<!--
+type: CHECKPOINT
+section: CASE2_OUTCOME
+layout: before-after-evidence
+time: 2m
+progress: 证据
+-->
+
+### 画面
+
+左：before 视频槽位（CPU/软件路径卡顿）
+
+中：硬解路径证据链
+
+```text
+FreeRDP command
+→ OHOS hardware decoder
+→ valid output
+→ correct owner
+→ EndFrame present
+```
+
+右：after 动态播放与验收矩阵
+
+| 结论 | 当前证据 | 判定 |
+|---|---|---|
+| HarmonyOS H.264 硬解对接方向成立 | 源码、构建与现有实现路径 | CURRENT / 可复核 |
+| 画面与交互在某次运行可见 | 播放视频、交互联系表 | PARTIAL PASS |
+| 黑屏/颜色/owner 问题有真实复盘 | 失败视频、日志、代码复盘 | PASS as diagnosis evidence |
+| CPU 与卡顿达到目标 | 同场景 before/after CPU/FPS 尚未入库 | UNKNOWN / 待补 |
+| resize/后台/重连长稳 | 需要完整 soak 与设备矩阵 | UNKNOWN / 待补 |
+
+<!-- VIDEO SLOT: harmonyos-sdd-workshop-media/gpu-hwdecode-after.mp4 -->
+
+![修复后动态播放与交互关键帧](harmonyos-sdd-workshop-media/gpu-validation-video-playback-contact.jpg)
+
+### 讲师备注
+
+先播放 `gpu-validation-video-playback-16s.mp4`，但不要说“性能目标已经完成”。它能证明某次运行可以播放和交互，不能替代 CPU/FPS A/B、codec path 日志和长稳。
+
+案例二最终收获不是一个 `OH_AVCodec` API 清单，而是五种可迁移能力：
+
+1. **大库认知**：用问题、分层地图和 evidence index 控制上下文；
+2. **平台迁移**：先理解成熟实现的契约，再映射目标平台差异；
+3. **最小穿刺**：先证明最短真实路径，再拆完整工程任务；
+4. **正确性判断**：方案、实现、路径、用户结果四层分别取证；
+5. **失败处理**：不让 AI 连续猜测，用最早异常、最小反证和 checkpoint 收口。
+
+最终证据包必须包含 codebase map、平台调研、ADR、任务卡、build、runtime path、frame trace、before/after 性能、视频、故障注入、回归矩阵和 Reviewer verdict。缺一项就标记对应维度 `UNKNOWN`，而不是把已有视频包装成完整成功。
+
+### 演示动作
+
+播放修复后视频，让学员先填验收矩阵再翻牌。最后要求每组回答：“AI 为什么可能是对的？我们用什么证明？如果错了，回到哪一个 checkpoint？”
+
+### 通过条件
+
+学员的结论包含证据边界；能够把“可见播放”“硬解路径”“性能改善”“工程可交付”区分为四个独立判定。
+
+### 素材
+
+- `gpu-validation-video-playback-16s.mp4`
+- `gpu-validation-video-playback-contact.jpg`
+- `gpu-e2e-interaction-public.jpg`
+- `evidence/gpu/03-task-acceptance-and-debug.md`
+- `harmonyos-sdd-workshop-media/VIDEO_TODO.md`
+
+---
 ## 第 39 页｜把方法带回项目，只保留七个问题
 
 <!--
