@@ -49,7 +49,7 @@
 
 课程不把“更多 Agent”视为进阶：单文件低风险任务优先单 Agent，确定步骤固化为 Workflow，跨进程/事务/GPU 等高风险任务才增加 Planner、Implementer 与独立 Reviewer。
 
-方法论参考 Anthropic 的 [Building Effective AI Agents](https://www.anthropic.com/engineering/building-effective-agents)、[Effective Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)、[Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) 与 [Harness Design for Long-Running Application Development](https://www.anthropic.com/engineering/harness-design-long-running-apps)，并在主文档附录 I 中给出逐项工程映射。
+方法论参考 Anthropic 的 [Building Effective AI Agents](https://www.anthropic.com/engineering/building-effective-agents)、[Effective Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents)、[Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) 与 [Harness Design for Long-Running Application Development](https://www.anthropic.com/engineering/harness-design-long-running-apps)，并在主文档附录 C10 中给出逐项工程映射。
 
 附录轻量参考 Anthropic Academy 的研究型 AI Fluency 课程模型，用于提醒讲师“先澄清并迭代、每一步训练辨别”；它不构成课程主方法论。课程仍围绕需求拆解、开发、验证、问题定位与协同闭环展开，不围绕任何具体产品功能。
 
@@ -111,7 +111,7 @@
 ## 使用建议
 
 1. 先阅读主文档的“课程定位”和 39 页大纲。
-2. 保持原 120 分钟时，GPU 段使用附录 K 的 28 分钟核心迁移版。
+2. 保持原 120 分钟时，GPU 段使用附录 D9 的 28 分钟核心迁移版。
 3. 技术分享或半天 workshop，可使用 45 分钟演示版或 60–75 分钟分组实操版。
 4. 公开投屏前再次检查设备、账号、地址和私人窗口信息。
 5. 视频与截图只作可见行为证据；最终结论仍按日志、系统状态和验收契约判定。

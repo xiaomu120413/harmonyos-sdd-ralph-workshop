@@ -2,7 +2,7 @@
 
 > 以真实 HarmonyOS MDM 与 FreeRDP GPU 送显问题为载体，跑通需求拆解、上下文组织、Agent 协作、开发、验证、问题定位与证据交付
 
-> **Rich V5 / 双案例工程闭环版**：保留 39 页与 120 分钟结构，不压缩 V4 的事实、媒体与 Session 证据；重新把“AI 如何完成复杂需求”放回主角位置。案例一用 MDM 跑通需求到验收，案例二基于 55 万行级 FreeRDP 源码，从用户报告的远控视频卡顿问题出发，演示代码认知、跨平台调研、HarmonyOS 对接、最小穿刺、任务拆解、开发排障与证据验收。CPU 路径、性能改善和长稳在没有同 run 证据前保持空白或 `UNKNOWN`。
+> **Rich V5 / 双案例工程闭环版**：保留 39 页与 120 分钟结构，不压缩 V4 的事实、媒体与 Session 证据；重新把“AI 如何完成复杂需求”放回主角位置。案例一用 MDM 跑通需求到验收，案例二基于 55 万行级 FreeRDP 源码，从“原视频处理走 CPU/软件路径、未走 GPU，用户感知卡顿”的已冻结背景出发，演示代码认知、跨平台调研、HarmonyOS 对接、最小穿刺、任务拆解、开发循环、排障与交付验收。具体 CPU/FPS 数值、before/after 录屏、运行路径截图和长稳结果在没有同 run 证据前保持占位或 `PENDING/UNKNOWN`。
 
 ## 课程定位
 
@@ -19,7 +19,7 @@
 | Eval 与反证 | UI 绿、测试绿或截图正常，但系统事实仍错误 | RED/GREEN、故障注入、状态回读、Trace/Outcome 双审 | `PASS / FAIL / UNKNOWN` |
 | 长任务 Harness 与协同 | AI 越界修改、实现者自评完成、交接丢失事实 | 小任务、Git checkpoint、证据包、风险驱动 Reviewer | review verdict + next task |
 
-公开的 AI Agent 工程研究与实践在这里充当“方法论参照系”，不是任何厂商的产品教程。本课用真实 Session 解释方法为什么必要，再把抽象原则落到 HarmonyOS 的规格、代码、设备日志、截图、视频和系统 getter 上检验。公开的 AI 熟练度课程模型只轻量参考其“先澄清与迭代、每步都做辨别”的教学节奏，不作为本课主方法论。完整来源、候选文章、工程映射与取舍见附录 I。
+公开的 AI Agent 工程研究与实践在这里充当“方法论参照系”，不是任何厂商的产品教程。本课用真实 Session 解释方法为什么必要，再把抽象原则落到 HarmonyOS 的规格、代码、设备日志、截图、视频和系统 getter 上检验。公开的 AI 熟练度课程模型只轻量参考其“先澄清与迭代、每步都做辨别”的教学节奏，不作为本课主方法论。完整来源、候选文章、工程映射与取舍见附录 C10。
 
 每个关键页面都沿用同一课堂结构：
 
@@ -531,8 +531,8 @@ SDD 负责“要到哪里、边界是什么”；Ralph Loop 是“一次走多�
 
 ### 素材
 
-- 附录 D 任务卡模板
-- 附录 E `progress.md` 模板
+- 附录 B7 任务卡与进度模板
+- 附录 B8 工程验收手册
 
 ---
 
@@ -578,8 +578,8 @@ progress: 需求
 
 ### 素材
 
-- 附录 C1 歧义勘察 Prompt
-- 附录 L4 权限策略 Session Evidence Card
+- 附录 B6.1 歧义勘察 Prompt
+- 附录 E4 权限策略 Session Evidence Card
 
 ---
 
@@ -608,13 +608,13 @@ progress: 需求
 
 ### 讲师备注
 
-这一页仍然只是在引入问题，不给设计答案。附录 L4 的真实 Session 说明：第一次进入为空、按钮状态与系统事实不一致时，危险方向是先更新组件状态，再等待系统结果；正确判断必须先区分 `pending intent` 与 `system committed`。
+这一页仍然只是在引入问题，不给设计答案。附录 E4 的真实 Session 说明：第一次进入为空、按钮状态与系统事实不一致时，危险方向是先更新组件状态，再等待系统结果；正确判断必须先区分 `pending intent` 与 `system committed`。
 
 课堂只要求学员识别“哪些答案不同会导致不同代码或测试”。若答案会改变状态所有权、监听顺序、失败展示或验收证据，它就是开发前必须关闭的歧义。
 
 ### 演示动作
 
-只投屏现象，让 AI 按附录 C1 输出模糊词、互斥答案、工程影响、决定者和危险假设。禁止输出架构、类名和代码。
+只投屏现象，让 AI 按附录 B6.1 输出模糊词、互斥答案、工程影响、决定者和危险假设。禁止输出架构、类名和代码。
 
 ### 通过条件
 
@@ -622,8 +622,8 @@ progress: 需求
 
 ### 素材
 
-- 附录 C1 歧义勘察 Prompt
-- 附录 L4 权限策略：乐观 UI 与系统状态撕裂
+- 附录 B6.1 歧义勘察 Prompt
+- 附录 E4 权限策略：乐观 UI 与系统状态撕裂
 
 ---
 
@@ -654,7 +654,7 @@ AI 的职责是列出互斥答案、工程影响和危险假设；人的职责�
 
 这四个答案是教学示例，用来说明“冻结语义”的产物长什么样，不声称已经定位了真实代码根因。真实项目中，答案必须由现有接口、调用链、产品约束和设备证据共同支持；证据不足时保留 `OPEN`，不要为了进入开发而强行选择。
 
-这一页直接采用附录 C1 的五项输出：模糊词、互斥答案、工程行为、决定者、危险假设。PPT 为控制密度只展示冻结后的答案，完整勘察记录进入 `spec.md / Open Decisions`。
+这一页直接采用附录 B6.1 的五项输出：模糊词、互斥答案、工程行为、决定者、危险假设。PPT 为控制密度只展示冻结后的答案，完整勘察记录进入 `spec.md / Open Decisions`。
 
 ### 演示动作
 
@@ -666,7 +666,7 @@ AI 的职责是列出互斥答案、工程影响和危险假设；人的职责�
 
 ### 素材
 
-- 附录 C1 歧义勘察 Prompt
+- 附录 B6.1 歧义勘察 Prompt
 - 附录 B4 `spec.md` 的 `Open Decisions` 模板
 
 ---
@@ -711,7 +711,7 @@ THEN SHALL 显示可重试错误，并保留诊断证据。
 
 EARS 不是为了写得像规范，而是把触发条件、等待状态、期望结果和失败分支写在一起。这里仍然是引子中的教学规格，不声明真实项目一定采用 loading、retry 或特定超时时间；进入案例后必须根据真实产品语义和代码事实重新冻结。
 
-附录 L4 提供了真实问题的工程约束：`pending intent` 不能提前伪造 `system committed`。因此本页的关键不是 UI 样式，而是“未知不等于空”“系统事实返回前不能宣布完成”。
+附录 E4 提供了真实问题的工程约束：`pending intent` 不能提前伪造 `system committed`。因此本页的关键不是 UI 样式，而是“未知不等于空”“系统事实返回前不能宣布完成”。
 
 ### 现场互动
 
@@ -727,7 +727,7 @@ EARS 不是为了写得像规范，而是把触发条件、等待状态、期望
 ### 素材与来源
 
 - 附录 B4 `spec.md` 模板
-- 附录 L4 权限策略 Session Evidence Card
+- 附录 E4 权限策略 Session Evidence Card
 - 本地预告图：`harmonyos-sdd-workshop-media/e2e/peripheral-policy-current.png`
 
 ---
@@ -759,7 +759,7 @@ progress: 需求
 
 这一页是引子收口，不讲 MDM 业务行为。它把前七页转换成进入案例的准入门槛：没有事实时间线就不能谈根因，没有最终事实源就不能判定成功，没有规格就无法产生测试，没有任务卡就无法约束 AI 的修改范围。
 
-四项产物分别来自附录 C2 的只读勘察、附录 B4 的规格模板和附录 D1 的 Task Card。后面的两个案例可以领域不同，但都必须从这四项开始。
+四项产物分别来自附录 B6.2 的只读勘察、附录 B4 的规格模板和附录 B7.1 的 Task Card。后面的两个案例可以领域不同，但都必须从这四项开始。
 
 可选口播案例：同一个错误码问题，对话式协作负责解释和追问；仓库内 Agent 负责定位、修改与测试；异步任务代理负责汇总多份材料并生成 PRD、RFC 和验收清单。正文不展开这三条支线。
 
@@ -773,9 +773,9 @@ progress: 需求
 - 修改已有模块并运行回归。
 - 收集多份材料，生成 PRD、Story 和验收报告。
 
-- 附录 C2 仓库只读勘察 Prompt
+- 附录 B6.2 仓库只读勘察 Prompt
 - 附录 B4 `spec.md` 模板
-- 附录 D1 Task Card
+- 附录 B7.1 Task Card
 
 ---
 
@@ -1068,17 +1068,17 @@ Ralph 不是模型、框架或魔法 Prompt。Geoffrey Huntley 的原始定义�
 
 END ARCHIVED INTRO 2-8 -->
 
-## 第 9 页｜案例背景：外设管理不是几个开关，而是四层策略叠加
+## 第 9 页｜案例背景：三层优先级 + 一条并行存储策略
 
 ### 页内内容
 
 ```text
 目标：企业管理员统一管控 USB，并支持动态黑白名单
 
-L1 设备级 USB 全局总控
-L2 USB 存储访问模式
-L3 已识别设备显式 allow / deny
-L4 未识别设备默认 allow / deny
+L1 接口管控：USB 全局允许 / 禁止（最高）
+L2 已识别设备显式 allow / deny
+L3 未配置设备默认黑 / 白名单（最低）
+并行覆盖：USB 存储读写 / 只读 / 禁止访问
 
 难点：优先级、真相源、动态生效、失败回退、实物验收
 ```
@@ -1088,7 +1088,7 @@ L4 未识别设备默认 allow / deny
 ### 讲师备注
 
 - 怎么做：先让学员列出四层状态，不展示代码。
-- 怎么判断：同一设备在全局关/开、默认 allow/deny 下是否有唯一结果。
+- 怎么判断：同一设备在 L1 全局闸门、L2 显式规则、L3 默认规则下是否只有一个结果。
 - 不对怎么办：如果大家把默认策略说成全局开关，立即进入第 11 页的真实历史冲突。
 - 证据：页面截图只证明 UI 已存在；完整实物矩阵 PENDING。
 
@@ -1103,6 +1103,8 @@ L4 未识别设备默认 allow / deny
 | 关键切片 | 命中代码 | UI→VM→Service→Repo/MDM |
 | 历史地图 | Story、changelog、git log | 旧方案为什么错 |
 | 证据地图 | UT/E2E/截图 | PASS/FAIL/PENDING |
+
+阶段实际产物：`scope-map / requirement-card / conflicts / evidence-index / unknowns`。
 
 页脚命令：
 
@@ -1231,6 +1233,9 @@ PeripheralPage
                             └─ DispatchService
 
 PeripheralViewModel：管理员门禁 + 跨 Tab 刷新
+
+后台：USB/蓝牙事件 → Producer/Pipeline → Consumer
+      → Policy State RDB + Trace RDB → Repository notify → VM reload
 ```
 
 ### 讲师备注
@@ -1326,7 +1331,7 @@ ESCALATE：需要设备/权限/产品决策
 - 不对怎么办：重复三轮同一阻塞就升级，不无限重试。
 - 证据：`05-Ralph迭代运行账.md`。
 
-## 第 21 页｜真实十轮收敛：每次错误都固化成不变量
+## 第 21 页｜真实十五轮收敛：每次错误都固化成不变量
 
 ### 页内内容
 
@@ -1338,6 +1343,10 @@ ESCALATE：需要设备/权限/产品决策
 desired=active        → 意图/执行态分离
 还原=删除             → 清系统残留 + 保留卡片
 默认 allow 不入名单  → allow 也保存资产状态
+9200010 冲突残留     → 还原先读取并清 EDM
+9200007 部分生效     → API + getter + 运行态三态判定
+Trace 入库不刷新     → 事实提交与维护通知分离
+present 在线态残留   → 启动时用真实设备集合对账
 ```
 
 页脚放提交：`63dda4b4 / 6e7702cd / 23c4a046 / f95c5109`。
@@ -1347,6 +1356,7 @@ desired=active        → 意图/执行态分离
 - 怎么做：不逐个讲 commit，只讲“症状→根因→新不变量”。
 - 怎么判断：修复是否同时更新设计、代码、测试和证据。
 - 不对怎么办：如果修复只改 UI，回到系统真源重做。
+- 证据：完整症状、调用链、错误码和截图位见 `case-materials/mdm/13-本地Session真实问题证据卡.md`。
 
 ## 第 22 页｜失败处理：补偿和还原不是同一件事
 
@@ -1362,6 +1372,13 @@ suspend deny → global disable FAIL → restore deny → UI 不提交
 
 ```text
 read EDM residue → remove all → local allow/none → reload
+```
+
+页脚“部分生效不是补偿”：
+
+```text
+9200007 + getter 已到目标 + 重挂载失败
+→ 保留目标状态，提示重插，并继续收集实物证据
 ```
 
 ### 讲师备注
@@ -1418,6 +1435,8 @@ D1 文档 → D2 代码 → D3 UT → D4 构建
 | 页面路径 | PASS（多条 E2E） |
 | 系统回读 | PENDING |
 | USB 实物矩阵 | PENDING |
+
+当前 OPEN：Trace 通知时机、启动在线态对账、9200007 呈现、同 baseClass 双设备影响面。
 
 预留视频：默认 allow/deny、全局禁用/恢复、还原、同类型双设备。
 
@@ -1533,7 +1552,7 @@ result: PENDING
 
 ---
 
-## 第 28 页｜案例二背景：在 55 万行级 FreeRDP 上验证视频卡顿问题
+## 第 28 页｜案例背景：CPU 路径让远控视频卡顿
 
 <!--
 type: CLAIM
@@ -1547,19 +1566,19 @@ progress: 需求
 
 **任务背景**
 
-> 基于 30 万行级以上开源库实现 HarmonyOS 远控应用。用户报告播放远端视频时出现卡顿，希望评估 HarmonyOS 硬件解码与 GPU 合成方案。当前没有与源码 commit、decoder path、CPU/FPS 绑定的 before 证据，因此根因和改善幅度都不能提前下结论。
+> 基于 30 万行级以上开源库实现 HarmonyOS 远控应用。原始视频处理走 CPU/软件路径，没有走 HarmonyOS 硬件解码和 GPU 合成，远端播放视频时出现卡顿。需要在不破坏 FreeRDP 协议语义和原生回退的前提下，实现可验证、可回退、可长时运行的硬解 + GPU 路径。
 
 ```text
 本地 FreeRDP 快照：2014 个相关源文件 / 约 559,355 行
-用户报告：远端视频播放卡顿
-现有媒体：某次运行可见播放/交互，但未绑定 decoder path
-第一目标：证明当前路径、建立 before 基线
+现象：远端视频连续播放卡顿
+已知原因：CPU/软件视频路径，GPU takeover 未启用
+第一目标：保存 before 录屏、CPU/FPS 和路径日志
 最终目标：硬解路径可用、可回退、可验收、可维护
 ```
 
 <!-- VIDEO SLOT: harmonyos-sdd-workshop-media/gpu-cpu-stutter-before.mp4 -->
 
-当前用 `freerdp-stutter-scenario.jpeg` 做场景占位，它不证明卡顿。正式授课应替换为 20–30 秒 before 视频，并同时录入 CPU/FPS 与 codec path；拍摄脚本见 `harmonyos-sdd-workshop-media/VIDEO_TODO.md`。
+当前用 `freerdp-stutter-scenario.jpeg` 做场景图。正式授课应在旁边补入 20–30 秒 before 视频、CPU/software path 日志截图和 CPU/FPS/queue 基线；未采集前保留 `PLACEHOLDER`，不填假数据。
 
 ![FreeRDP 视频播放卡顿场景](harmonyos-sdd-workshop-media/freerdp-stutter-scenario.jpeg)
 
@@ -1573,15 +1592,15 @@ progress: 需求
 - 一张正常截图不能证明持续流畅，也不能证明走了硬件 decoder；
 - 即使平均 CPU 下降，黑屏、色块、resize 或 fallback 失效仍然算失败。
 
-这里要区分“现象”和“根因”。如果没有 runtime path 日志，就只能说“视频卡顿”，不能先写成“CPU 解码导致卡顿”。本案例第一步不是改代码，而是把这个推断变成可验证事实。
+这里不再让学员猜根因：本案例已冻结原始路径为 CPU/软件处理，未走 GPU。要引导学员继续问的是：这个事实如何在当前 run 中被日志看见？硬解接入后怎么证明路径真的改变？怎么确认画面正确和卡顿改善？
 
 ### 演示动作
 
-当前 before 视频槽位为空。先展示静态场景并要求学员指出“静态图不能证明卡顿”；课前补齐视频后，视频只能证明持续现象，CPU/FPS、协商 codec 和 decoder path 仍需独立采样。
+当前 before 视频、CPU/software path 日志和性能数值都保留占位。先展示背景卡和静态场景，明确“已知原因”来自案例背景，而课件中要补的是可复核的原始证据。
 
 ### 通过条件
 
-学员能说出：**用户问题是卡顿，CPU 软件解码只是待证假设；第一份产物应是可重复的 before 基线。**
+学员能说出：**问题是 CPU/软件路径下的远端视频卡顿；开发前先保存可重复的 before 基线，最终必须同时证明路径改变和用户结果。**
 
 ### 素材
 
@@ -1628,9 +1647,20 @@ flowchart TD
 
 右侧放上下文预算：`1 个问题 + 1 条调用链 + 3–7 个接口 + 1 个假设 + 1 条下一步命令`。
 
+文档截图放在图下方：
+
+```text
+codebase-map.md 每条只记：
+path::symbol → 输入 → 输出 → owner → 回退 → 未知
+```
+
+| 第一轮输出 | 不要输出 |
+|---|---|
+| 三个入口、一条 command 调用链、五个未知、下一轮 5 个文件 | 仓库全量摘要、全部类图、把文件名当运行路径 |
+
 ### 讲师备注
 
-AI 熟悉大库的产物不是“仓库总结”，而是 `codebase-map.md`：
+AI 熟悉大库的产物不是“仓库总结”，而是 `codebase-map.md`。课堂截图直接来自 `02-大代码库认知地图.md` 和 `09-源码调用链与任务拆解.md` 的三入口/调用链区块：
 
 | 层 | 本轮只读入口 | 先不读什么 |
 |---|---|---|
@@ -1663,12 +1693,14 @@ AI 熟悉大库的产物不是“仓库总结”，而是 `codebase-map.md`：
 ### 素材
 
 - `evidence/gpu/01-codebase-map.md`
+- `case-materials/gpu/02-大代码库认知地图.md`
+- `case-materials/gpu/09-源码调用链与任务拆解.md`
 - `harmony/third_party/FreeRDP/libfreerdp/codec/h264.c`
 - `harmony/third_party/FreeRDP/client/OHOS/README.md`
 
 ---
 
-## 第 30 页｜第二步：研究其他平台，复制契约而不是复制代码
+## 第 30 页｜跨平台调研：复用 decoder 契约，不照抄平台代码
 
 <!--
 type: MAP
@@ -1680,23 +1712,41 @@ progress: 设计
 
 ### 画面
 
-| 已有后端 | 作用 | AI 应该学习什么 |
-|---|---|---|
-| FFmpeg / OpenH264 | 通用软件路径 | 正确性 fallback、YUV 输出语义 |
-| Windows Media Foundation | Windows 硬解 | 平台 decoder 生命周期与失败传播 |
-| Android MediaCodec | 移动平台硬解 | buffer 输入输出、format change、释放 |
-| HarmonyOS `OH_AVCodec` | 目标平台 | 能力查询、AVBuffer/Surface、stride/plane |
+| 已有实现 | 作用 | 能复用 | 不能照抄 |
+|---|---|---|---|
+| FFmpeg / OpenH264 | 通用软解 | 正确性 fallback、YUV 语义 | CPU 线程/内存模型 |
+| Windows Media Foundation | Windows 硬解 | create/configure/sample/flush/release | COM 和 Windows surface |
+| Android MediaCodec | 移动硬解 | input/output buffer、format change、有界等待 | Android buffer index/Surface 时序 |
+| HarmonyOS `OH_AVCodec` | 目标平台 | hardware capability、AVBuffer、native output | 仍需设计 RDPGFX owner/EndFrame/fallback |
 
-中央结论：
+下半屏直接截取调研文档中的时序图：
+
+```mermaid
+sequenceDiagram
+    participant R as FreeRDP Contract
+    participant A as Platform Adapter
+    participant D as Hardware Decoder
+    R->>A: Init(codec, size)
+    A->>D: Query + Create + Configure + Start
+    R->>A: Decompress(sample, pts)
+    A->>D: Queue compressed input
+    D-->>A: Output / format changed
+    A->>A: Validate size/format/stride/planes
+    A-->>R: Output or explicit failure
+    R->>A: Reset / Uninit
+    A->>D: Flush / Stop / Destroy
+```
+
+页脚放分界结论：
 
 ```text
-共同契约：Create → Configure → Start → Input → Output → Validate → Release
-平台差异：API、buffer ownership、output format、Surface/lifecycle
+decoder 只解决 compressed → decoded output；
+远控 GPU 方案还必须解决 consumed、dirty rect、owner、EndFrame 和 fallback。
 ```
 
 ### 讲师备注
 
-这一步不是让 AI 上网找一篇“HarmonyOS 硬解教程”然后照抄。先研究 `H264_CONTEXT_SUBSYSTEM` 如何隔离 FFmpeg、OpenH264、Media Foundation 和 MediaCodec，提炼 decoder 生命周期；随后必须回到 OHOS RDPGFX bridge，确认最终 GPU 接管还需要 command 校验、dirty rect、owner、fallback 与 EndFrame。decoder subsystem 是重要参考，不是完整方案。
+这一步不是让 AI 上网找一篇“HarmonyOS 硬解教程”然后照抄。课堂直接打开 `03-跨平台实现调研.md`：先看源码对照表，再看 decoder 生命周期时序图，最后看 decoder 与 RDPGFX/GPU 显示边界图。文档的输出必须能直接输入下一页 ADR，否则调研只是资料堆积。
 
 AI 输出一张“同与不同”表：
 
@@ -1717,6 +1767,7 @@ AI 输出一张“同与不同”表：
 ### 素材
 
 - `evidence/gpu/02-platform-research-and-spike.md`
+- `case-materials/gpu/03-跨平台实现调研.md`
 - `h264_mediacodec.c` / `h264_mf.c` / `h264_ohos_decoder.c`
 
 ---
@@ -1862,20 +1913,35 @@ progress: 任务
 
 ### 画面
 
-| Task | 主要源码边界 | 一个可观察结果 / Stop |
-|---|---|---|
-| T00 | diagnostics only | 保存同 runId before；路径不明则不归因 |
-| T01 | `InstallRdpgfxDiagnosticsHooks`、`bridge_attach`、decoder init | bridge + hardware decoder 真机成立；只编译成功则停 |
-| T02 | decoder input/output、`OH_AVBuffer_GetNativeBuffer` | 一帧输入输出可关联；format/native buffer 不明则停 |
-| T03 | candidate policy、`OnSurfaceCommand`、`ProcessCommand`、`PresentEndFrame` | consumed→owner→matched present 闭环；GDI/GPU 双写则 FAIL |
-| T04 | `EnqueueSurfaceCommand`、worker compaction | 连续队列有界；depth/age 持续增长则停 |
-| T05 | target generation、pause/detach/recreate | resize/后台/重连拒绝 stale task；旧 target 可写则 FAIL |
-| T06 | AVC444 candidate/compositor、LC retained state | 单 decoder + LC + EndFrame；复用 420 假设则停 |
-| T07 | 测试/脚本/报告，生产代码冻结 | 同场景 A/B；缺 CPU/FPS/path/soak 则 UNKNOWN |
+先给一张从穿刺结果推导出来的任务图：
+
+```mermaid
+flowchart LR
+    T00["T00<br/>before 与路径观测"] --> T01["T01<br/>bridge + hardware decoder"]
+    T01 --> T02["T02<br/>一帧合法 native output"]
+    T02 --> T03["T03<br/>owner + matched EndFrame"]
+    T03 --> T04["T04<br/>连续队列/背压"]
+    T04 --> T05["T05<br/>resize/后台/重连"]
+    T05 --> T06["T06<br/>AVC444 帧语义"]
+    T06 --> T07["T07<br/>A/B + 工程验收"]
+```
+
+右侧截取一张真实任务卡，不再把 8 行小字全塞上去：
+
+```markdown
+# T-GPU-02｜AVC420 一帧合法输出
+Requirement: 一份压缩输入产生可关联 native output
+Allowed: decoder input/output + format/stride/plane diagnostics
+Forbidden: owner / EndFrame / AVC444 / queue refactor
+Verify: frameId + input/output PTS + size/format/stride/planes
+Stop: 输出不可关联或格式不支持时不进入 T03
+```
+
+页脚：`T00 → T01 → … → T07` 是进入门，不是项目时间表。
 
 ### 讲师备注
 
-穿刺以前只能确定探索任务，不能假装完整实现计划已经可靠。穿刺以后，任务沿源码中的状态所有权拆开：decoder 输出属于 T02；是否 consumed、谁拥有 output、何时 EndFrame present 属于 T03；跨线程积压属于 T04；target generation 属于 T05。这样黑屏或卡顿时能定位第一处异常，而不是让一个“大任务”同时改 codec、renderer、queue 和 lifecycle。
+穿刺以前只能确定探索任务，不能假装完整实现计划已经可靠。穿刺以后，才能根据已证实边界拆任务：decoder 输出属于 T02；consumed、owner 与 EndFrame 属于 T03；队列积压属于 T04；target generation 属于 T05。这样出问题时才知道回到哪张卡。
 
 每张任务卡必须包含：Requirement、Current Evidence、Allowed、Forbidden、RED/Probe、Minimal Change、Verify、Stop。特别强调 `Forbidden` 写到对象和行为，例如：T02 不允许顺手重写 AVC444 compositor，也不允许为了“干净”删除原生 fallback。
 
@@ -1887,7 +1953,7 @@ progress: 任务
 
 ### 演示动作
 
-给学员一张错误任务卡：“完成 HarmonyOS FreeRDP 硬解优化”。要求拆成上表任务，并为每项补一个 FAIL/UNKNOWN 判定。
+先给学员错误任务“完成 HarmonyOS FreeRDP 硬解优化”，要求他们只拆出前三张卡；再翻开 T01/T02/T03 原文，检查每张卡的 `Forbidden` 和 `Stop`。
 
 ### 通过条件
 
@@ -1897,16 +1963,17 @@ progress: 任务
 
 - `evidence/gpu/03-task-acceptance-and-debug.md`
 - `case-materials/gpu/09-源码调用链与任务拆解.md`
-- 附录 D Task Card / Progress Ledger
+- `case-materials/gpu/tasks/T-GPU-02.md`
+- 附录 B7 Task Card / Progress Ledger
 
 ---
 
-## 第 34 页｜第四步：AI 开发不是一条聊天，而是一条可审查流水线
+## 第 34 页｜实际开发：先打通 hook、一帧输出和显示主链
 
 <!--
-type: MAP
+type: LAB
 section: CASE2_EXECUTION
-layout: swimlane
+layout: source-steps
 time: 3m
 progress: 代码
 -->
@@ -1915,173 +1982,163 @@ progress: 代码
 
 ```mermaid
 sequenceDiagram
-    participant H as Human / Planner
-    participant E as Explorer
-    participant I as Implementer
-    participant T as Tool / MCP
-    participant R as Reviewer
-    H->>E: 只读调用链与 GAP
-    E-->>H: codebase map + evidence index
-    H->>I: 单张 Task Card
-    I-->>T: 最小 diff + verify commands
-    T-->>R: build/device/log/video evidence
-    R-->>H: Trace + Outcome verdict
+    participant B as OHOS RDPGFX Bridge
+    participant C as App Compositor
+    participant D as OH_AVCodec
+    participant W as Render Owner / Window
+    B->>B: T01 save original callbacks + attach hook
+    B->>C: T01 create hardware decoder path
+    C->>D: T02 queue AVC420 input(frameId, pts)
+    D-->>C: T02 native output(format/stride/planes)
+    C->>C: T03 retained composite + pendingFrameId
+    B->>C: T03 matched EndFrame(frameId)
+    C->>W: T03 unique owner present
 ```
+
+右侧放三张“开发—证据—停止”卡：
+
+| 任务 | 实际修改 | 本轮必须看到 | 没看到怎么办 |
+|---|---|---|---|
+| T01 Hook + decoder | `bridge_attach`、build flags、capability/init | HAP 库身份、attach、hardware decoder name/start | 停在构建/平台能力，不写 buffer |
+| T02 一帧输出 | input/output buffer adapter | 同 frameId/PTS 的 size/format/stride/planes/native buffer | 保留原始 output description，不写 owner |
+| T03 显示边界 | candidate policy、retained composite、EndFrame | callbackReady、owner、pendingFrameId、matched present、无双写 | 回到第一异常，不开始队列优化 |
+
+页脚：`T01 证明路径进了产物 → T02 证明有合法输出 → T03 证明输出在正确边界显示`。
 
 ### 讲师备注
 
-这里把“怎么协同”演出来，而不是只放一张 Agent 架构图：
+这页不再讲抽象 Planner/Explorer/Reviewer 角色，而是让学员看到 AI 实际修了哪个源码边界、为什么不能跳步、每一步用什么证据决定继续或停止。
 
-- Planner 冻结任务和验收，不写实现细节；
-- Explorer 只读，不靠记忆声称某条路径存在；
-- Implementer 只能改 Allowed，并在 stop 条件触发时停手；
-- MCP/脚本执行确定性动作并保存原始证据；
-- Reviewer 不看“我已经完成”的总结，先看 diff、运行路径和 outcome。
-
-一个人也可以分时扮演五个角色，但不能让同一段自我陈述同时充当方案、实现和验收证据。
-
-#### 怎么判断 AI 写的代码“看起来对”还是“真的对”
-
-```text
-方案：与原生/其他平台契约一致吗？
-实现：diff 只覆盖任务授权吗？
-路径：真机真的运行了新代码吗？
-结果：用户场景和工程回归都通过吗？
-```
+T01 解决“新路径真的进了产物和设备吗”；T02 解决“压缩输入真的产生可用 native output 吗”；T03 解决“这份输出由唯一 owner 在正确 EndFrame 显示了吗”。前一张卡未过门，后一张卡的代码就没有可信输入。
 
 ### 演示动作
 
-展示“只要求删除 cache，却删除整条实现路径”的真实 Session 卡。让 Reviewer 即使看到 build green 也判 Trace FAIL，并说明如何只回滚越界部分。
+打开 T01/T02/T03 三张任务卡，沿上图当场问三次：“本轮修哪个符号？什么证据算过门？没过时停在哪里？”
 
 ### 通过条件
 
-学员能区分实现者自评、工具结果、业务路径和独立验收四种不同事实。
+学员能按 T01→T02→T03 说出真实开发顺序，并说明为什么“build 绿”、“decoder create 成功”和“屏幕有一帧”都只是局部证据。
 
 ### 素材
 
-- 附录 L6 越界修改 Session Evidence Card
-- `evidence/gpu/03-task-acceptance-and-debug.md`
-- `anthropic/evaluator-optimizer.png`（讲师备注可选）
+- `case-materials/gpu/tasks/T-GPU-01.md`
+- `case-materials/gpu/tasks/T-GPU-02.md`
+- `case-materials/gpu/tasks/T-GPU-03.md`
+- `case-materials/gpu/09-源码调用链与任务拆解.md` 第 2–4 节
 
 ---
 
-## 第 35 页｜开发遇到黑屏、色块或仍卡顿：先停，再找最早异常
+## 第 35 页｜Ralph 循环：每轮只收敛一个开发未知
+
+<!--
+type: LAB
+section: CASE2_EXECUTION
+layout: progress-ledger
+time: 3m
+progress: 代码
+-->
+
+### 画面
+
+```text
+READ 上轮 progress + 当前 Task Card
+  → PLAN 只选一个未知和一个 oracle
+  → IMPLEMENT 只改 Allowed 边界
+  → VERIFY 目标测试 + 路径证据 + 回归
+  → RECORD 结论/证据/剩余未知/下一轮
+  → STOP / CONTINUE / REPLAN
+```
+
+下方直接放一张运行账：
+
+| 轮次 | 本轮唯一未知 | 必须留下的证据 | 决策 |
+|---|---|---|---|
+| R1 | bridge 是否进入目标 HAP | symbol、library hash、attach log | PASS 才进 R2 |
+| R2 | 真机是否选中硬件 decoder | capability、decoder name、configure/start | 不支持则 STOP/UNSUPPORTED |
+| R3 | 一帧输入输出是否可关联 | frameId、PTS、format、stride/planes | 输出合法才进 R4 |
+| R4 | owner/EndFrame 是否正确 | pendingFrameId、matched present、无双写 | 异常则进第 36 页 |
+| R5 | 连续播放是否积压 | queue depth/age、decodeUs、present gap、CPU/FPS | 推导 T04 背压任务 |
+
+页脚：**一轮的产物不是“AI 回复完成”，而是一条可让下一 Session 继续的 progress 记录。**
+
+### 讲师备注
+
+这页把“开发”和“循环”连起来。第 34 页说源码怎么一段一段接，本页说为什么不能一次把 decoder、renderer、queue、AVC444 全改完。每轮只关一个未知，是为了让 PASS/FAIL 都能转化成下一步决策。
+
+AI 必须把原始命令、返回码、日志路径和未知写回 progress。如果连续三轮在同一边界没有新证据，不继续重试，进入 `REPLAN/ESCALATE`。
+
+### 演示动作
+
+给出 R1 的 progress 空表，让学员根据“HAP 可以安装，但无 bridge symbol/attach log”选择 PASS、FAIL 还是 UNKNOWN，并写下一轮唯一动作。
+
+### 通过条件
+
+学员能把“让 AI 继续开发”改写为“下一轮只验证哪个未知、用什么 oracle、什么情况停止”。
+
+### 素材
+
+- `case-materials/gpu/07-开发排障复盘.md`
+- `evidence/gpu/03-task-acceptance-and-debug.md`
+- 附录 B7 Progress Ledger
+
+---
+
+## 第 36 页｜遇到黑屏、色块或仍卡顿：只修第一处异常
 
 <!--
 type: DEBUG
 section: CASE2_DEBUG
-layout: evidence-ladder
+layout: issue-triage
 time: 3m
 progress: 调试
 -->
 
 ### 画面
 
-左侧循环播放黑屏片段；右侧逐层点亮：
+顶部固定排障协议：
 
 ```text
-1 command received
-2 candidate path / decoder selected
-3 compressed input queued
-4 decoded output valid
-5 format / stride / planes valid
-6 command state applied
-7 render owner correct
-8 EndFrame present
-9 next frame continues
+Stop → Preserve → Locate → Falsify → Repair → Replay
 ```
 
-底部写：**第一处与预期不一致的位置，才是本轮修改边界。**
+中间放三个实际问题，每个问题只给第一组观测：
+
+| 现象 | 先固定哪条证据链 | 第一个可证伪假设 | 不要先做 |
+|---|---|---|---|
+| decoder 有 output，但画面黑 | native buffer → composite → pendingFrameId → matched EndFrame → target generation | 输出已有，第一异常在 GPU import/present 边界 | 继续改 decoder 参数或直接猜 shader |
+| 粉/绿色块、花屏或局部错位 | output format/stride/planes + dirty rect + retained background | 格式/plane math 与实际 output description 不一致 | 盲换色彩矩阵 |
+| 刚开始流畅，随后越来越卡 | queue depth/age p95 + decodeUs + present gap + target state | worker 消费跟不上，旧任务持续积压 | 直接加线程或无限队列 |
+
+底部保留一行真实 Trace 占位：
+
+| runId | frameId | decoder | output | owner | EndFrame/present | first abnormal | verdict |
+|---|---:|---|---|---|---|---|---|
+| `PLACEHOLDER` |  |  |  |  |  |  | `PENDING` |
 
 ### 讲师备注
 
-AI 第一反应经常是列出十个可能原因并连续改代码。本课固定执行：
+这页不要先讲 Trace Eval 与 Outcome Eval 的概念，而是直接用三个现象教学员怎么办。统一步骤是：停止扩大修改，保存 commit/设备/runId/原日志，按同一 frame 找第一处 `expected != actual`，只加一条能区分两个分支的观测，修复后重放目标场景和 fallback。
 
-```text
-Stop → Preserve → Locate → Falsify → Repair → Re-evaluate
-```
-
-典型问题：
-
-| 现象 | 容易误改 | 最小观测 |
-|---|---|---|
-| 仍卡顿 | 加更多线程 | selected decoder + CPU/FPS + queue depth |
-| 黑屏 | 改 shader | same frame input/output/owner/present |
-| 白帧 | 改 UI 背景 | upload 前像素 + remote paint readiness |
-| 粉/绿块 | 猜色彩矩阵 | output format/stride/planes/rect |
-| 闪烁 | 增加 repaint | command consumed + EndFrame + owner |
-| resize 后失效 | 重建 session | surface/target generation + stale queue |
-
-没有日志时，正确动作不是继续猜，而是增加一条只回答当前假设的结构化日志。日志加到能区分两个分支的边界，不做全链路高频刷屏。
+如果单帧 Trace 已经 PASS 但仍卡顿，才进入队列、时延、帧节奏和长时行为；不要回头重写已经有证据的 decoder 主链。
 
 ### 演示动作
 
-先播放 `gpu-failure-black-screen-13s.mp4`，让学员选择下一条日志。随后给一张正确截图，追问：它能否证明第 9 步持续成立？
+播放 `gpu-failure-black-screen-13s.mp4`，先告诉学员“decoder 有 output”，让他们从表中选下一个观测边界。当前视频未绑定 frame trace，只用于练排障方法，不预设真实根因。
 
 ### 通过条件
 
-学员提出的是可推翻当前判断的观测，而不是另一个无法证实的根因故事。
+学员能根据现象选出第一组观测，并让修正建议与第一异常处于同一边界，不借机重写整条渲染链。
 
 ### 素材
 
 - `gpu-failure-black-screen-13s.mp4`
 - `gpu-failure-black-screen-contact.jpg`
-- `docs/archive/rdp-white-frame-case-study.md`
+- `case-materials/gpu/07-开发排障复盘.md`
+- `case-materials/gpu/09-源码调用链与任务拆解.md` 第 8 节
 
 ---
 
-## 第 36 页｜AI 不对时，用同一 frame 的事实推翻它
-
-<!--
-type: DEBUG
-section: CASE2_DEBUG
-layout: trace-table
-time: 2m
-progress: 调试
--->
-
-### 画面
-
-| frameId | codec | decoder | output | owner | present | verdict |
-|---:|---|---|---|---|---|---|
-|  |  |  |  |  |  | `PENDING` |
-
-> 本表等待真实 frame trace；不再使用未绑定 run 的示例 frameId 冒充证据。
-
-下方两句：
-
-> “API 调用成功”只证明一个边界。
-
-> “截图看起来正确”只证明一个采样瞬间。
-
-### 讲师备注
-
-Reviewer 对 AI 的结论做两次审查：
-
-- **Trace Eval**：这条 frame 是否按预期经过 command、decoder、state、owner 和 present？
-- **Outcome Eval**：持续视频是否流畅、颜色正确、交互可用、CPU 改善、fallback 稳定？
-
-如果 Trace FAIL，就修第一处异常边界；如果 Trace PASS 但 Outcome FAIL，才继续看队列、时延、帧节奏与更长时间行为。如果两者证据不足，结论是 `UNKNOWN`，不能让模型用解释填空。
-
-AVC444 的真实教训是：两个 decoder、过早 suppress GDI、在 SurfaceCommand 直接 present 等方案都“局部合理”，但不符合原生 LC、单 `H264_CONTEXT` 与 EndFrame 语义。正确性来自契约和同帧证据，不来自代码复杂度。
-
-### 演示动作
-
-在有真实 frame trace 时，只允许学员根据第一处 FAIL 选择一个最小修正。当前 trace 未入库，本环节保留为空白模板，不预设“释放 owner、补 chroma、恢复 fallback 或移动 present”中的任何一个是事实答案。
-
-### 通过条件
-
-修正建议与证据指向同一边界，不借机重写整条渲染链。
-
-### 素材
-
-- `gpu-e2e-interaction-public.jpg`
-- `docs/archive/avc444-gpu-compositor-retrospective.md`
-- 附录 F GPU Diagnosis 模板
-
----
-
-## 第 37 页｜穿刺有结论以后，工程化能力决定它能不能交付
+## 第 37 页｜最终交付：一帧走通之后，还要补齐四个工程闭环
 
 <!--
 type: CHECKPOINT
@@ -2093,45 +2150,49 @@ progress: 证据
 
 ### 画面
 
-| 工程能力 | 必须回答 | 失败表现 |
-|---|---|---|
-| 生命周期 | create/start/flush/stop/destroy 与 Surface generation 如何对齐 | resize 黑屏、旧 target |
-| 队列/背压 | 输入、输出、present 队列是否有界 | 延迟增长、内存上涨 |
-| 所有权 | GDI、AVC420、AVC444 谁能写 XComponent | 闪烁、旧帧覆盖 |
-| 回退 | 硬解失败能否回软件/原生路径 | 静默黑屏 |
-| 可观测性 | 能否证明 decoder、frame、owner、present | 只能靠肉眼猜 |
-| 回归 | 输入、resize、后台、重连是否仍工作 | 局部 GREEN |
+| 后续任务 | 交付能力 | 验收点 | 失败时的结论 |
+|---|---|---|---|
+| T04 连续队列/背压 | 输入、输出、present 队列有界 | depth/age p95、drop reason、frame order、CPU/FPS | 延迟持续增长则 FAIL，不用一帧 PASS 遮盖 |
+| T05 生命周期 | resize/后台/重连不使用旧 target | generation、stale task rejection、release/recreate、恢复 | 旧 target 可写则 FAIL |
+| T06 AVC444 | LC、单 decoder、retained state、EndFrame 闭合 | stream/LC/readiness/owner/present 同帧 trace | 直接复用 AVC420 假设则 NEEDS_REPLAN |
+| T07 最终验收 | 性能、正确性、交互、长稳、fallback、scope 同时收口 | before/after + path + frame trace + fault + soak + reviewer | 任一强结论缺主证据则 PENDING/UNKNOWN |
+
+右侧放最终交付包，让学员看到不是只交代码：
+
+```text
+delivery/<runId>/
+├─ requirements + codebase-map + platform-research + ADR
+├─ task-cards + progress-ledger + final diff
+├─ build.log + runtime-path.log + frame-trace.log
+├─ cpu-fps-before/after.csv + video-before/after.mp4
+├─ fault-injection.md + regression/soak-matrix.md
+└─ reviewer-verdict.md
+```
 
 ### 讲师备注
 
-“接通 `OH_AVCodec`”只是能力穿刺，工程化还包括：
+“接通 `OH_AVCodec`”只是能力穿刺，不是交付。第 34 页的 T01–T03 证明一帧主链；本页的 T04–T07 才把连续性、生命周期、AVC444、回退和独立验收补齐。
 
-- 有界等待，不让同步调用永久阻塞；
-- queue depth、drop、fallback reason 可观测；
-- Surface/target generation 改变后不消费旧 buffer；
-- AVC420 与 AVC444 共享输出契约，但不共享未经证明的实现假设；
-- 先保留可靠 fallback，再逐步优化 zero-copy；
-- 每个风险都有故障注入，而不是只跑成功路径。
-
-这一页把原 32–37 页的技术深挖收束成工程验收维度；Buffer、plane math、LC、单 decoder 和队列推演的完整材料仍保留在附录 F、J、K 与本地复盘文档中，讲师按学员水平展开。
+最终交付包要让另一个人不依赖当前聊天，也能重放需求、找到方案依据、核对修改边界、重跑验收并得出同样的 verdict。
 
 ### 演示动作
 
-让学员从矩阵中选一个最容易被遗漏的维度，为它补一条故障注入和一条恢复验收。
+给出一个“代码和一帧 trace 都 PASS”的中间状态，让学员从 T04–T07 中选出下一张必须执行的卡，并说明不能直接发布的原因。
 
 ### 通过条件
 
-方案不只覆盖 happy path；至少具有 fallback、生命周期、背压和可观测性四个工程闭环。
+学员能区分“一帧主链穿刺 PASS”与“完整工程交付”，并能列出交付包中代码以外的必需证据。
 
 ### 素材
 
 - `freerdp-render-queue.jpeg`
 - `freerdp-compositor-scale.jpeg`
-- 附录 F1–F7
+- `case-materials/gpu/06-工程验收计划.md`
+- `case-materials/gpu/tasks/T-GPU-04.md`–`T-GPU-07.md`
 
 ---
 
-## 第 38 页｜当前证据状态：已有材料证明什么，还缺什么
+## 第 38 页｜结果验收：视频、路径、性能和工程矩阵必须同时对上
 
 <!--
 type: CHECKPOINT
@@ -2143,9 +2204,15 @@ progress: 证据
 
 ### 画面
 
-左：before 视频槽位（`PENDING`；当前为空）
+左：before 证据（案例已知 CPU/软件路径；原始素材待补）
 
-中：硬解路径待填证据链
+```text
+video-before.mp4: PLACEHOLDER
+software/cpu path log: PLACEHOLDER
+cpu/fps/frame-time/queue-age baseline: PLACEHOLDER
+```
+
+中：after 硬解/GPU 路径待填证据链
 
 ```text
 commit:
@@ -2155,18 +2222,21 @@ decoder identity:
 frameId / output:
 owner / matched EndFrame:
 present:
+video-after:
+cpu/fps/frame-time/queue-age:
 ```
 
 右：现有可见媒体与验收矩阵
 
 | 结论 | 当前证据 | 判定 |
 |---|---|---|
+| 原始实现走 CPU/软件路径，未走 GPU | 用户冻结的案例背景；原始日志截图待入库 | `CASE FACT / EVIDENCE PLACEHOLDER` |
 | 源码存在 bridge→compositor→EndFrame 路径 | 源码锚点与调用链 | `REPO FACT` |
 | 当前 arm64/HAP 构建通过 |  | `PENDING` |
 | 真机实际选择 OHOS hardware decoder |  | `PENDING` |
 | 某次运行可见播放与部分交互 | `gpu-validation-video-playback-16s.mp4` | `MEDIA FACT / UNBOUND` |
 | 某次运行出现黑屏 | `gpu-failure-black-screen-13s.mp4` | `MEDIA FACT / UNBOUND` |
-| CPU/FPS 与卡顿改善 |  | `UNKNOWN` |
+| CPU/FPS 与卡顿改善幅度 |  | `PENDING` |
 | resize/后台/重连长稳 |  | `UNKNOWN` |
 
 <!-- VIDEO SLOT: harmonyos-sdd-workshop-media/gpu-hwdecode-after.mp4 -->
@@ -2175,7 +2245,7 @@ present:
 
 ### 讲师备注
 
-可以播放 `gpu-validation-video-playback-16s.mp4`，但不要称它为“修复后”或“硬解 after”。它只能证明某次运行可见播放和部分交互；由于缺少 commit、runId、decoder path 和性能 CSV，不能替代 CPU/FPS A/B、路径日志和长稳。
+可以播放 `gpu-validation-video-playback-16s.mp4`，但当前不称它为“硬解 after 验收”。它只能证明某次运行可见播放和部分交互；由于缺少 commit、runId、decoder path 和性能 CSV，不能替代 CPU/FPS A/B、路径日志和长稳。这些空格就是课堂上的真实验收占位。
 
 案例二最终收获不是一个 `OH_AVCodec` API 清单，而是五种可迁移能力：
 
@@ -2189,7 +2259,7 @@ present:
 
 ### 演示动作
 
-播放现有可见视频，让学员先填写它能证明与不能证明的内容，再对照 `00-证据状态总表.md`。最后要求每组回答：“AI 为什么可能是对的？我们还缺什么证明？如果错了，回到哪一个 checkpoint？”
+播放现有可见视频，让学员把它放进右侧表格，并判断还缺 before、path、performance、frame trace、fallback 还是 soak。最后要求每组回答：“什么证据到了才能说交付？哪一项没到必须保留占位？”
 
 ### 通过条件
 
@@ -2272,7 +2342,7 @@ flowchart TD
 
 ---
 
-# 附录 A｜120 分钟讲师 Runbook
+# 附录 A｜讲师运行与 120 分钟时间盒
 
 ## A1. 严格时间盒
 
@@ -2308,7 +2378,7 @@ flowchart TD
 
 ---
 
-# 附录 B｜MDM 外设管理课堂冻结规格
+# 附录 B｜MDM 规格、AI 协同与工程验收
 
 ## B1. TEACHING Requirements
 
@@ -2352,6 +2422,18 @@ WHEN 执行还原，THE SYSTEM SHALL 先清理 EDM 当前全部 disallowed USB t
 
 验收 SHALL 分别记录 UI、本地状态、MDM 回读与实物行为；任一必要层缺失 SHALL 标 UNKNOWN/PENDING，不得用较低层证据代替。
 
+### FR-USB-011｜部分生效
+
+IF MDM API 返回错误但 getter 已等于目标值，THE SYSTEM SHALL NOT 简单回滚为旧状态；SHALL 区分策略已保存但重枚举/重挂载未完成，并提供可行动提示与后续实物验证。
+
+### FR-USB-012｜事实发布
+
+WHEN Trace RDB 写入事务成功，THE SYSTEM SHALL 立即发布变更；过期清理、数量裁剪等维护失败 SHALL NOT 吞掉已经提交的连接事实。
+
+### FR-USB-013｜在线态对账
+
+WHEN 外设运行时启动或恢复，THE SYSTEM SHALL 用当前真实 USB 设备集合对 `present` 执行对账；SHALL 保留离线设备的 `desiredPolicy`，但 SHALL NOT 允许离线设备继续动态修改。
+
 ## B2. 完整行为矩阵
 
 | 全局 | 存储 | 显式状态 | 默认 | 动作/结果 | 状态提交 |
@@ -2381,6 +2463,10 @@ WHEN 执行还原，THE SYSTEM SHALL 先清理 EDM 当前全部 disallowed USB t
 | G2 | 全局恢复部分 deny 重放失败只告警 | OPERATIONAL GAP / 需设备复核 |
 | G3 | 完整 D6/D7 设备矩阵未归档 | EVIDENCE GAP |
 | G4 | E2E JSON artifacts 为空 | TELEMETRY GAP |
+| G5 | Trace notify 位于维护流程末尾，写入后可能未即时发布 | STATE FLOW GAP / OPEN |
+| G6 | `present` 尚无启动真实设备对账 | STATE TRUTH GAP / OPEN |
+| G7 | `9200007` 部分生效尚未形成统一 ViewModel 结果模型 | ERROR SEMANTICS GAP / OPEN |
+| G8 | 还原后系统成功、本地保存失败缺少完整补偿 | TRANSACTION GAP / OPEN |
 
 ## B4. `spec.md` 空白模板
 
@@ -2473,11 +2559,11 @@ effectivePolicy = ...
 
 ---
 
-# 附录 C｜AI Prompt 梯子
+## B6. AI Prompt 梯子
 
 下面的 Prompt 不是“万能咒语”，而是每轮输入/权限/输出/停止条件的模板。每次只使用当前阶段的一条。
 
-## C1. 歧义勘察 Prompt
+### B6.1 歧义勘察 Prompt
 
 ```text
 你是需求分析协作者。不要设计方案，不要写代码。
@@ -2495,7 +2581,7 @@ effectivePolicy = ...
 禁止输出架构、类名、代码。未知标 OPEN。
 ```
 
-## C2. 仓库只读勘察 Prompt
+### B6.2 仓库只读勘察 Prompt
 
 ```text
 本轮禁止修改任何文件。
@@ -2513,7 +2599,7 @@ effectivePolicy = ...
 找不到就写 NOT FOUND，不得发明 API。
 ```
 
-## C3. 任务切片 Prompt
+### B6.3 任务切片 Prompt
 
 ```text
 根据已冻结 spec/design，把 <Requirement ID> 切成最小任务。
@@ -2526,7 +2612,7 @@ Forbidden Changes、失败测试、实现提示、验证命令、证据文件、
 请继续拆分。不要按文件数量切任务。
 ```
 
-## C4. RED Prompt
+### B6.4 RED Prompt
 
 ```text
 只为 <Task ID> 增加一个会因缺少目标行为而失败的测试。
@@ -2536,7 +2622,7 @@ Forbidden Changes、失败测试、实现提示、验证命令、证据文件、
 若失败来自环境/编译/无关断言，停止并标 BLOCKED，禁止改生产代码。
 ```
 
-## C5. 最小实现 Prompt
+### B6.5 最小实现 Prompt
 
 ```text
 目标：让 <Task ID> 的目标 RED 转 GREEN。
@@ -2550,7 +2636,7 @@ Forbidden Changes、失败测试、实现提示、验证命令、证据文件、
 完成后运行窄测试、相关回归，并更新 progress.md。
 ```
 
-## C6. DEBUG Prompt
+### B6.6 DEBUG Prompt
 
 ```text
 不要先给修复。根据同一个 correlationId/frameId 的证据：
@@ -2563,7 +2649,7 @@ Forbidden Changes、失败测试、实现提示、验证命令、证据文件、
 禁止根据最终 UI 现象直接跳到根因。
 ```
 
-## C7. 验收审阅 Prompt
+### B6.7 验收审阅 Prompt
 
 ```text
 按 spec 的每个 SHALL 审阅 evidence pack。
@@ -2579,9 +2665,9 @@ UI 文案只能证明 UI；mock 只能证明测试逻辑；
 
 ---
 
-# 附录 D｜Ralph 任务与进度模板
+## B7. Ralph 任务与进度模板
 
-## D1. Task Card
+### B7.1 Task Card
 
 ```markdown
 # TXX — <一个可观察结果>
@@ -2624,7 +2710,7 @@ UI 文案只能证明 UI；mock 只能证明测试逻辑；
 - [ ] progress.md 已更新
 ```
 
-## D2. Progress Ledger
+### B7.2 Progress Ledger
 
 ```markdown
 ## Round <N> — <timestamp>
@@ -2640,7 +2726,7 @@ UI 文案只能证明 UI；mock 只能证明测试逻辑；
 - Stop reason / Next task：
 ```
 
-## D3. 两轮课堂示例
+### B7.3 两轮课堂示例
 
 ### Round 1 / S3
 
@@ -2660,9 +2746,9 @@ UI 文案只能证明 UI；mock 只能证明测试逻辑；
 
 ---
 
-# 附录 E｜构建、测试与 MDM 外设验收手册
+## B8. 构建、测试与 MDM 外设验收手册
 
-## E1. 本地验证命令
+### B8.1 本地验证命令
 
 ```powershell
 # 单元测试
@@ -2678,7 +2764,7 @@ hvigorw assembleHap --mode module -p product=default -p module=entry@ohosTest
 
 报告：`entry/.test/default/outputs/test/reports/coverageReport.json`。先看目标测试是否执行，再看 coverage；coverage 不替代系统验收。
 
-## E2. 设备执行链
+### B8.2 设备执行链
 
 ```powershell
 hdc list targets
@@ -2694,7 +2780,7 @@ runId / commit / HAP hash / deviceId / OS version
 admin state / USB VID:PID / baseClass / SN / storage mode
 ```
 
-## E3. E2E 可执行链（CURRENT）
+### B8.3 E2E 可执行链（CURRENT）
 
 ```powershell
 python scripts/e2e/run_e2e.py --list-suites
@@ -2708,7 +2794,7 @@ python scripts/e2e/run_e2e.py --case scripts/e2e/cases/peripheral/usb_blacklist.
 
 已有结果：`PER-IF-001/002`、`PER-POL-001`、`PER-POLICY-002`、`PER-REC-001`、`PER-WL-USB-001` PASS；`PER-BL-USB-001` 是保留的旧 FAIL。
 
-## E4. 系统 Getter 与实物 Oracle（TARGET）
+### B8.4 系统 Getter 与实物 Oracle（TARGET）
 
 建议验收 bridge 输出结构化结果，不用 UI 文本猜系统状态：
 
@@ -2730,7 +2816,26 @@ python scripts/e2e/run_e2e.py --case scripts/e2e/cases/peripheral/usb_blacklist.
 
 任何必需 `status != OK` 都使系统结论至少为 UNKNOWN。`baseClasses=[]` 必须与“读取失败”使用不同状态。
 
-## E5. `acceptance.md` 模板
+#### B8.4.1 错误码与系统日志取证
+
+```powershell
+hdc shell hilog -r
+hdc shell hilog -x | Out-File -Encoding utf8 .\usb-policy.log
+Select-String -Path .\usb-policy.log -Pattern `
+"UsbGlobalPolicyService|PeripheralDevicePolicyDispatchService|UsbReadOnlyPlugin|disallowed_usb_devices|readonly value|Unmount|Mount|9200010|9200007"
+hdc shell param get persist.filemanagement.usb.readonly
+hdc shell param get const.enterprise.external_storage_device.manage.enable
+```
+
+| 观察 | 结论 | 下一步 |
+|---|---|---|
+| `9200010` + 存在 disallowed type | 系统策略冲突 | 还原系统类型规则并回读 |
+| `9200007` + getter 已到目标 + Unmount/Mount 失败 | 部分生效 | 关闭占用、重插设备、补 D7 |
+| API fail + getter 仍是旧值 | 完全失败 | 保持旧状态、检查权限/管理员/冲突 |
+| UI 变了但 getter/实物没变 | 假成功 | FAIL，回查提交顺序 |
+| RDB 有 trace 但 VM 没刷新日志 | 事实发布链断点 | 查 notify 位置，不用 Tab 切换掩盖 |
+
+### B8.5 `acceptance.md` 模板
 
 ```markdown
 # Acceptance — <runId>
@@ -2775,9 +2880,9 @@ PASS | FAIL | UNKNOWN | PENDING
 
 ---
 
-# 附录 F｜GPU 实现与诊断手册
+# 附录 C｜GPU 技术、素材与方法依据
 
-## F1. AVC420 / AVC444 事实对照
+## C1. AVC420 / AVC444 事实对照
 
 | 维度 | AVC420 | AVC444 |
 |---|---|---|
@@ -2790,7 +2895,7 @@ PASS | FAIL | UNKNOWN | PENDING
 | Decoder model | AVC stream + retained GDI | 单 decoder 顺序消费 luma/chroma |
 | Current risk | 累计阈值、queue 720 同步越序、0 rect | queue 非硬上限、Surface lifecycle |
 
-## F2. AVC420 接管判定
+## C2. AVC420 接管判定
 
 | 输入 | 背景 | 结果 |
 |---|---|---|
@@ -2802,7 +2907,7 @@ PASS | FAIL | UNKNOWN | PENDING
 
 `failures` 与 `ignoredUpdates` 是累计计数；教学时若要表达“连续失败”，必须先设计 reset 条件并补测试。
 
-## F3. AVC444 LC 判定
+## C3. AVC444 LC 判定
 
 ```text
 LC=0: needsLuma=true,  needsChroma=true
@@ -2817,7 +2922,7 @@ LC=2: needsLuma=false, needsChroma=true
 
 只有 retained state 满足 present readiness 时才可 claim / present。测试至少覆盖 LC 顺序变化、SPS/PPS 缺失、decoder reset、NV12/NV21、v1/v2 chroma、0 dirty rect、Surface recreate。
 
-## F4. Frame boundary 的规则与例外
+## C4. Frame boundary 的规则与例外
 
 - 普通 AVC pending update：匹配 real 或 synthetic EndFrame 后 present。
 - `frameOpen=false`：bridge 生成 synthetic matched frame callback。
@@ -2827,7 +2932,7 @@ LC=2: needsLuma=false, needsChroma=true
 
 因此验收断言应写具体分支，不能写成“所有 present 都必须对应真实 EndFrame”。
 
-## F5. `gpu-diagnosis.md` 模板
+## C5. `gpu-diagnosis.md` 模板
 
 ```markdown
 # GPU Diagnosis — <runId>
@@ -2866,7 +2971,7 @@ LC=2: needsLuma=false, needsChroma=true
 PASS | FAIL | UNKNOWN
 ```
 
-## F6. 两个课堂 Case 参考答案
+## C6. 两个课堂 Case 参考答案
 
 ### Case 420
 
@@ -2885,7 +2990,7 @@ PASS | FAIL | UNKNOWN
 - 下一轮：记录 LC、SPS/PPS、hasLuma/hasChroma、claim owner；验证是否应等待 luma base。
 - 反证：若此前有成功 LC0/1 并且 luma state 在同 Surface generation 有效，则检查生命周期丢失。
 
-## F7. GPU 验收矩阵
+## C7. GPU 验收矩阵
 
 | 场景 | 必备直接证据 | PASS 条件 |
 |---|---|---|
@@ -2901,9 +3006,9 @@ PASS | FAIL | UNKNOWN
 
 ---
 
-# 附录 G｜代码与提交素材索引
+## C8. 代码与提交素材索引
 
-## G1. MDM 代码锚点
+### C8.1 MDM 代码锚点
 
 | 教学问题 | 真实锚点 |
 |---|---|
@@ -2928,7 +3033,7 @@ PASS | FAIL | UNKNOWN
 - `0d26c92e`：全局恢复后的 USB 重枚举采用有界重试。
 - `f95c5109`：USB 存储策略成功后同步名单可编辑状态。
 
-## G2. GPU 代码锚点
+### C8.2 GPU 代码锚点
 
 | 教学问题 | 真实锚点 |
 |---|---|
@@ -2943,7 +3048,7 @@ PASS | FAIL | UNKNOWN
 
 可用于讲师备注的提交锚点：`a9c05d2`、`a6918ba1`、`93c6207`、`d789bb5`、`5370d34`、`227c1a9`、`1c07750`、`00544cb`。上课不在画面堆哈希，只在打开历史时使用。
 
-## G3. 每 2–3 页插入的真实素材
+### C8.3 每 2–3 页插入的真实素材
 
 1. MDM 外设页三个 Tab 与黑白名单截图。
 2. `rg` 勘察结果与 MVVM 调用链。
@@ -2958,9 +3063,9 @@ PASS | FAIL | UNKNOWN
 
 ---
 
-# 附录 H｜课前准备与视觉交付清单
+## C9. 课前准备与视觉交付清单
 
-## H1. 讲师必须提前准备
+### C9.1 讲师必须提前准备
 
 - 锁定两个仓库的演示 commit，确认所有代码锚点仍存在。
 - 准备训练分支：默认 allow 漏名单、全局禁用补偿两个场景可产生真实 RED；不要在已修复 HEAD 上假演示失败。
@@ -2973,7 +3078,7 @@ PASS | FAIL | UNKNOWN
 - 为 GPU 准备 AVC420/AVC444 可复现片段、卡顿录屏、已脱敏 frame trace 与色块 Buffer。
 - 提前验证 39 页所有 `time:` 合计 120 分钟。
 
-## H2. PPT 资产命名
+### C9.2 PPT 资产命名
 
 先检查现成资产，不把“建议截图”误写成“证据已经准备”：
 
@@ -2995,14 +3100,20 @@ assets/
 ├── 21-usb-compensation-fault.png
 ├── 24-e2e-fail-pass.png
 ├── 25-mdm-readback-pending.png
-├── 29-dual-codec-path.svg
-├── 34-buffer-inspection.png
-├── 35-avc420-takeover.png
-├── 37-avc444-lc.png
-└── 38-owner-frame-trace.png
+├── 28-cpu-stutter-before-placeholder.png
+├── 29-codebase-map.png
+├── 30-platform-research-sequence.svg
+├── 31-harmonyos-gpu-adr.svg
+├── 32-one-frame-spike.svg
+├── 33-task-cards.png
+├── 34-t01-t03-development.svg
+├── 35-progress-ledger.png
+├── 36-issue-triage.png
+├── 37-delivery-bundle.png
+└── 38-before-after-acceptance.png
 ```
 
-## H3. 页面制作验收
+### C9.3 页面制作验收
 
 - [ ] 画面层每页只有一个判断中心。
 - [ ] 所有长答案、完整矩阵、哈希与路径进入 Notes / 附录。
@@ -3019,9 +3130,9 @@ assets/
 
 ---
 
-# 附录 I｜项目事实与方法论依据
+## C10. 项目事实与方法论依据
 
-## I1. 项目事实来源
+### C10.1 项目事实来源
 
 本课程的项目事实以以下本地仓库及其提交历史为准：
 
@@ -3032,17 +3143,17 @@ assets/
 
 对外分享前，再按授课当天的 HarmonyOS SDK、MDM API、OH_AVCodec / OH_NativeBuffer 文档复核接口签名、权限、错误码和生命周期约束。外部文档只用于确认平台契约；案例行为仍必须由当前代码、测试和真机证据共同支持。
 
-## I2. Anthropic 方法论文章
+### C10.2 Anthropic 方法论文章
 
 | 官方文章 | 核心观点（本课采用的部分） | 在课程中的落点 |
 |---|---|---|
 | [Best practices for Claude Code](https://code.claude.com/docs/en/best-practices) | 先 Explore，再 Plan、Implement；给 Agent 可运行的检查；主动管理上下文；长任务后用新上下文反证 | 第 3–5、13、27 页 |
 | [Building Effective AI Agents](https://www.anthropic.com/engineering/building-effective-agents) | 从最简单可行方案开始；工作流适合确定路径，Agent 适合开放任务；执行中持续获取环境 ground truth，并设置 checkpoint / stopping condition | 第 4、6–7、28、39 页 |
-| [Effective Harnesses for Long-Running Agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) | 首轮建立任务与验证清单；后续一次只推进一个 feature；使用 progress、Git 和端到端测试完成跨上下文交接 | 第 14–17 页、附录 D |
-| [Effective Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) | 上下文是有限注意力预算；保留完成当前任务所需的最小高信号信息；长任务使用压缩、结构化记录和按需检索 | 第 13、17 页、附录 D |
-| [Writing Effective Tools for Agents](https://www.anthropic.com/engineering/writing-tools-for-agents) | 少量高价值工具优于大量重叠薄包装；工具应有清晰边界、语义化返回、token 效率，并用真实任务评测 | 第 25–26 页、附录 E |
-| [Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) | 复杂 Agent 评估要区分 task、trial、trace 与 outcome；组合代码、模型和人工 grader；从真实失败建立可维护的 eval suite | 第 3、26–27、39 页、附录 E |
-| [Harness Design for Long-Running Application Development](https://www.anthropic.com/engineering/harness-design-long-running-apps) | 把长任务拆成可处理片段，用结构化产物跨阶段交接；Planner、Generator 与 Evaluator 分工；持续检验 harness 中哪些假设真正必要 | 第 14–17、27、39 页、附录 D |
+| [Effective Harnesses for Long-Running Agents](https://www.anthropic.com/engineering/effective-harnesses-for-long-running-agents) | 首轮建立任务与验证清单；后续一次只推进一个 feature；使用 progress、Git 和端到端测试完成跨上下文交接 | 第 14–17 页、附录 B7 |
+| [Effective Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) | 上下文是有限注意力预算；保留完成当前任务所需的最小高信号信息；长任务使用压缩、结构化记录和按需检索 | 第 13、17 页、附录 B7 |
+| [Writing Effective Tools for Agents](https://www.anthropic.com/engineering/writing-tools-for-agents) | 少量高价值工具优于大量重叠薄包装；工具应有清晰边界、语义化返回、token 效率，并用真实任务评测 | 第 25–26 页、附录 B8 |
+| [Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) | 复杂 Agent 评估要区分 task、trial、trace 与 outcome；组合代码、模型和人工 grader；从真实失败建立可维护的 eval suite | 第 3、26–27、39 页、附录 B8 |
+| [Harness Design for Long-Running Application Development](https://www.anthropic.com/engineering/harness-design-long-running-apps) | 把长任务拆成可处理片段，用结构化产物跨阶段交接；Planner、Generator 与 Evaluator 分工；持续检验 harness 中哪些假设真正必要 | 第 14–17、27、39 页、附录 B7 |
 | [AI Fluency 研究型课程模型](https://academy.claude.com/tutorials/getting-good-at-claude-a-research-backed-curriculum) | 对话式工具先教迭代，执行型与异步型 Agent 先教澄清目标；描述能力沿耐久度逐渐扩展；辨别力不会随使用时间自然增长，必须在每一步重复训练 | 第 5 页主视觉、各模块辨别检查、结课迁移 |
 
 使用这些来源时保留两个时间与适用性边界：
@@ -3050,7 +3161,7 @@ assets/
 1. `Building Effective AI Agents` 发布于 2024 年，原页面已提示工具生态随后发生变化。本课只采用仍稳定的原则：从简单方案开始、区分 Workflow 与 Agent、持续读取环境事实、设置 checkpoint 和 stopping condition；不照搬具体产品配置。
 2. 独立 Evaluator 不是所有任务的固定要求。任务位于模型可靠能力范围内且已有强确定性检查时，额外 Evaluator 可能只是开销；跨进程、事务、权限、GPU、主观质量或模型能力边缘任务才优先启用。
 
-## I3. 从文章观点到本课动作
+### C10.3 从文章观点到本课动作
 
 本课不照搬任何具体 AI 产品命令或功能清单，而是提炼跨工具、跨项目成立的工程动作：
 
@@ -3070,7 +3181,7 @@ assets/
 
 引用这些文章的目的不是给课程增加一套新名词，而是说明：本课从两个真实 HarmonyOS 项目提炼出的“需求先冻结、上下文高信号、Workflow 与 Agent 有边界、任务小、失败真、证据强、评估独立、停止清楚”，与 Anthropic 在 Agent 工程实践中总结的可靠性原则一致。
 
-## I4. 把 Agent Eval 图翻译成课堂验收
+### C10.4 把 Agent Eval 图翻译成课堂验收
 
 ![Agent Eval 组件：Task、Trial、Trajectory、Outcome、Graders 与 Harness](harmonyos-sdd-workshop-media/anthropic/agent-evaluation-components.png)
 
@@ -3085,7 +3196,7 @@ assets/
 
 这张图最适合放在第 27 页之后做 2 分钟拓展：先遮住 `Outcome`，问学员“为什么聊天记录、diff 和测试全绿仍可能不够”；揭示最终环境状态后，再回到 `PASS / FAIL / UNKNOWN`。
 
-## I5. 其他值得参考的文章：分级使用，不扩张主线
+### C10.5 其他值得参考的文章：分级使用，不扩张主线
 
 AI 熟练度成长模型已前移到第 5 页作为正文主视觉，这里不重复放图。研究型课程模型提供教学节奏：对话式工具先形成迭代习惯，执行型与异步型 Agent 先澄清目标，再沿描述耐久度沉淀任务卡、项目规则和自动化，并让辨别与验证贯穿每一步。课程自己的工程主线仍是 **需求拆解 → 开发 → 验证 → 问题定位与协同闭环**。
 
@@ -3097,28 +3208,28 @@ AI 熟练度成长模型已前移到第 5 页作为正文主视觉，这里不�
 | B | [The 4 Properties of AI](https://academy.claude.com/tutorials/the-4-properties-of-ai) | next-token prediction、knowledge、working memory、steerability 解释了为什么 AI 会自信、遗忘上下文、误解意图 | 课前阅读或第 1 页 90 秒心智模型 | 不展开成模型原理课 |
 | B | [Can You Trust What AI Tells You?](https://academy.claude.com/tutorials/can-you-trust-what-ai-tells-you) | 信任是随风险调整的刻度，不是开关；高影响决策需要更强审查 | 把 `PASS / FAIL / UNKNOWN` 与风险分级结合 | 不用泛泛“AI 会幻觉”替代具体证据标准 |
 | B | [The “Think” Tool: Enabling Claude to Stop and Think](https://www.anthropic.com/engineering/claude-think-tool) | 长工具链拿到新证据后，应暂停、更新假设并检查信息是否齐全，再执行下一动作 | 第 18、30–31 页增加 `Observe → Reframe → Act` 口令 | 不讲具体工具 API；官方更新也不再建议多数场景使用独立 think tool |
-| B | [How We Built Our Multi-Agent Research System](https://www.anthropic.com/engineering/multi-agent-research-system) | 只并行真正独立的搜索；Lead 负责任务拆分、预算和最终综合；Worker 返回压缩后的高信号结果 | 附录 J4 的协同演示与分组实操 | 不把“多 Agent”包装成进阶能力本身 |
+| B | [How We Built Our Multi-Agent Research System](https://www.anthropic.com/engineering/multi-agent-research-system) | 只并行真正独立的搜索；Lead 负责任务拆分、预算和最终综合；Worker 返回压缩后的高信号结果 | 附录 D4 的协同演示与分组实操 | 不把“多 Agent”包装成进阶能力本身 |
 | C | [Equipping Agents for the Real World with Agent Skills](https://www.anthropic.com/engineering/equipping-agents-for-the-real-world-with-agent-skills) | 把组织的步骤、脚本、模板和资源封装为可发现、按需加载的能力包 | 课后扩展：把 Task Card、MCP 命令和验收模板沉淀成团队能力 | 120 分钟主课不讲产品配置与安装流程 |
 
 如果正文只再吸收两项，优先选择前两篇研究：一篇解释“为什么精美成品更需要辨别”，一篇解释“为什么学员必须能讲清 AI 生成的代码”。4D 适合做评分观察表，其余文章保持讲师备课参考即可。
 
 ---
 
-# 附录 J｜GPU 图片、视频与协同实操包
+# 附录 D｜GPU 图片、视频、协同实操与逐页导航
 
 本附录只服务第 28–38 页，不改变原 39 页结构。正文保留概念与判断，附录提供“怎么让学员带入、怎么播放素材、怎么实操、怎么判定”的完整脚本。若严格维持 120 分钟，可选做 J2 的前两轮；若作为半天 workshop，可完整执行三轮。
 
-## J1. 已整理进课件包的素材
+## D1. 已整理进课件包的素材
 
 | 素材 | 内容 | 课堂用途 | 能证明 / 不能证明 |
 |---|---|---|---|
-| `gpu-failure-black-screen-13s.mp4` | 连接后远程窗口持续黑屏 | 第 28、32 页故障起点 | 能证明该媒体中存在黑屏；不能证明它与卡顿用户报告属于同一 run，也不能证明根因 |
+| `gpu-failure-black-screen-13s.mp4` | 连接后远程窗口持续黑屏 | 第 32 页穿刺反例、第 36 页排障练习 | 能证明该媒体中存在黑屏；不能证明它与卡顿用户报告属于同一 run，也不能证明根因 |
 | `gpu-failure-black-screen-contact.jpg` | 黑屏录屏关键帧 | 投屏静止讨论、标注最早异常 | 能证明现象时序；不能替代 frameId 日志 |
-| `gpu-validation-video-playback-16s.mp4` | 视频播放、窗口切换与遮挡变化 | 第 31、38 页媒体观察 | 能证明该媒体时段内可见播放/交互；未绑定 commit/runId，不能命名为硬解 after |
+| `gpu-validation-video-playback-16s.mp4` | 视频播放、窗口切换与遮挡变化 | 第 38 页媒体验收边界 | 能证明该媒体时段内可见播放/交互；未绑定 commit/runId，不能命名为硬解 after |
 | `gpu-validation-video-playback-contact.jpg` | 现有动态录屏关键帧 | 逐格检查媒体覆盖 | 适合观察遮挡前后；不证明 bit-exact、decoder path 或性能 |
 | `gpu-connection-interaction-contact.jpg` | 连接、打开内容、页面变化、右键交互 | 可选扩展验证 | 证明多种交互被执行；前段含连接信息，公开投屏前需裁剪/脱敏 |
-| `nativebuffer-test-pattern.png` | NativeBuffer 阶段色块 | 第 29、34 页 420 import | 只证明该阶段画面；路径事实仍需 EGLImage/OES 日志 |
-| `rgba-renderer-test-pattern.png` | RGBA renderer 阶段色块 | 第 29、34 页 retained 输出 | 可与上一张肉眼对照；不能替代 dirty-rect 保留断言 |
+| `nativebuffer-test-pattern.png` | NativeBuffer 阶段色块 | 第 34 页 T02 输出辅助素材 | 只证明该阶段画面；路径事实仍需 EGLImage/OES 日志 |
+| `rgba-renderer-test-pattern.png` | RGBA renderer 阶段色块 | 第 34 页 T03 显示辅助素材 | 可与上一张肉眼对照；不能替代 dirty-rect 保留断言 |
 | `freerdp-stutter-scenario.jpeg` | 远程桌面真实播放场景 | 第 28 页场景建立 | 是场景图，不是卡顿根因证据 |
 | `freerdp-frame-pacing.jpeg` | 视频与侧栏交互画面 | 第 31 页节奏验证 | 辅助说明 workload；单帧不能证明 frame pacing |
 | `freerdp-render-queue.jpeg` | 连接与诊断界面 | 第 30 页采集准备 | 证明诊断入口可达；不证明队列行为正确 |
@@ -3126,7 +3237,7 @@ AI 熟练度成长模型已前移到第 5 页作为正文主视觉，这里不�
 
 仓库素材目录：`harmonyos-sdd-workshop-media/`。
 
-## J2. 三轮实操：需求拆解 → 开发 → 验证 → 问题处理
+## D2. 三轮实操：需求拆解 → 开发 → 验证 → 问题处理
 
 ### Round 1｜先把“黑屏”拆成可验证需求（6–8 分钟）
 
@@ -3171,7 +3282,7 @@ queueDepth queueAgeMs durationUs owner targetEpoch result reason
 
 随后注入一个失败：target 暂不可用、partial+no snapshot、LC=2 且 luma not ready，三选一。观察系统是否 preserve/pause/fail-open，而不是只看“最后有没有画面”。
 
-## J3. 一组图片不是装饰，而是一条证据叙事
+## D3. 一组图片不是装饰，而是一条证据叙事
 
 建议按以下顺序投屏：
 
@@ -3185,7 +3296,7 @@ queueDepth queueAgeMs durationUs owner targetEpoch result reason
 
 截图时固定四个角标：`runId`、设备/分辨率、codec/path、commit/包版本。没有这四项的图只做场景素材，不进入最终 evidence pack。
 
-## J4. 人、AI、MCP 如何协同，才不会演成聊天秀
+## D4. 人、AI、MCP 如何协同，才不会演成聊天秀
 
 ```mermaid
 sequenceDiagram
@@ -3214,7 +3325,7 @@ sequenceDiagram
 - MCP 负责重复、可记录的设备动作，不负责把截图解释成系统真相。
 - Reviewer 只依赖 spec、task、diff、test 与 evidence；不接受“实现者说已经好了”。
 
-## J5. 现场可直接使用的 Prompt
+## D5. 现场可直接使用的 Prompt
 
 ### 只读定位
 
@@ -3241,7 +3352,7 @@ queueAgeMs/durationUs/owner/targetEpoch/result/reason。
 视频和截图只能作辅证；缺字段不得推断为 PASS。
 ```
 
-## J6. 最终证据包目录
+## D6. 最终证据包目录
 
 ```text
 evidence/gpu-<runId>/
@@ -3257,7 +3368,7 @@ evidence/gpu-<runId>/
 └── acceptance.md                # 每条契约 PASS / FAIL / UNKNOWN
 ```
 
-## J7. 仍在本地、但未直接打包的可选录屏
+## D7. 仍在本地、但未直接打包的可选录屏
 
 | 本地文件 | 时长/内容 | 使用建议 |
 |---|---|---|
@@ -3266,7 +3377,7 @@ evidence/gpu-<runId>/
 | `LOCAL_ONLY/屏幕录制 2026-08-07 144716.mp4` | 约 11.3 秒；新版连接页与 USB 选项 | 属于产品/USB 演示，不放进 GPU 28–38 页 |
 | `LOCAL_ONLY/屏幕录制 2026-06-03 102437.mp4` | 0 字节 | 无效素材，禁止列入验证证据 |
 
-## J8. 讲师最终检查
+## D8. 讲师最终检查
 
 - [ ] 每段视频播放前有问题，播放后有判定，不是背景素材。
 - [ ] 故障录屏保留失败过程，没有只展示“修好了”。
@@ -3279,56 +3390,55 @@ evidence/gpu-<runId>/
 
 ---
 
-# 附录 K｜第 28–38 页逐页讲授导航
+## D9. 第 28–38 页逐页讲授导航
 
-## K1. 三种授课模式
+### D9.1 三种授课模式
 
 | 模式 | 时长 | 必讲/必做 | 适用场景 |
 |---|---:|---|---|
-| 核心迁移版 | 28 分钟 | 28 黑屏带入、29 双路径、30 同帧 trace、35 可信背景、38 验收矩阵 | 保持原 120 分钟总课时 |
-| 完整演示版 | 45 分钟 | 核心版 + 31 指标案例、32 resize、33 三套 decoder、36 队列推演、37 LC 卡片 | 技术分享、内部 workshop |
-| 分组实操版 | 60–75 分钟 | 完整演示版 + 34 Buffer 实操 + 故障注入 + evidence pack 互审 | 半天课程、训练营 |
+| 核心主线版 | 28 分钟 | 28 背景、29 读库、30 调研、31 方案、32 穿刺、33 拆分、34 开发、36 排障、38 验收 | 保持 120 分钟总课时 |
+| 完整开发版 | 40–45 分钟 | 核心版 + 35 运行账 + 37 交付包；打开调研文档、T01–T03 卡和 progress | 技术分享、内部 workshop |
+| 分组实操版 | 60–75 分钟 | 完整版 + 学员拆 Task Card + 黑屏/色块/积压故障定位 + evidence pack 互审 | 半天课程、训练营 |
 
 “丰富”不等于每次全部讲完。课件负责给讲师足够选择，现场只沿一条证据主线推进。
 
-## K2. 逐页节奏表
+### D9.2 逐页节奏表
 
 | 页 | 开场问题 | 第一层揭示 | 第二层揭示 | 学员动作 | 本页带走 |
 |---:|---|---|---|---|---|
-| 28 | 黑屏第一步改哪里？ | 区分观察与解释 | 冻结诊断交付 | 填三栏事实表 | 现象先变成可证伪问题 |
-| 29 | confirmed=444 是否等于走 444？ | 能力确认 ≠ 命令分流 | owner 又是第三层事实 | 画命令身份证 | 先定位真实数据路径 |
-| 30 | frameId 单独够不够？ | 加 run/session/seq/time | 找最早断链而非最终失败 | 重排 trace | 观测本身也是最小任务 |
-| 31 | decode 低为何仍卡？ | 指标只排除一部分假设 | 上游、queue、lifecycle 都可能 | 写下一条反证 | 指标选择层，不宣布根因 |
-| 32 | 每帧成功为何 resize 残留？ | old composite 写 new target | 入队检查不足以阻止晚回调 | 选择 epoch 校验点 | Buffer 与 target 生命周期要闭环 |
-| 33 | 为什么改了 decoder 没效果？ | 两层三套接入 | callback ≠ 已显示 | 三组认领证据 | diff 必须落在真实 consumer |
-| 34 | `width*height` 能算 UV offset 吗？ | runtime stride/sliceHeight | 420 与 444 证据完全不同 | 算 8×4 Buffer | 小样本先验证格式契约 |
-| 35 | 白帧是 clear color 吗？ | 被提交内容本身已白 | readiness 才是最早异常 | 排除五轮假设 | 对象存在不等于内容可用 |
-| 36 | latest-frame-wins 能用于 dirty rect 吗？ | 每个 command 是状态增量 | 720 后同步 fallback 仍有顺序 GAP | 队列卡片推演 | 局部更新不能随便丢历史命令 |
-| 37 | luma/chroma 为什么不用双 decoder？ | LC 是同一协议状态 | readiness 决定能否接管 | 翻 Y/UV 卡 | 单 decoder 保持参考与参数状态 |
-| 38 | 视频流畅是否全部 PASS？ | 可见结果只是一层 | targetEpoch/背压仍可能 UNKNOWN | 填验收矩阵 | 结束于证据，不结束于观感 |
+| 28 | 这个案例为什么要改？ | 卡顿背景：CPU/软件路径，未走 GPU | 缺失的 before/路径/性能证据必须占位 | 填背景卡 | 问题、已知原因和验收目标同时清楚 |
+| 29 | 55.9 万行代码怎么读？ | 五问、三入口、一条 command 链 | `codebase-map` 只留输入/输出/owner/fallback/未知 | 追 `SurfaceCommand` | 读有用边界，不读全库 |
+| 30 | 其他平台哪些能学？ | 通用 decoder 生命周期 | decoder 不包含 owner/EndFrame/fallback | 对照时序图 | 复用契约，不照抄代码 |
+| 31 | HarmonyOS 最终选哪条路？ | RDPGFX 受控接管 + OH_AVCodec/GPU | original GDI 保留，AVC444/队列/长稳延后 | 互审 ADR | 方案先写 Decision/Reject/Deferred/Fallback |
+| 32 | 先证明什么最划算？ | SP-01–05 一帧垂直链 | 一帧 PASS 不等于性能/长稳 PASS | 填 Spike verdict | 先关最危险未知 |
+| 33 | 穿刺后怎么拆开发？ | T00–T07 按风险闭环拆 | 每张卡先写 Forbidden/Verify/Stop | 拆 T01–T03 | 任务小到可独立验收 |
+| 34 | AI 实际开发什么？ | T01 hook/decoder → T02 output → T03 owner/EndFrame | 前一门未过不进后一任务 | 沿三张卡追源码 | 开发顺序由证据门决定 |
+| 35 | 为什么要一轮一轮做？ | R1–R5 每轮只关一个未知 | progress 为下一 Session 提供入口 | 填一轮 ledger | 循环产出证据与下一步，不是多聊几轮 |
+| 36 | 黑屏/色块/仍卡顿怎么办？ | 三个现象各有第一条证据链 | 只修 first abnormal，修后重放 fallback | 选一条最小观测 | 问题处理不靠猜测清单 |
+| 37 | 一帧通了就能交付吗？ | T04 队列、T05 生命周期、T06 AVC444、T07 验收 | 交付包包含文档/代码/路径/性能/故障/长稳 | 选下一张必做卡 | 穿刺 PASS 不等于工程交付 |
+| 38 | 视频流畅是否全部 PASS？ | before/after、path、frame trace、CPU/FPS、fault、soak 分层 | 缺失项必须留 `PENDING/UNKNOWN` | 填验收矩阵 | 结束于可复核证据，不结束于观感 |
 
-## K3. 一条连续案例怎么贯穿 11 页
+### D9.3 一条连续案例怎么贯穿 11 页
 
 不要把 28–38 页讲成 11 个互不相关的技术点。建议始终追踪同一个案例：
 
 ```text
-用户说“远程画面黑/卡”
-→ 先冻结现象（28）
-→ 判断实际是 420 还是 444，谁持有输出（29）
-→ 补同帧 trace（30）
-→ 用指标选择 queue / content / lifecycle（31）
-→ 发现 resize/target 错位（32）
-→ 确认不能改错 decoder（33）
-→ 用小 Buffer 验证 import/plane（34）
-→ 首次接管需要可信 retained/base（35）
-→ 压力下还要保序与 fail-open（36）
-→ 444 另有 LC/readiness 语义（37）
-→ 用公共契约逐条验收，留下诚实 GAP（38）
+原路径走 CPU/软件处理，远端视频卡顿（28）
+→ 用五问、三入口和一条 command 链读 55.9 万行大库（29）
+→ 对照 FFmpeg/OpenH264/MF/MediaCodec/OH_AVCodec 提炼契约（30）
+→ 确认 RDPGFX 受控接管 + GPU + original GDI fallback 方案（31）
+→ 用 SP-01–05 只穿刺一帧主链（32）
+→ 按风险闭环拆成 T00–T07（33）
+→ 实际开发 T01 hook/decoder → T02 output → T03 owner/EndFrame（34）
+→ 用 R1–R5 progress ledger 每轮关一个未知（35）
+→ 遇到黑屏/色块/仍卡顿时只修 first abnormal（36）
+→ 补齐队列、生命周期、AVC444 和交付证据包（37）
+→ 用 before/after + path + performance + fault + soak 最终验收（38）
 ```
 
 每翻一页，都在白板保留六个字段：`现象 / 当前路径 / 最早异常 / 唯一修改 / 反证 / verdict`。学员会看到结论如何随着证据改变，而不是只记住最终答案。
 
-## K4. 推荐讲师口播主线
+### D9.4 推荐讲师口播主线
 
 ### 开场
 
@@ -3336,21 +3446,21 @@ evidence/gpu-<runId>/
 
 ### 需求拆解
 
-> “用户说的是卡顿，但工程任务不能叫‘优化卡顿’。我们先把它拆成：哪条 codec 路径、哪一个 frame、哪个 owner、在哪个 target 上第一次不满足显示契约。”
+> “已知原问题是 CPU/软件路径下的视频卡顿。但工程任务不能叫‘改成 GPU’；它要被拆成产物注入、硬件 decoder、一帧输出、显示 owner、EndFrame、队列、生命周期、AVC444 和验收证据。”
 
 ### 开发
 
-> “第一轮开发甚至不修画面，只补能把 command、decode、retained、EndFrame、present 串起来的观测。因为没有这条链，后面的每个优化都无法证明有效。”
+> “实际开发按 T01、T02、T03 三道门走：先证明 bridge 和硬件 decoder 真的进入产物，再证明有合法 native output，最后才让唯一 owner 在 matched EndFrame 显示。每一道门没过，AI 都必须停。”
 
 ### 发现问题后的处理
 
-> “证据推翻假设不是失败，而是本轮最值钱的产出。比如我们原来把输入当全帧，人一句‘来的本来就是区域的’，就迫使设计从直接 present 收敛到 retained composite。”
+> “遇到黑屏不先猜 shader，遇到色块不先改色彩矩阵，遇到越播越卡不先加线程。保存当前 run，沿同一 frame 找第一处 expected 不等于 actual，只修那个 owner 所在边界。”
 
 ### 验证
 
-> “可见播放是必要的用户证据，但不是全部契约。我们还要确认实际 decoder path、没有双写、没有 stale callback、局部更新没丢像素、LC readiness 正确。缺一个关键事实就写 UNKNOWN。”
+> “可见播放是必要的用户证据，但不是全部交付。before/after 视频、decoder/path、同帧 trace、CPU/FPS/queue、fallback 故障注入和 resize/后台/重连 soak 必须同时对上；缺一项就把那一项留成 PENDING/UNKNOWN。”
 
-## K5. 图片与视频的现场使用方式
+### D9.5 图片与视频的现场使用方式
 
 ### 黑屏录屏
 
@@ -3377,7 +3487,7 @@ evidence/gpu-<runId>/
 - 58s：画面中出现右键菜单变化，证明该媒体记录了交互结果；完整输入映射仍需同 run 事件日志。
 - 三帧仍不能证明无偶发卡顿，需要完整视频和分段指标。
 
-## K6. 学员证据卡
+### D9.6 学员证据卡
 
 每组打印或复制一张：
 
@@ -3413,7 +3523,7 @@ evidence/gpu-<runId>/
 - verdict：PASS | FAIL | UNKNOWN
 ```
 
-## K7. 讲师故意设置的四个“坑”
+### D9.7 讲师故意设置的四个“坑”
 
 1. **先给 `confirmed=avc444`**：看学员是否忘记检查实际 command codecId。
 2. **给两张看起来一样的色块图**：看学员是否用视觉替代 Buffer 路径证据。
@@ -3422,7 +3532,7 @@ evidence/gpu-<runId>/
 
 坑的目的不是难住学员，而是让“证据等级”在课堂中真实发生一次。
 
-## K8. 设备不可用时的诚实降级
+### D9.8 设备不可用时的诚实降级
 
 | 现场阻塞 | 仍可完成 | 必须保持 UNKNOWN |
 |---|---|---|
@@ -3432,7 +3542,7 @@ evidence/gpu-<runId>/
 | 日志缺 frameId | 证明缺口并设计最小观测任务 | 同帧因果链 |
 | targetEpoch 未实现 | 做 resize 故障时间线与设计审查 | stale callback 已被阻止 |
 
-## K9. GPU 段评分建议
+### D9.9 GPU 段评分建议
 
 | 维度 | 分值 | 满分表现 |
 |---|---:|---|
@@ -3448,11 +3558,11 @@ evidence/gpu-<runId>/
 
 ---
 
-# 附录 L｜真实 Session 证据卡
+# 附录 E｜真实 Session 证据与授课成效审计
 
 本附录保存可进入课堂的真实问题片段。它不是聊天记录归档：只保留能够改变工程判断的原始提示词、初始假设、反证、修正和迁移规则。投屏时隐藏个人路径、设备标识、账号、地址和无关上下文。
 
-## L1. USB 默认策略：从“设备可用”到“资产已被管理”
+## E1. USB 默认策略：从“设备可用”到“资产已被管理”
 
 | 阶段 | 证据 |
 |---|---|
@@ -3468,7 +3578,7 @@ evidence/gpu-<runId>/
 
 课堂用途：P6、P17、P21、P25；迁移问题：还有哪些“功能能用但资产/意图没有进入管理真源”的案例？
 
-## L2. MDM：工具/UI 返回成功不等于 USB 真实生效
+## E2. MDM：工具/UI 返回成功不等于 USB 真实生效
 
 | 阶段 | 证据 |
 |---|---|
@@ -3481,7 +3591,7 @@ evidence/gpu-<runId>/
 
 课堂用途：P23–P27；证据边界见 `case-materials/mdm/00-外设管理证据状态总表.md`。学员任务：对 `PER-IF-002 PASS` 给出四层判定，并指出最小缺失证据。
 
-## L3. 开关机事件：真实生命周期推翻静态分析
+## E3. 开关机事件：真实生命周期推翻静态分析
 
 | 阶段 | 证据 |
 |---|---|
@@ -3493,7 +3603,7 @@ evidence/gpu-<runId>/
 
 迁移规则：需要重启、登录、权限激活或远端连接的事实不能靠静态代码独立证明；诊断代码完成使命后也要接受最小化审查。
 
-## L4. 权限策略：乐观 UI 与系统状态撕裂
+## E4. 权限策略：乐观 UI 与系统状态撕裂
 
 | 阶段 | 证据 |
 |---|---|
@@ -3505,7 +3615,7 @@ evidence/gpu-<runId>/
 
 课堂用途：P19、P22、P39。迁移规则：乐观更新只能改变“pending intent”，不能提前伪造“system committed”。
 
-## L5. GPU：截图正确也可能是持续显示错误
+## E5. GPU：截图正确也可能是持续显示错误
 
 | 阶段 | 证据 |
 |---|---|
@@ -3517,7 +3627,7 @@ evidence/gpu-<runId>/
 
 课堂用途：P28–P38。迁移规则：可见证据必须与同一 runId/frameId 的运行时事实对齐。
 
-## L6. AVC420：删除 cache 变成删除整条路径
+## E6. AVC420：删除 cache 变成删除整条路径
 
 | 阶段 | 证据 |
 |---|---|
@@ -3529,7 +3639,7 @@ evidence/gpu-<runId>/
 
 课堂用途：P14、P27、P36。迁移规则：Allowed/Forbidden 不只写文件，还要写具体对象、行为和删除边界。
 
-## L7. Session Evidence Card 模板
+## E7. Session Evidence Card 模板
 
 ```markdown
 # Session Evidence Card — <问题名称>
@@ -3554,9 +3664,9 @@ evidence/gpu-<runId>/
 
 ---
 
-# 附录 M｜四线闭环与授课成效审计
+## E8. 四线闭环与授课成效审计
 
-## M1. 方法论、需求、演示、问题必须在同一页链路相遇
+### E8.1 方法论、需求、演示、问题必须在同一页链路相遇
 
 | 教学线 | 学员必须学会 | 主案例落点 | 不能退化成 |
 |---|---|---|---|
@@ -3567,7 +3677,7 @@ evidence/gpu-<runId>/
 
 四条线缺一条，该段都不能算完成：只有方法没有问题会空；只有需求没有方法难迁移；只有演示没有系统事实会误判；只有正确答案没有错误过程，学员遇到新问题仍不会处理。
 
-## M2. 120 分钟内学员必须产生的九个动作
+### E8.2 120 分钟内学员必须产生的九个动作
 
 | 页码 | 学员动作 | 当场产出 | 讲师判定 |
 |---|---|---|---|
@@ -3583,7 +3693,7 @@ evidence/gpu-<runId>/
 
 如果现场时间不足，优先保留 P6、P13、P18/P24、P26/P27、P30 和 P39；可以缩短讲师技术展开，但不要删除学员决策动作。
 
-## M3. 每次演示统一使用七步脚本
+### E8.3 每次演示统一使用七步脚本
 
 ```text
 1. Show     展示原始需求、现象、截图或失败输出
@@ -3597,7 +3707,7 @@ evidence/gpu-<runId>/
 
 讲师不要直接从 Show 跳到 Verify。课程精髓位于 Guess → Falsify → Decide：学员必须亲自经历“第一反应不够、证据改变下一步”。
 
-## M4. 四类常见授课失败
+### E8.4 四类常见授课失败
 
 1. **方法论过满**：连续解释多个框架名词，却没有原始需求和失败证据。处理：方法图放备注，主画面先放项目事实。
 2. **现场演示过冒险**：临时切历史提交、构建或连接远端，时间耗在环境。处理：训练分支预构建；实时操作失败时切换到带命令、退出码、commit 的回放证据。

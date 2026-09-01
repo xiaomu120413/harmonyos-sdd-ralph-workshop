@@ -8,7 +8,7 @@
 
 1. 全局 USB 状态只相信 restrictions 系统回读，不另存本地镜像。
 2. 默认策略和全局开关是两个独立概念、两个入口、两个真源。
-3. 全局禁用优先于设备显式规则，设备显式规则优先于默认规则。
+3. 接口管控是全局闸门、优先级最高；设备显式规则优先于黑白名单默认规则。
 4. 全局禁用不得改写 `desiredPolicy`。
 5. 系统下发成功前，不得把 `activePolicy` 提前写成目标状态。
 6. 首次默认 deny 下发失败，不得新增“已生效黑名单”。
@@ -16,6 +16,16 @@
 8. USB 存储总策略为 DISABLED 时，存储设备的 allow/deny 两个方向都拒绝。
 9. 还原策略先清系统残留，后改本地记录；记录恢复为 allow，不删除资产卡片。
 10. UI/E2E 结果不能代替 MDM 回读和实物接入 oracle。
+
+课堂冻结公式：
+
+```text
+接口管控 global gate
+  > fingerprint 单设备显式 allow/deny
+    > 未配置设备默认黑/白名单
+```
+
+“USB 全局启用”表示所有 USB 设备可以继续进入下一层规则判定，不表示自动删除单设备 deny；“默认白名单”也不是对所有历史设备批量写 allow。
 
 ## 3. MVVM 真实结构
 
@@ -51,6 +61,45 @@
 │ BasicServices usbManager：当前真实在场设备                           │
 └──────────────────────────────────────────────────────────────────────┘
 ```
+
+### 3.1 外设运行框架不仅是 MVVM
+
+MVVM 解决“页面如何持有和提交状态”，但完整外设框架还包括两条后台链和两个系统事实源：
+
+```mermaid
+flowchart TB
+  subgraph FG[前台交互链]
+    View --> ParentVM --> ChildVM --> DomainService
+  end
+
+  subgraph BG[后台事件链]
+    CommonEvent[USB/蓝牙事件] --> Producer --> Pipeline --> Consumer
+    Consumer --> StateService
+    Consumer --> TraceRepo
+  end
+
+  subgraph DATA[应用数据]
+    Pref[Default Policy Preferences]
+    PolicyRdb[(Policy State RDB)]
+    TraceRdb[(Trace RDB)]
+  end
+
+  subgraph SYS[系统执行]
+    Restrict[restrictions usb]
+    UsbMdm[usbManager storage/type rule]
+    Enumerate[BasicServices usbManager.getDevices]
+  end
+
+  DomainService --> Restrict
+  DomainService --> UsbMdm
+  StateService --> PolicyRdb
+  ChildVM --> Pref
+  TraceRepo --> TraceRdb
+  Restrict --> Enumerate
+  UsbMdm --> Enumerate
+```
+
+因此“页面没刷新”至少要沿三条路径排查：是否产生系统事件、是否成功写库并通知、ViewModel 是否重新查询并提交可观察状态。直接在 View 上加刷新按钮，只会掩盖其中一层断点。
 
 ## 4. 为什么父 ViewModel 还要存在
 
@@ -153,6 +202,8 @@ interface UsbDevicePolicyStateRecord {
 | 启用 | 非 DISABLED | 无 | deny | 首次接入尝试 deny | 暂无卡片 |
 | 启用 | 非 DISABLED | 无 | allow | allow，并建白名单卡片 | 在线时可改 |
 
+矩阵中的“无”必须理解为“没有 fingerprint 显式规则”，而不是“页面暂时没有渲染卡片”。规则查询顺序必须在 Service 中固定，不能由 UI 的列表是否为空决定。
+
 ### 6.2 身份规则
 
 ```text
@@ -190,6 +241,20 @@ const desiredPolicy = existing?.desiredPolicy ??
   → 写策略快照
   → 重新从 Repository 读 UI
 ```
+
+### 6.5 业务规则粒度与系统执行粒度
+
+```text
+业务身份：USB-SN:xxx / USB-WEAK:vid:pid:hash
+系统下发：UsbDeviceType { baseClass, subClass=0, protocol=0 }
+```
+
+这意味着“根据设备单独设置”在应用层是按 fingerprint 保存意图，但当前系统调用可能影响同 `baseClass` 的其它设备。RFC 必须同时保留两句话：
+
+1. 产品交互允许管理员对某个设备卡片设置显式规则。
+2. 在当前系统 API 粒度下，不能宣传成已证明的 SN 级物理隔离。
+
+课堂演示应准备两台同类型设备：A 设 deny 后插入 B，观察 B 是否也受影响。这是验证执行粒度的唯一有效反例，单台设备视频无法证明。
 
 ## 7. 全局 USB 禁用事务
 
@@ -236,6 +301,29 @@ if (!result.success && disallow) {
 
 这不是严格数据库事务：系统全局策略一旦成功，不能因为一条 trace 写失败就回滚。RFC 明确区分“安全策略主结果”和“审计副作用”。
 
+### 8.1 恢复后为什么仍可能“USB 已启用但设备不可用”
+
+```mermaid
+sequenceDiagram
+  participant U as 管理员
+  participant G as Global Service
+  participant R as restrictions usb
+  participant S as State Service
+  participant M as usbManager type rule
+  participant D as 设备
+
+  U->>G: setDisabled(false)
+  G->>R: 解除全局 USB 禁用
+  R-->>G: success
+  G->>S: restore present explicit deny
+  S->>M: addDisallowedUsbDevices(baseClass)
+  M-->>S: success / partial failure
+  M-->>D: 同类型设备可能继续被拒绝
+  G-->>U: 全局启用成功 + 设备规则重放结果
+```
+
+全局启用和设备可用是两层结论。页面必须分别表达“全局闸门已打开”和“该设备仍命中显式 deny/存储策略”，不能用一个“USB 已启用”Toast 代替最终设备状态。
+
 ## 9. 首次连接状态机
 
 ```text
@@ -249,6 +337,41 @@ USB attach
       ├─ 成功：active=deny，保存记录
       └─ 失败：不创建假黑名单，连接事实仍可记录失败原因
   → desired=allow：不下发 deny，保存 allow/none 白名单记录
+```
+
+### 9.1 首次连接时序
+
+```mermaid
+sequenceDiagram
+  participant OS as USB CommonEvent
+  participant C as UsbConsumer
+  participant I as IdentityResolver
+  participant S as StateService
+  participant P as Preferences/RDB
+  participant M as MDM Dispatch
+  participant T as Trace
+
+  OS->>C: ATTACHED(raw payload)
+  C->>I: resolve SN / weak fingerprint
+  I-->>C: identity + baseClass
+  C->>S: handleConnect(identity)
+  S->>P: get existing state
+  alt 已有显式规则
+    P-->>S: desired allow/deny
+  else 首次出现
+    S->>P: read usbDefaultPolicy
+  end
+  alt desired allow
+    S->>P: save allow/none/present
+  else desired deny
+    S->>M: dispatch type deny
+    alt success
+      S->>P: save deny/deny/present
+    else failure
+      S-->>C: failure, active 不伪造为 deny
+    end
+  end
+  C->>T: append connect fact + policy outcome
 ```
 
 ## 10. 拔出与回退
@@ -281,6 +404,8 @@ View 点击“还原策略”
 ```
 
 若第 2 步失败，第 3 步不得执行。若第 4 步失败，则系统已恢复但本地未完成，返回失败并要求重新同步/人工核对，而不是显示成功。
+
+还原是一个高风险顺序：当前实现若“系统清理成功、本地 `upsertAll` 失败”，会形成系统已允许、本地仍显示 deny 的反向不一致。课程中必须把它列为需要补偿或可重试中间态的风险，不能因为 happy-path UT 通过就写成完全闭环。
 
 ## 12. UI 失败回退
 
@@ -344,7 +469,20 @@ PolicyList (View)
 | 系统回读 | restrictions、storage policy、disallowed USB device types |
 | 实物矩阵 | U 盘、HID、摄像头、打印机；同类型第二台设备影响范围 |
 
-## 16. RFC 评审门
+## 16. 当前已知风险与待补契约
+
+| 风险 | 真实症状/证据 | 当前判断 | 需要补的契约 |
+|---|---|---|---|
+| Trace 写入后未及时刷新 | 记录已进 RDB，切 Tab 后才出现 | 写入后的保留期/裁剪维护若失败，通知可能不到达 | 写入提交成功立即通知；维护失败不能吞掉已写事实 |
+| 在线态残留 | 设备拔出后仍像在线 | `present` 依赖 attach/detach，缺少启动对账 | 初始化时用 `getDevices()` 对账；指纹不一致有降级匹配 |
+| EDM 残留 | USB 已启用仍报 `9200010` | 本地 allow 不等于系统无类型 deny | 还原按钮状态必须读取系统；清理后回读 |
+| 存储策略部分生效 | `9200007`，但 readonly 参数已变 | 策略写入与卷重挂载是两阶段 | 成功/部分生效/失败三态结果 |
+| 还原的反向不一致 | 系统清理成功，本地保存可能失败 | 当前缺乏补偿事务 | 快照、补偿或显式可重试状态 |
+| 系统粒度扩大 | deny 键盘后同类 HID 受影响 | MDM 按 `baseClass` 执行 | 双同类设备实测；UI 明示影响范围 |
+
+这些不是附录里的“以后优化”；它们决定哪些结论只能标为 PARTIAL/PENDING，并直接进入 S8 验收矩阵。
+
+## 17. RFC 评审门
 
 - [x] MVVM 每层有真实类和禁止越界项。
 - [x] 全局、默认、显式、执行态、在线态各有真源。
@@ -352,4 +490,5 @@ PolicyList (View)
 - [x] 动态设置、失败回退、全局补偿、还原顺序已写清。
 - [x] 系统下发粒度限制已显式记录。
 - [x] 测试与设备 oracle 分层。
+- [x] 当前已知状态一致性风险已显式登记，不用 happy path 掩盖。
 - [ ] 实物矩阵结果仍待回填。

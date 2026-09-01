@@ -9,11 +9,15 @@
 | `mdm/firewall-duplicate-rule-failure.jpeg` | 历史真机截图 / LEGACY | 不再用于当前 MDM 主案例 | 保留旧案例资产，不进入外设管理页稿 |
 | `e2e/security-log-menu-open.jpeg` | 真机截图 | 可观测性、审计日志与菜单交互样例 | 含真实审计日志行，投屏前仍应检查设备名、账号和时间信息 |
 | `e2e/e2e-runner-current-reference.jpg` | 架构参考图 | E2E 两页预留内容的结构输入 | 用户提供的当前版本；结构可用但版式需重绘，不作为最终视觉或运行事实证据 |
-| `gpu-failure-black-screen-13s.mp4` | 视频 | 第 28/32 页黑屏故障带入 | 只证明该媒体中可见黑屏，不直接证明根因或与卡顿报告属于同一 run |
+| `gpu-failure-black-screen-13s.mp4` | 视频 | 第 32 页穿刺反例 / 第 36 页排障练习 | 只证明该媒体中可见黑屏，不直接证明根因或与卡顿报告属于同一 run |
 | `gpu-failure-black-screen-contact.jpg` | 图片 | 黑屏关键帧讨论 | 需结合 frame trace |
-| `gpu-validation-video-playback-16s.mp4` | 视频 | 第 31/38 页媒体观察 | 只证明该媒体中可见播放/部分交互；未绑定 commit/runId，不证明硬解、性能或 owner/target 契约 |
-| `gpu-cpu-stutter-before.mp4` | 视频槽位 / PENDING | 第 28 页：待采集用户报告的卡顿现象；文件名中的 CPU 不是已证事实 | 当前仓库没有能同时证明卡顿、CPU 占用和协商路径的原始视频；拍摄脚本见 `harmonyos-sdd-workshop-media/VIDEO_TODO.md` |
+| `gpu-validation-video-playback-16s.mp4` | 视频 | 第 38 页媒体验收边界 | 只证明该媒体中可见播放/部分交互；未绑定 commit/runId，不证明硬解、性能或 owner/target 契约 |
+| `gpu-cpu-stutter-before.mp4` | 视频槽位 / PENDING | 第 28/38 页：待采集 CPU/软件路径下的卡顿现象 | CPU/软件路径、未走 GPU 是用户已冻结的案例背景；当前缺少同 run 原始录屏、路径日志与性能数值，拍摄脚本见 `harmonyos-sdd-workshop-media/VIDEO_TODO.md` |
 | `gpu-hwdecode-after.mp4` | 视频槽位 / PENDING | 第 38 页硬解方案最终 A/B 验收 | 必须与 before 使用同一设备、分辨率、服务端和片段，并同时保存性能采样与路径日志 |
+| `gpu-cpu-software-path-before.log` | 日志槽位 / PENDING | 第 28 页 CPU/software path 截图 | 需记录 subsystem/candidate/decoder/fallback 并绑定 before runId；未采集前保留占位 |
+| `gpu-one-frame-spike.log` | 日志槽位 / PENDING | 第 32/34 页穿刺与实际开发 | 需把 decoder/frame/output/owner/matched EndFrame 关联到同一 runId/frameId |
+| `gpu-progress-ledger.md` | 文档槽位 / PENDING | 第 35 页开发循环 | 每轮只记一个未知、原始证据、verdict 与下一步 |
+| `gpu-issue-first-abnormal.log` | 日志槽位 / PENDING | 第 36 页问题处理 | 等待黑屏/色块/积压中一个真实问题的 first abnormal 证据 |
 | `gpu-validation-video-playback-contact.jpg` | 图片 | 视频、切换、遮挡关键帧 | 用于逐项核对场景覆盖 |
 | `gpu-e2e-interaction-public.jpg` | 图片 | 打开内容、页面变化、右键交互 | 只证明关键帧中可见这些结果，不证明完整输入路径 |
 | `gpu-connection-interaction-contact.jpg` | 图片 | 本地 V3 的完整连接与交互联系表 | 含连接信息；当前仓库为 Public，公开使用前必须再次审查与脱敏 |
@@ -38,8 +42,8 @@
 | `augmented-llm.png` | 第 25 页 | Retrieval / Tools / Memory 的职责边界 | [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) |
 | `evaluator-optimizer.png` | 第 27 页 | 实现与独立评估的反馈闭环 | [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) |
 | `eval-quality-layers.png` | 第 39 页 | 多层验证共同拦截漏检 | [Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) |
-| `agent-evaluation-components.png` | 附录 I4 | Task / Trial / Trajectory / Outcome / Grader | [Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) |
-| `orchestrator-workers.png` | 附录 J4 | 解释什么时候适合动态拆分和并行协同 | [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) |
+| `agent-evaluation-components.png` | 附录 C10.4 | Task / Trial / Trajectory / Outcome / Grader | [Demystifying Evals for AI Agents](https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents) |
+| `orchestrator-workers.png` | 附录 D4 | 解释什么时候适合动态拆分和并行协同 | [Building Effective Agents](https://www.anthropic.com/engineering/building-effective-agents) |
 | `system-prompt-calibration.png` | 第 10/17 页候选 | 解释系统提示词应在约束强度、可复用性与自主性之间校准 | [Effective Context Engineering for AI Agents](https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents) |
 
 ## Anthropic 产品方式与趋势配图

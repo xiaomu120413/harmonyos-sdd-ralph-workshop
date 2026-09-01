@@ -16,7 +16,7 @@
 
 ## 2. 先把问题改写成五个可回答的问题
 
-原始问题：用户报告播放远端视频时卡顿，并怀疑与 CPU/软件解码路径有关；当前 path 与根因都未由同一 run 证据确认。
+原始问题：远端视频播放卡顿；案例已确认原实现走 CPU/软件解码路径、未走 GPU。当前仓库仍需补齐同 run 的 path 日志、before 录屏与 CPU/FPS/queue 量化基线。
 
 AI 第一次只回答：
 
@@ -68,7 +68,7 @@ AI 第一次只回答：
 
 ```text
 只读任务。不要修改代码，也不要总结整个仓库。
-问题：用户报告远端 H.264 视频播放卡顿。当前实际 consumer/decoder 路径未知。
+问题：远端 H.264 视频播放卡顿，已知原路径为 CPU/软件处理且 GPU takeover 未启用。第一轮要把这个案例事实转成当前 run 可展示的 subsystem/candidate/decoder/fallback 日志证据。
 
 请输出：
 1. 从 RDPGFX SurfaceCommand 到 H.264 decoder，再到最终 present 的调用链；
