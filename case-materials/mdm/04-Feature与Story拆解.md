@@ -134,6 +134,6 @@ stop:
 
 ## 7. PPT 截图位
 
-- `PLACEHOLDER`：Story 地图。
-- `PLACEHOLDER`：S5 Worker Packet 真实 Markdown 截图。
-- `PLACEHOLDER`：对应 Git 提交文件列表。
+- **【补充素材】**：Story 地图。
+- **【补充素材】**：S5 Worker Packet 真实 Markdown 截图。
+- **【补充素材】**：对应 Git 提交文件列表。

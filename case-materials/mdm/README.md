@@ -32,9 +32,11 @@
 - 第 24–25 页：预留 2 页 E2E。第 24 页使用 Runner–Driver–Backend 架构图完成静态路由练习，第 25 页运行或推演真实用例 `FW-STATUS-001`，读取报告并给出 `PASS / FAIL / UNKNOWN`。
 - 设备不可用时不取消实操：改为静态展开 Case JSON、Driver、Assertion 与 Artifact，并把设备相关结论明确标为 `UNKNOWN`。
 
-详细页稿与讲师 Runbook 见 `07-PPT第9-25页内容与备注.md`。
+详细页稿与讲师 Runbook 见 `07-PPT第9-25页内容与备注.md`。其 P9–25 内容已经同步到仓库根目录主稿 `harmonyos-sdd-ralph-workshop.md`；后续内容调整应同时维护两处，主稿可直接作为 PPT 制作输入。
 
 代码级调用链、系统 API、失败分支、UT oracle 与 E2E Runner 路由见 `08-代码级调用链与课堂穿刺.md`。讲师至少应完成一次从 `onAccountAdded()` 到 `netFirewall`、再从 Case JSON 到 `CaseResult` 的现场穿刺；只展示架构图或文件树不足以支撑本案例。
+
+整体叙事、逐页主视觉、页内/备注/现场的信息分层，以及仍需补充的真实证据见 `09-MDM案例整体审阅与落版规则.md`。制作 PPT 时优先遵守该文件的落版约束，避免把代码级细节全部堆到页面正文。
 
 ## 事实标记
 
@@ -42,7 +44,7 @@
 - `GIT FACT`：当前 Git 历史中的真实提交、文件和时间。
 - `RUN FACT`：本轮实际执行得到的结果。
 - `TEACHING RECONSTRUCTION`：为了培训把多个真实提交整理成阶段或 Story，不声称历史上使用了同名自动化 Runner。
-- `PLACEHOLDER`：等待补充真实截图、设备日志或视频。
+- **【补充素材】**：等待补充真实截图、设备日志或视频。
 
 ## 源仓库
 

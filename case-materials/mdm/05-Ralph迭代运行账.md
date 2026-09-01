@@ -107,6 +107,6 @@ stop_if:
 
 ## 8. PPT 截图位
 
-- `PLACEHOLDER`：9 个提交组成的迭代时间线。
-- `PLACEHOLDER`：`4b372d0d` 与 `c0c1bc9f` 两个真实 Git 详情。
-- `PLACEHOLDER`：一轮 progress + evidence 目录。
+- **【补充素材】**：9 个提交组成的迭代时间线。
+- **【补充素材】**：`4b372d0d` 与 `c0c1bc9f` 两个真实 Git 详情。
+- **【补充素材】**：一轮 progress + evidence 目录。

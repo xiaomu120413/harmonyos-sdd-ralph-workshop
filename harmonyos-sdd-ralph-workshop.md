@@ -540,862 +540,1035 @@ progress: 需求
 
 # 第二幕：把规格变成 AI 不容易越界的设计与任务
 
-## 第 9 页｜五类状态必须分开，才能定义“已应用”
+## 实操节奏（讲师 Runbook，不占 PPT 页数）
 
-<!--
-type: MAP
-section: MDM_DESIGN
-layout: state-layers
-time: 3m
-progress: 设计
--->
+| 实操段 | 对应页 | 现场动作 | 学员产物 | 建议时间 | 无设备备用方案 |
+|---|---:|---|---|---:|---|
+| A. 资产同步 | 10–12 | 对照两个 Excel、PRD 和代码，完成一张冲突卡 | `requirement-card.yaml` | 6 分钟 | 使用文档中的真实 C4 冲突 |
+| B. 方案推导 | 13–15 | 四方案投票，补齐真相源与失败语义 | `ADR-FW-ACCOUNT-001` | 6 分钟 | 使用稳定快照复现事实 |
+| C. RFC 评审 | 16–17 | 给架构节点分配所有者，找一个违规依赖 | RFC 不变量/代码映射批注 | 6 分钟 | 直接打开三个真实 ETS 文件 |
+| D. Story 拆分 | 18–19 | 把 S5 填成 Worker Packet，检查禁止路径 | `worker-packet.yaml` | 7 分钟 | 使用文档内完整示例 |
+| E. Ralph 单轮 | 20–22 | 读取 Packet，检查 R6/R7 Diff 与 UT，再给状态 | `progress.yaml` + review verdict | 8 分钟 | 复用真实 Git 提交和测试结果 |
+| F. E2E 验收 | 24–25 | 追踪一个 Case JSON，执行或模拟 Driver，判定结果 | E2E report + PASS/FAIL/UNKNOWN | 10 分钟 | 运行资产校验，静态走读 action plan |
 
-### 画面
+讲授与实操的比例建议约为 1:1。每段实操必须在屏幕上留下一个文件或报告；只讨论、不落产物，不算完成。
 
-| 状态层 | 示例 | 能否单独证明成功 |
+## 17 页连续叙事与进入条件（讲师总控，不占 PPT 页数）
+
+| 页 | 本页接收的输入 | 本页实际动作 | 留下的证据/产物 | 进入下一页的 Gate |
+|---:|---|---|---|---|
+| 9 | 原始需求与项目仓库 | 建立六阶段证据链 | 六阶段交付目录 | 学员知道代码不是第一步 |
+| 10 | Excel、UX、PRD、代码、测试 | 标记用途和可信边界 | 资产登记表 | 每类问题知道去哪找答案 |
+| 11 | 同一需求的多源表达 | 对照并识别概念误合并 | C4 冲突卡 | 主模式与规则类型被拆开 |
+| 12 | 已裁决冲突 | 固化来源、决策、实现、测试 | `FW-MODE-001` 需求卡 | status=RESOLVED，路径可验证 |
+| 13 | 账号同步 Feature | 比较四种实现方案的失败模式 | 方案评分表 | 真相源、所有权、失败语义有候选 |
+| 14 | “事件后读一次”假设 | 最小穿刺账号事件与列表时序 | old→new 时间线 | 证明必须等待业务条件 |
+| 15 | 穿刺证据 | 冻结选择、拒绝项和重开条件 | `ADR-FW-ACCOUNT-001` | 不再在实现阶段重新选架构 |
+| 16 | ADR | 写范围、状态、不变量、失败保持 | RFC 契约 | 每个失败都知道不能改什么 |
+| 17 | RFC 抽象节点 | 映射到函数、系统 API 和状态写入门 | 双闭环调用链 | 每层责任与当前实现缺口可定位 |
+| 18 | RFC 节点与风险 | 按独立 oracle 拆 Story | S1–S6 Story Map | 每个 Story 可单独判定 |
+| 19 | S5 Story | 补齐 allowed/forbidden/AC/命令/stop | Worker Packet | 新 Session 不读聊天也能执行 |
+| 20 | Ready Worker Packet | 执行一轮受控 Ralph | progress + evidence | 本轮状态和下一步已写回 |
+| 21 | 九个真实提交 | 把调用链断点映射成迭代账 | R1–R9 时间线 | 下一轮由证据触发而非随机优化 |
+| 22 | R6/R7 文档与代码 Diff | 用 RFC 反查实现和测试缺口 | Reviewer verdict | 核心协议与事务缺口分别判定 |
+| 23 | 已定义的验收对象 | 接入讲师现有 MCP 材料 | 工具能力边界 | 学员知道 tool success ≠ business PASS |
+| 24 | Case JSON | 追到 Normalizer/Runner/Template/Driver/Assertion | 路由表 | 每个动作和断言都有执行落点 |
+| 25 | CaseResult 与 artifacts | 执行或静态推演三态判定 | acceptance result | UI、系统事实和 overall 分层结论 |
+
+如果某一页没有留下表中产物，后续页就没有合法输入。讲师应停下来补产物，而不是用口头解释跨过 Gate。
+
+## 第 9 页｜MDM 案例要走完六个阶段，不能从需求图直接跳到代码
+
+### PPT 内容
+
+主视觉是一条六阶段证据链：
+
+```text
+1 资产同步
+→ 2 方案推导
+→ 3 架构 RFC
+→ 4 Story 拆分
+→ 5 Ralph 迭代
+→ 6 测试验收
+```
+
+每一步都生成一个可检查文档：
+
+| 阶段 | 生成文档 | 解决的问题 |
 |---|---|---|
-| User intent | `desiredEnabled=true` | 不能 |
-| Local apply record | `mode=public, signature=100,112,123` | 不能 |
-| System truth | 每用户 policy / rules | 可以作为最终事实 |
-| UI projection | 顶部开关、模式文案 | 不能 |
+| 资产同步 | 资产清单、术语表、冲突矩阵 | 输入是否完整、一致 |
+| 方案推导 | 备选方案表、ADR、穿刺报告 | 为什么选这个方案 |
+| RFC | 架构、状态、不变量、失败语义 | 系统应该怎样工作 |
+| Story | Feature Map、Worker Packet | AI 每轮只做什么 |
+| Ralph | progress、evidence、iteration ledger | 多轮如何不断线、不漂移 |
+| 验收 | acceptance report | 凭什么给 PASS |
 
-醒目结论：`currentMode=public` **不等于** public 已覆盖最新账号集合。
+### 怎么做 / 怎么判断 / 不对怎么办
 
-### 讲师备注
-
-还存在第 5 类“事件/运行态”：trigger、pending、inFlight、retry count。它决定何时开始 reconcile，但不能取代账号事实。
-
-`CURRENT GAP`：`saveModeApplyState` 通过两个独立 `setValue + flush` 保存 mode 和 signature，第二次失败可能形成半提交；快照/回滚也没有完整恢复旧 apply state。课程主任务先把它写入风险清单，不假装已经解决。可作为高级任务把 mode/signature 收敛到单一原子记录。
-
-### 演示动作
-
-给出 `public + signature=100,112`，再新增账号 123，问“当前状态叫什么？”正确答案是模式意图仍为 public，但 apply coverage 已陈旧。
-
-### 通过条件
-
-学员不再用 UI 状态或本地 mode 单独判定系统已应用。
-
-### 素材
-
-- `FirewallLocalRepository.ets`
-- `FirewallOverviewViewModel.ets`
-
----
-
-## 第 10 页｜真相源决定不变量，也暴露当前 GAP
-
-<!--
-type: CLAIM
-section: MDM_DESIGN
-layout: truth-source
-time: 2m
-progress: 设计
--->
-
-### 画面
-
-**TEACHING：英雄任务的四条不变量**
-
-1. 所有写操作基于一个明确、已记录的账号快照。
-2. 模式切换只改变默认动作 / 规则，必须保留旧 `isOpen`。
-3. 失败补偿后，本地 deployment 指向恢复后新生成的 `systemRuleId`。
-4. 只有系统操作全部成功，才提交目标 mode 与 account signature。
-
-**CURRENT GAP**：系统读取失败不能被当成“系统确实为空”。
+- 怎么做：每一阶段读取上一阶段产物，并产生下一阶段的进入条件。
+- 怎么判断：任何代码都能追到 Story，任何 Story 都能追到 RFC/需求，任何 PASS 都能追到证据。
+- 不对怎么办：缺少上游文档就停止向下执行；不能靠更长 Prompt 补齐不存在的决策。
 
 ### 讲师备注
 
-仓库当前 `FirewallSystemRepository.listRules` 失败时可能回退为 `[]`，本地 mapping 读取失败也可能回退为空。这样所谓“完整快照”无法区分真实空集合与读取失败，后续 clear 可能产生破坏性动作。
+- 先问学员：“一张需求图给 AI，最快几分钟能开始写代码？”然后指出“开始写”并不是这门课的目标。
+- 本案例只选一条真实 Feature 深挖：系统账号变化后的防火墙同步。这样能把六阶段讲透，而不是展示七个模块的功能清单。
+- 告诉学员，后面每页都会打开一份真实文档，而不是只看流程箭头。
 
-因此课堂设计要增加 snapshot validity：每个 truth source 必须返回 `OK(value)` 或 `ERROR(evidence)`；只要关键读取失败，事务在写入前终止。不要让 AI 用 `catch { return [] }` 把未知变成事实。
+### 文档 / 截图
 
-### 演示动作
-
-让 AI 搜索所有返回空数组的 catch 分支，并按“真实空 / 降级空 / 错误被吞”分类；此轮禁止改代码。
-
-### 通过条件
-
-设计文档明确列出：事实源、失败表达、写入前置条件、禁止的 fallback。
-
-### 素材
-
-- `FirewallSystemRepository.ets`
-- `FirewallLocalRepository.ets`
-- `FirewallModeSwitchService.createSnapshot`
+- 文档：`case-materials/mdm/README.md`
+- **【补充素材】**：六份文档目录的文件树截图。
 
 ---
 
-## 第 11 页｜进程边界比类图更早决定设计
+## 第 10 页｜资产同步先建立来源和可信边界，不是把所有文件塞进上下文
 
-<!--
-type: MAP
-section: MDM_DESIGN
-layout: architecture
-time: 3m
-progress: 设计
--->
+### PPT 内容
 
-### 画面
-
-```mermaid
-flowchart TB
-    A[EnterpriseAdmin Extension] --> B[AccountChangeCoordinator]
-    B --> C[Handler：业务 reconcile]
-    C --> D[MDM API + Local Repository]
-    B --> E[CommonEvent：稳定账号事实]
-    E --> F[UIAbility / ViewModel 刷新]
-```
-
-- Extension 与 UI 不是共享内存。
-- CommonEvent 负责跨进程通知，不负责事务。
-- UI / ViewModel 的互斥只保护 UI 入口，不是全局 writer lock。
-
-### 讲师备注
-
-提交 `53751b2e` 将协调器改为 handler registry；`cecf6d17` 让稳定账号事实即使某个 handler 失败也继续发布，避免一个业务消费者阻断整个 UI 刷新链。
-
-必须指出真实边界：`FirewallPage` / `FirewallOverviewViewModel` 的模式与开关互斥，只覆盖 UI 进程；Extension 触发的 account reconcile 与 UI 操作之间仍没有全局写串行器。这是 `CURRENT GAP`，不能说“Coordinator 已串行所有写操作”。
-
-### 演示动作
-
-打开 Extension、Coordinator、EntryAbility 三处代码，先用历史已有的 `accountId / signature / process` 标注日志位置，再让学员补设计跨进程 `eventId`；明确后者是遥测改进，不是历史已有字段。
-
-### 通过条件
-
-学员能回答：业务处理失败后为什么仍可能需要发布账号事实，以及 UI lock 为什么不能防止 Extension 并发写。
-
-### 素材
-
-- `AccountChangeCoordinator.ets`
-- `FirewallAccountChangeHandler.ets`
-- commit `53751b2e`、`cecf6d17`、`f6886182`
-
----
-
-## 第 12 页｜一行追踪关系，限制 AI 只改必要边界
-
-<!--
-type: MAP
-section: MDM_DESIGN
-layout: traceability
-time: 3m
-progress: 设计
--->
-
-### 画面
-
-| 需求 | 设计决定 | 实现锚点 | 验证证据 |
-|---|---|---|---|
-| FR-ACC-001 | 新增账号必须等 trigger 可见 | `loadStableSnapshot` | RED/GREEN + retry log |
-| FR-MODE-002 | 模式失败整体补偿 | `rollbackToSnapshot` | fault injection + getter |
-| FR-ID-001 | 恢复后重映射 ID | `remapDeployments` | mapping 与系统 ID 对齐 |
-
-页尾：**追踪矩阵不是文档装饰，它决定下一轮 AI 可以碰哪里。**
-
-### 讲师备注
-
-课堂只展示英雄任务三行；完整追踪矩阵放附录。每一行必须能回答：为什么改、哪个边界负责、先看到什么失败、最后用什么事实验收。
-
-不允许“为了更优雅”同时重构 ViewModel、Repository、Service。若失败首先发生在 snapshot 时序，本轮文件边界就只允许 Coordinator 与对应测试。设计的价值之一，是帮 AI 拒绝无关改动。
-
-### 演示动作
-
-让学员选 FR-ACC-001，圈出允许修改的两个文件和明确禁止的 UI / Store 文件。
-
-### 通过条件
-
-一条需求可以顺向追到证据，也能从一个 diff 反向说明它服务哪个需求。
-
-### 素材
-
-- 附录 C 设计模板
-- 附录 D 任务卡模板
-
----
-
-## 第 13 页｜实践：先做只读勘察，不让 AI 猜代码
-
-<!--
-type: LAB
-section: MDM_DESIGN
-layout: four-block
-time: 4m
-progress: 任务
--->
-
-### 画面
-
-**T00 / Read-only Exploration**
-
-**输入**：FR-ACC-001、仓库根目录、英雄任务。
-
-**只允许**：搜索入口、调用链、真相源、写入点、提交点、测试和历史提交。
-
-**禁止**：修改生产文件；凭命名推断行为；给出未经代码支持的 API。
-
-**输出七项**：
-
-`入口 / 事实源 / 副作用 / commit point / 现有测试 / 相关提交 / Spec Gap`
-
-![Coding Agent 高层时序：先澄清，再携带上下文搜索、修改与测试](harmonyos-sdd-workshop-media/anthropic/coding-agent-flow.png)
-
-<sub>讲师读图：把上半段“Clarify / Refine”对应需求拆解，把下半段“Search / Write / Test”对应开发验证；两段之间传递的是收敛后的上下文，不是整段聊天。图源：Anthropic《Building Effective Agents》。</sub>
-
-### 讲师备注
-
-这是 AI 使用中最省返工的一步。推荐让 AI 先用 `rg` 找符号，再读最短调用链，再用 `git log -S` / `git show` 解释为什么代码现在这样。提交历史是证据，不是课程结构。
-
-英雄任务的真实入口包括：`AccountChangeCoordinator.loadStableSnapshot/runOnce`、`FirewallAccountChangeHandler.handle`、`FirewallModeSwitchService.createSnapshot/applyModeToUsers/rollbackToSnapshot/remapDeployments`。
-
-**Anthropic 方法锚点**：Anthropic 的 Agent 工程实践建议将 Explore、Plan、Implement 分开，避免在尚未理解代码时直接解决错误问题。T00 就是这个原则的 HarmonyOS 版本：勘察轮次保持只读，输出必须引用文件、函数、测试和历史提交；冻结 Spec Gap 与修改边界后，再用干净的实现轮次执行任务。探索过程可以很宽，但交给实现轮次的上下文必须收敛。
-
-### 演示动作
-
-现场运行一次只读 Prompt；若 AI 输出了不存在的 `firewall.get_runtime_state`，当场标红并要求提供定义位置。
-
-### 通过条件
-
-输出中的每个函数、测试和能力都能在仓库中定位；未知项标记 GAP，不得编造。
-
-### 素材
-
-- `repos/security_tool`
-- commit `94ff17e7`、`c0c1bc9f`、`0b5edc5f`
-
----
-
-## 第 14 页｜任务卡只允许一个可观察结果
-
-<!--
-type: CODE
-section: MDM_DESIGN
-layout: task-card
-time: 2m
-progress: 任务
--->
-
-### 画面
+展示本项目真实资产层级：
 
 ```text
-T01 — account-added 等到 trigger 可见
-Requirement: FR-ACC-001
-Allowed: AccountChangeCoordinator + 对应测试
-Forbidden: UI、Firewall Handler、Repository
-RED: [100,112] → [100,112] → [100,112,123]
-GREEN: handler 只执行一次，参数包含 123
-STOP: 窄测/回归绿；diff 不越界；progress 已记录
+docs/00-原始输入/
+  信创工具需求清单.xlsx
+  信创工具需求清单_AI修正版.xlsx
+docs/01-UX设计/
+  index.html / script.js / styles.css
+docs/02-总体设计/
+  PRD.md / 总体设计RFC.md
+docs/03-模块设计/
+  防火墙管理组件设计说明.md
+entry/src/main/ets/...
+entry/src/test/...
+scripts/e2e/cases/firewall/...
 ```
 
-> 任务按“可验证依赖”切，不按页面、类或文件数量切。
+AI 对每类资产只做对应工作：
+
+- 原始 Excel：抽取需求原文，不做技术裁决。
+- AI 修正版：作为候选平台映射，不自动视为真相。
+- UX：抽取页面和交互，不证明业务生效。
+- PRD/RFC/模块设计：分别管理产品范围、架构、模块状态与异常。
+- 代码/测试：验证当前实现事实，不决定未来产品取舍。
+
+### 怎么做 / 怎么判断 / 不对怎么办
+
+- 怎么做：为每个资产记录路径、版本、用途、可信边界、被谁引用。
+- 怎么判断：新 Session 看到资产索引，能知道“去哪找哪类问题的答案”。
+- 不对怎么办：文档和代码冲突时不自动选最新文件；生成冲突卡，交给下一页决策。
 
 ### 讲师备注
 
-推荐四张任务卡：
+- 现场打开原始 Excel，只看表头：场景、描述、功能、详细描述、接口、测试用例。指出原始文件后三列大量为空，这就是 AI 可以补充但不能擅自决定的空间。
+- 再打开 AI 修正版，说明它补了接口，却仍可能误解产品抽象。
 
-- T00：只读勘察。
-- T01：新增账号稳定快照。
-- T02：模式重放故障与补偿。
-- T03：设备验收 getter / evidence contract。
+### 现场实操
 
-当前生产 `wait()` 使用真实 `setTimeout` 且为私有实现，不能在讲义里伪装成可直接 mock 的测试。课堂有两种诚实做法：使用仓库现有 Hamock 测试结构与短等待；或先把 `Clock / RetryPolicy` 注入作为独立设计任务，再写确定性测试。
+1. 给学员 90 秒，从五类资产中各选一个文件，填写 `path / answers / cannot_prove / downstream`。
+2. 用代码搜索验证两条事实：`FirewallPresetMode` 定义在哪里；真实系统防火墙 API 被封装在哪里。
+3. 小组互换资产表，检查是否把 UX 当成业务真相、把代码现状当成未来需求、或把 AI 修正版当成最终决策。
 
-**Anthropic 方法锚点**：`Effective Harnesses for Long-Running Agents` 观察到长任务最常见的失败是一次做太多、留下半实现，或看到已有进度后提前宣布完成。其应对方式是一次只推进一个 feature，完成后留下干净状态、Git 记录和 progress。T01/T02/T03 因此不是按页面或类拆分，而是按“一个可观察结果＋一个可执行停止条件”拆分；不得通过删除测试、扩大范围或顺手重构制造假完成。
+学员产物示例：
 
-### 演示动作
-
-学员将一个“实现多用户防火墙”大任务改写成上面的一张 7 行任务卡。
-
-### 通过条件
-
-本轮失败时能明确判断：是任务没完成，还是任务定义越界；不存在“顺便重构”。
-
-### 素材
-
-- `entry/src/test/firewall/account-change-coordinator.test.ets`
-- 附录 D
-
----
-
-# 第三幕：让受控循环真正跑两轮
-
-## 第 15 页｜Round 1：先看见一个解释得通的 RED
-
-<!--
-type: CODE
-section: MDM_RALPH
-layout: test-first
-time: 4m
-progress: 代码
--->
-
-### 画面
-
-**目标行为**：新增账号事件到达时，旧快照不能进入 handler。
-
-```text
-Read #1  [100,112]       → reject
-Read #2  [100,112]       → reject
-Read #3  [100,112,123]   → dispatch once
+```yaml
+path: entry/src/main/ets/services/firewall/FirewallSystemRepository.ets
+answers: 当前系统防火墙 API 的封装方式
+cannot_prove: public/private/custom 的产品取舍
+downstream: RFC code mapping / system readback
 ```
 
-RED 断言：
+### 文档 / 截图
 
-- 在第 1、2 次读取后 handler 调用数为 0。
-- 第 3 次读取后 handler 调用数为 1。
-- dispatch snapshot 包含 123。
-- 超时路径不 dispatch、不 publish 旧快照。
-
-### 讲师备注
-
-不要展示一段无法运行的伪 Hamock 代码。现场材料应提前在当前仓库环境中跑过，并保留真实命令与失败输出。测试先失败的原因必须与需求一致，而不是 import、mock 或 SDK 配置错误。
-
-当前实现所谓 stable 不是“两次读取完全相同”，而是新增场景中“包含 triggerAccountId”。`account-removed` 当前读一次即处理；可把“删除事件仍看到 123”作为高级 RED，但不要混进 T01。
-
-### 演示动作
-
-在全模块测试中运行目标用例并保存 `unit-test-red.txt`。真实 RED 是 `expect 1 equals 2`：基线只读一次就 dispatch，而测试要求等到第二次快照出现 123。让学员用一句话解释它与 FR-ACC-001 的关系。
-
-```text
-ERROR: Error in should wait until added account appears before dispatching handlers,
-expect 1 equals 2
-BUILD SUCCESSFUL ...
-HVIGOR_EXIT=0
-```
-
-这里故意保留 Hvigor 的反直觉输出：命令横幅和退出码看起来成功，目标用例仍然失败。判定必须读取用例级错误或 `test_result.txt`。
-
-### 通过条件
-
-只有目标断言失败；环境错误、编译错误或无关用例失败不能进入实现阶段。
-
-### 素材
-
-- `account-change-coordinator.test.ets`
-- commit `c0c1bc9f`
-- `evidence/mdm/t01-red-green.md`
+- 文档：`case-materials/mdm/01-资产同步与冲突清单.md#输入资产`
+- **【补充素材】**：两个 Excel、UX、PRD、代码目录拼成一张真实资产地图。
 
 ---
 
-## 第 16 页｜Round 1：AI 只补最小状态转换
+## 第 11 页｜资产同步最有价值的产物，是把“AI 修正错了”也保留下来
 
-<!--
-type: CODE
-section: MDM_RALPH
-layout: diff
-time: 4m
-progress: 代码
--->
+### PPT 内容
 
-### 画面
+展示真实冲突：
 
-```text
-event = account-added(123)
-repeat at most 5 times:
-  snapshot = readSystemAccounts()
-  if snapshot contains 123:
-    return VALID(snapshot)
-  wait 200ms
-return TIMEOUT
-```
-
-AI 修改约束：
-
-- 不改 handler 业务。
-- 不把 trigger 直接 append 到快照。
-- 读取失败与空集合保持可区分。
-- timeout 不 dispatch 旧事实。
-
-### 讲师备注
-
-“把 123 加进数组”会让测试绿，却伪造 OS 事实；这正是需要人工审查的 AI 捷径。实现还要考虑协调器已有的 debounce、single-flight 和 pending 语义，不能为一个重试分支破坏全局调度。
-
-**SESSION FACT｜错误方案必须进入课堂**
-
-> “延迟 2S 还是拿不到，你分析得不对吧。”
-
-这句话不是要求把 2 秒改成 5 秒，而是在否定“只是系统数据刷新慢”的假设。让学员回答：延迟改变了等待时间，但是否改变了事实源、进程边界和发布机制？若没有，就不能把继续加延迟称为最小实现。
-
-代码已经存在相应实现，课堂可以采用“遮住关键分支，让 AI 按任务卡补齐”的训练仓，或使用历史提交前的版本。若直接在当前 HEAD 上演示，应改为高级缺口，例如移除事件对称稳定条件。
-
-### 演示动作
-
-让 AI 先输出计划和预计 diff，再允许写；完成后展示实际 diff，只审查状态转换与越界文件。最后运行同一条命令，确认目标用例记录 `result=Success`；覆盖率报告器仍出现的 `00507008` 单独记为工具链 GAP，不能混进本轮业务 GREEN。
-
-### 通过条件
-
-T01 窄测试转绿，相关 coordinator 回归通过，修改文件不超出 Allowed。
-
-### 素材
-
-- `AccountChangeCoordinator.loadStableSnapshot`
-- `AccountChangeCoordinator.runOnce`
-- T01 GREEN：`c0c1bc9f`
-- `evidence/mdm/t01-red-green.md`
-
----
-
-## 第 17 页｜长任务的记忆写在 progress，不在聊天记录
-
-<!--
-type: DEBUG
-section: MDM_RALPH
-layout: progress-ledger
-time: 3m
-progress: 调试
--->
-
-### 画面
-
-| Round | 假设 | 证据 | Stop / Next |
-|---|---|---|---|
-| 1 | 事件先于账号查询可见 | 前两读无 123，第三读出现 | GREEN；进入故障注入 |
-| 2 | 模式重放失败会污染 apply state | 用户 123 第 2 条 add 失败 | 回滚后 getter 再判断 |
-
-![Prompt Engineering 与 Context Engineering 对比](harmonyos-sdd-workshop-media/anthropic/prompt-vs-context-engineering.png)
-
-<sub>讲师读图：左边只优化一次输入；右边每轮都从文档、工具、记忆和历史中筛选上下文。课堂中 `spec + current task + progress + evidence index` 就是右侧 Curation 的具体实现。图源：Anthropic《Effective Context Engineering for AI Agents》。</sub>
-
-`progress.md` 本轮新增事实：
-
-> “稳定”是 trigger 可见，不是连续读相同；删除事件尚无对称等待。
-
-### 讲师备注
-
-每轮至少记录七项：hypothesis、RED command/output、files changed、GREEN command/output、new fact、remaining risk、stop reason。这样换人、换会话或上下文压缩后，AI 仍从事实继续，而不是重新猜一遍。
-
-不要把长聊天复制进 progress。它是外部控制面：一句事实对应一份证据，一条风险对应下一张任务卡。
-
-**Anthropic 方法锚点**：`Effective Context Engineering for AI Agents` 将上下文视为有限注意力预算，目标不是把资料全部塞进去，而是保留能最大化当前任务成功率的最小高信号信息；对长任务，结构化记笔记比保留完整聊天更可靠。因此新会话只加载 spec、当前 task、progress、相关代码和证据索引：保留架构决定、未解决风险、修改文件和验证命令，丢弃重复搜索过程与大段原始工具输出。
-
-### 演示动作
-
-做一次上下文 A/B：A 组获得压缩后的长聊天，B 组只获得 `spec + current task + progress + related files + evidence index`。两组都要在 90 秒内写出下一步、禁止范围和缺失证据，再比较谁引入了更多未经支持的假设。
-
-### 通过条件
-
-另一组只读 `progress.md` 就能复现已完成行为、剩余风险与停止原因。
-
-### 素材
-
-- 附录 E `progress.md` 模板
-- `unit-test-red.txt` / `unit-test-green.txt`
-
----
-
-## 第 18 页｜DEBUG：先找最早异常，不从 UI 倒推
-
-<!--
-type: DEBUG
-section: MDM_RALPH
-layout: log-ladder
-time: 3m
-progress: 调试
--->
-
-### 画面
-
-**SESSION FACT｜假设阶梯**
-
-| 轮次 | 当前假设 | 新证据 | 判定 |
-|---|---|---|---|
-| 1 | 系统账号查询只是刷新慢 | 延迟 2 秒后现象不变 | 假设被推翻 |
-| 2 | `SystemUserProvider` 没读到新事实 | Provider raw=`[100,114]`，snapshot signature=`100,114` | Provider 读取成立 |
-| 3 | 进程内静态状态能通知页面 | Extension 与 UI 位于两个进程 | 传播边界错误 |
-| 4 | 接入 CommonEvent 即全部完成 | 卡片刷新，但已有规则和记录未刷新 | 只得到局部 GREEN |
-
-最早异常不是“页面没刷新”，而是：**事实已经产生，但没有跨进程、按职责传播到所有依赖者。**
-
-### 讲师备注
-
-本页优先沿账号主线展示“延迟补丁 → Provider 日志 → 进程边界 → 局部 GREEN”的推理。它训练的是：每轮只保留一个可证伪假设，并明确什么证据会推翻它。
-
-第二个可选案例是提交 `4906f7d3 → 06864339 → 78fca089`：public 规则把可选字段 `remoteIps: undefined` 带进 MDM API，真机 `addNetFirewallRule` 返回 401；随后收敛为只有有效字段才进入 payload，并保留原始错误码供上层映射。这个案例用于说明“最早异常也可能位于 payload 契约”，不要与账号传播根因混成一次历史故障。
-
-平台真实缺少企业管理员能力常见错误码为 `9200001`；201 是权限 / admin 状态类映射之一。课堂不要把模拟错误码当唯一真机事实。
-
-### 演示动作
-
-先给出前两轮证据，让学员选择下一条最小日志；揭示跨进程事实后，再让他们解释为什么 CommonEvent 只带来了局部 GREEN。时间允许时再打开 `FirewallRuleUtils.ets` 的 401 diff 作为迁移练习。
-
-### 通过条件
-
-定位结论能被具体日志、进程事实或系统返回推翻；不能只写“可能是缓存、权限或参数”。
-
-### 素材
-
-- commit `4906f7d3`、`06864339`、`78fca089`
-- 账号变化 Session 证据卡（附录 L1）
-- `FirewallRuleUtils.ets`
-- `FirewallSystemRepository.ets`
-
----
-
-## 第 19 页｜先由规格决定事务边界
-
-<!--
-type: MAP
-section: MDM_RALPH
-layout: compare-semantics
-time: 4m
-progress: 设计
--->
-
-### 画面
-
-| 操作 | 当前语义 | 部分失败后 | 本地提交 |
-|---|---|---|---|
-| 总开关 | Best-effort | 成功账号保持 | 不写 desired |
-| 模式切换 | All-or-nothing | 尝试整体补偿 | 不写 mode/signature |
-| 新增规则 | Collect-all + rollback | 删除已成功 deployment | 不写 intent/mapping |
-| DNS 目标编辑 | Remove + add | 重建旧 DNS | 保存恢复后的新 ID |
-
-### 讲师备注
-
-必须修正两个常见误讲：
-
-1. 当前多用户 Create 会继续尝试全部目标账号、收集失败，再统一回滚；不是“第二个失败就停止第三个”。如果课程要讲 fail-fast，必须标为 TARGET 规格。
-2. 不是所有 DNS 相关编辑都 remove+add；只有 `nextIntent.type === RULE_DNS` 走替换。`DNS → IP` 当前走 retained deployment 原地 update，测试 `should update retained deployments in place when editing DNS to IP` 固化了该行为。
-
-这页核心是让学员理解：事务不是统一模板，操作的业务承诺不同，补偿策略就不同。
-
-### 演示动作
-
-让学员分别给总开关与模式切换写一句失败后断言，观察是否错误地把两者都要求 rollback。
-
-### 通过条件
-
-任务卡明确写出“允许保留什么、必须恢复什么、什么时候提交本地状态”。
-
-### 素材
-
-- `FirewallPolicyService.setFirewallEnabledForAllUsers`
-- `FirewallModeSwitchService.applyModeToUsers`
-- `FirewallRuleMutationService.ets`
-
----
-
-## 第 20 页｜成功路径先锁住唯一 commit point
-
-<!--
-type: MAP
-section: MDM_RALPH
-layout: transaction-flow
-time: 3m
-progress: 设计
--->
-
-### 画面
-
-```mermaid
-flowchart TD
-    A[读取有效快照] --> B[清理受管规则]
-    B --> C[写各用户 Policy]
-    C --> D[下发预置 Rules]
-    D --> E{全部成功？}
-    E -- 是 --> F[提交 mode + signature]
-    E -- 否 --> G[补偿旧快照]
-```
-
-只在绿色节点之后，目标 apply state 才能被持久化。
-
-### 讲师备注
-
-真实 `FirewallModeSwitchService.applyModeToUsers` 已经体现“快照→清理→应用 policy/rules→成功才保存→失败 rollback”。课堂先让学员把成功路径写成测试，再注入失败；不要在同一轮同时生成完整正向与所有回滚分支。
-
-`CURRENT GAP`：mode/signature 双 key 保存不是原子操作，旧 apply state 也未完整进入 rollback。画面保持主流程简洁，备注中必须诚实标出风险。
-
-提交 `deaf8f27` 还证明模式写入必须保留各用户旧 `isOpen`；不要因为目标是 public 就把开关偷偷设为 true。
-
-### 演示动作
-
-打开 `applyModeToUsers`，让学员在代码中标出 read barrier、side effects、commit point 和 compensation entry。
-
-### 通过条件
-
-代码中只有一个可解释的目标状态提交点；任何早于它的本地写都被视为风险。
-
-### 素材
-
-- `FirewallModeSwitchService.ets`
-- commit `deaf8f27`、`0b5edc5f`
-
----
-
-## 第 21 页｜Round 2：在账号 123 的第 2 条规则注入失败
-
-<!--
-type: LAB
-section: MDM_RALPH
-layout: fault-injection
-time: 4m
-progress: 调试
--->
-
-### 画面
-
-**T02 / Mode transaction fault**
-
-`TEACHING`：这是从真实失败语义抽取的确定性故障注入，不表示同一历史 Session 恰好在账号 123 的第 2 条规则失败。
-
-初始：`public + enabled + users=[100,112]`
-
-目标：重放到 `[100,112,123]`
-
-注入：账号 123 的第 2 次 `addRule` 返回失败。
-
-四个核心断言：
-
-1. 目标 `mode/signature` 不提交。
-2. 旧 policy / rules 被尝试恢复。
-3. 已新增的目标规则不残留。
-4. deployment 指向恢复后新 `systemRuleId`。
-
-### 讲师备注
-
-先列出预期系统调用顺序，再让 AI 写 fault-injection test。测试要覆盖“补偿本身也可能失败”的证据输出，但无需在画面塞满所有断言。
-
-现有 `FirewallFailedItem` 没有结构化 `phase=forward|compensate`，rollback 失败主要靠 `errorMessage` 推断。这是观测性 GAP。建议课堂 TARGET 返回：`userId / operation / phase / originalCode / rollbackCode / localRuleId / systemRuleId`。
-
-### 演示动作
-
-运行 RED；把失败点从第 2 条规则移动到 local save，观察事务期望是否仍成立。AI 只能修改 ModeSwitch 与对应测试。
-
-### 通过条件
-
-测试先红后绿；失败证据能区分 forward 与 compensate；本地没有伪造目标 signature。
-
-### 素材
-
-- `service.test.ets`
-- `FirewallModeSwitchService.rollbackToSnapshot`
-- commit `0b5edc5f`
-
----
-
-## 第 22 页｜回滚最难的是 identity，不是把旧对象写回去
-
-<!--
-type: CODE
-section: MDM_RALPH
-layout: identity-remap
-time: 3m
-progress: 代码
--->
-
-### 画面
-
-```text
-Before failure
-  intent R1 → user 100 → systemRuleId 8001
-
-Rollback re-add
-  old rule 8001 → add again → new systemRuleId 9417
-
-After rollback
-  intent R1 → user 100 → systemRuleId 9417
-```
-
-> 业务 identity 要稳定；系统 resource identity 允许在补偿后变化。
-
-### 讲师备注
-
-如果只恢复系统规则、不更新 deployment mapping，下一次编辑或删除仍会针对 8001，形成“画面看起来恢复，后续操作全部错位”的延迟故障。
-
-真实代码通过 `remapDeployments` 维护 old→new ID。DNS 目标编辑的 remove+add 也有相同问题；恢复旧 DNS 时，新 add 仍会产生新 ID。最有价值的断言不是“规则数量恢复”，而是本地 mapping 与系统返回的新 ID 一致。
-
-### 演示动作
-
-在测试 fake repository 中让 re-add 返回固定新 ID 9417；故意保留旧 mapping，观察下一次 delete 的目标 ID。
-
-### 通过条件
-
-补偿后立即执行一次 edit/delete 仍能命中真实系统规则；mapping 不是靠旧快照原样写回。
-
-### 素材
-
-- `FirewallModeSwitchService.remapDeployments`
-- `FirewallRuleMutationService.applyDnsReplaceUpdateTransaction`
-- commit `0b5edc5f`、`76e7f6e6`
-
----
-
-# 第四幕：让代码越过 HarmonyOS 平台门并形成设备证据
-
-## 第 23 页｜代码正确之前，先过四道平台门
-
-<!--
-type: CHECKPOINT
-section: MDM_PLATFORM
-layout: four-gates
-time: 3m
-progress: 证据
--->
-
-### 画面
-
-| Gate | 预检问题 | 失败结论 |
-|---|---|---|
-| SDK / API | 目标 API、API level、类型定义存在？ | BLOCKED |
-| Permission / ACL | `ENTERPRISE_MANAGE_NETWORK` 等权限与签名匹配？ | BLOCKED |
-| Admin | 企业管理员已激活、应用身份正确？ | BLOCKED |
-| Device | 账号、网络、HDC endpoint、包版本可确认？ | UNKNOWN |
-
-页尾：**平台预检失败时不要改业务代码。**
-
-### 讲师备注
-
-多用户账号读取还涉及 `GET_LOCAL_ACCOUNT_IDENTIFIERS`；仓库演进曾经历 activated accounts、权限约束、最终回到系统账号事实源。提交 `8f99fc27` / `9ea957d2` 可用于解释 API 与权限如何共同决定实现。
-
-真机缺少企业管理能力可见 `9200001` 等错误；参数非法常见 401 / 2100001；DNS 冲突场景可见 29400007。不要只显示翻译后的 Toast，要保留原始 code、operation、userId 和 sanitized payload。
-
-### 演示动作
-
-用 MCP 列设备、查询包版本、构建 debug HAP；再在真机上确认 admin 激活和账号列表。任何门失败就写入 `acceptance.md / Preconditions`。
-
-### 通过条件
-
-四道 Gate 全有明确 PASS；无法确认的一项标 UNKNOWN，并停止“业务已完成”的结论。
-
-### 素材
-
-- `entry/src/main/module.json5`
-- `SystemUserProvider.ets`
-- `harmonyos-dev-mcp/README.md`
-
----
-
-## 第 24 页｜跨进程事件传事实，业务事务仍留在 Handler
-
-<!--
-type: MAP
-section: MDM_PLATFORM
-layout: sequence
-time: 3m
-progress: 调试
--->
-
-### 画面
-
-```mermaid
-sequenceDiagram
-    participant X as Admin Extension
-    participant C as Coordinator
-    participant H as Firewall Handler
-    participant U as UIAbility
-    X->>C: account-added(123)
-    C->>C: 读取稳定账号快照
-    C->>H: reconcile(snapshot)
-    C-->>U: publish account fact
-    U->>U: 按当前路由刷新
-```
-
-**SESSION FACT｜关键纠偏**
-
-> “这是两个进程，你用这种静态的传递不行。”
-
-| 接入 CommonEvent 后 | 结果 |
+| 来源 | 对同一需求的表达 |
 |---|---|
-| 黑/白名单卡片 | 已刷新 |
-| 已有防火墙规则 | 未刷新 |
-| 操作记录 | 未刷新 |
+| 原始 Excel C4 | 公共、专用、自定义三种缺省配置 |
+| AI 修正版 C4:E4 | 认为这是 Windows 概念，改成 IP/域名/DNS 三种规则类型 |
+| 当前 PRD | 要求 `public/private/custom` 三种主模式 |
+| 当前模块设计/代码 | 同时存在主模式和 IP/DOMAIN/DNS 规则类型 |
 
-结论：事件送达只是 `factPublished`；它不自动等于 `businessSucceeded` 或 `allConsumersReconciled`。
+最终决策：
 
-三个边界：
+```text
+主模式：public / private / custom
+规则类型：IP / DOMAIN / DNS
+```
 
-- Handler 失败不应吞掉稳定账号事实。
-- CommonEvent 不能承担 policy/rule rollback。
-- UI 互斥不覆盖 Extension 与 UI 的全局并发写。
+结论：平台接口没有“公共网络模式”枚举，不代表产品不能用预置规则组合出公共/私有模式。
+
+代码事实必须在同页出现：
+
+```ts
+// FirewallModels.ets
+export type FirewallPresetMode = 'public' | 'private' | 'custom'
+
+// 同一模型文件中的规则类型集合
+RULE_IP / RULE_DOMAIN / RULE_DNS
+
+// FirewallModeStrategy.buildRulesForMode
+public  → buildPublicRules → 预置模板 × 当前账号集合
+private → buildPrivateRules → 私网配置模板 × 当前账号集合
+custom  → buildCustomRules → 既有 intent.targetUserIds
+```
+
+这三段代码说明两个维度不是同义词：`mode` 决定规则生成策略，`rule type` 决定单条规则的数据形态。
+
+### 怎么做 / 怎么判断 / 不对怎么办
+
+- 怎么做：把来源原文、AI 解释、代码现状、冲突和决策放到同一张矩阵。
+- 怎么判断：一个概念是否被错误合并；产品抽象和平台 API 是否被混为一谈。
+- 不对怎么办：AI 修正版与业务目标冲突时，保留原文和候选解释，由人做产品决策，再同步 PRD/RFC。
 
 ### 讲师备注
 
-页面第 11 页讲“架构为什么这样分”，本页讲“运行时如何调试”。历史真机日志已经证明 Extension 收到删除事件、Provider 读到 `[100,114]`、Coordinator dispatch 且 Handler 返回成功；同一链路没有 UI 进程日志，且 `previous=` 暴露首次 diff 基线不可信。
+- 这是资产同步的“真实戏剧点”。不要快速略过。
+- 可以问学员：“AI 修正版写得很专业、接口也很全，为什么仍然可能错？”答案是它回答了平台能力，却替产品做了取舍。
+- 强调同步产物必须保留反例，否则后续 Session 会再次把模式和规则类型混淆。
+- 现场从 `FirewallModels.ets:4` 跳到 `FirewallModeStrategy.buildRulesForMode()`，再打开 `mode_cards.json`。让学员分别指出：产品枚举、实现策略、E2E 可见性证据。三者职责不同，但可以通过同一 requirement ID 串起来。
 
-历史日志没有统一 `eventId`，不能为了课件完整而补造。目前只能用 `time window + source + trigger + signature + process` 关联；显式 `eventId/runId` 应作为下一张可观测性任务卡。因而这里讲“两进程、四阶段”，其中事件接收、事实读取、业务 reconcile 有证据，UI 消费只有局部 GREEN。
+### 文档 / 截图
 
-提交 `0650b8eb` 展示 Extension 与 UI 不能依赖进程内单例；`cecf6d17` 展示 handler 失败与账号事实发布是两种结果。这里还要保留 `CURRENT GAP`：缺少覆盖所有 writer 的全局串行策略。
-
-### 演示动作
-
-先给学员真实脱敏日志，要求判断哪些阶段有直接证据、哪些仍是 UNKNOWN；再给出 CommonEvent 后“卡片已刷新、规则和记录未刷新”的局部结果，分别填写 `eventReceived`、`businessSucceeded`、`factPublished`、`uiRefreshed`。最后让学员设计下一版 `eventId` 字段，而不是假设历史已经有它。
-
-### 通过条件
-
-日志能区分 `factPublished`、`businessSucceeded`、`uiRefreshed` 三个布尔结果，而不是一个“成功”。
-
-### 素材
-
-- `AccountChangeCoordinator.ets`
-- `AccountChangeEventBus.ets`
-- commit `0650b8eb`、`cecf6d17`
-- `evidence/mdm/account-cross-process-log.md`
+- 文档：`case-materials/mdm/01-资产同步与冲突清单.md#真实冲突`
+- **【补充素材】**：两个 Excel 第 4 行、PRD 7.2、`FirewallPresetMode` 与模式卡代码四联截图。
 
 ---
 
-## 第 25 页｜MCP 是证据执行器，不是事实制造器
+## 第 12 页｜资产同步结束时，要生成一张能追到代码和测试的需求卡
 
-<!--
-type: MAP
-section: MDM_ACCEPTANCE
-layout: evidence-ladder
-time: 3m
-progress: 证据
--->
+### PPT 内容
 
-### 画面
+展示 `FW-MODE-001` 需求卡：
 
-**SESSION FACT｜18 个工具真机测试暴露的四层结果**
-
-| 结果层 | 关键问题 | 典型证据 |
-|---|---|---|
-| Protocol | 外部客户端请求是否满足 MCP Schema？ | 参数校验、requestId、协议错误 |
-| Tool | 工具是否被调用并正常返回？ | tool result、退出码、artifact path |
-| Business | 目标业务动作是否执行成功？ | 原始错误码、业务对象、日志链 |
-| System | 设备最终状态是否真的改变？ | system getter、系统接口回读 |
-
-**E2E FACT｜`FW-STATUS-001` 的真实结果摘要**
-
-```text
-tool action       toggle_firewall        PASS
-UI before/after   false → true            PASS
-evidence source   ui_tree                 PRESENT
-internal getter   getPolicy/listRules     PRESENT
-acceptance bridge get_runtime_state       MISSING
-final verdict     UNKNOWN at system layer
+```yaml
+requirement_id: FW-MODE-001
+source:
+  - 原始需求清单.xlsx!Sheet1:C4
+  - PRD.md#7.2
+decision: 保留 public/private/custom 产品模式
+implementation:
+  - FirewallPage.ets
+  - FirewallModeStrategy.ets
+tests:
+  - mode-strategy.test.ets
+  - e2e/cases/firewall/mode_cards.json
+conflict:
+  source: AI修正版.xlsx!Sheet1:C4:E4
+  resolution: 规则类型与主模式是两个维度
+status: RESOLVED
 ```
 
-CURRENT 已覆盖 build/install/launch、UI tree/action/screenshot 与 HiLog，App 内部也已有 `getNetFirewallPolicy` / `getNetFirewallRules` 读取。TARGET 是把现有读取通过测试专用只读 bridge 暴露为结构化验收事实。若课前未准备，系统验收只能是 `UNKNOWN`。
+资产同步的出口门：来源可追溯、术语有定义、冲突有状态、缺口有负责人、代码和测试有初步落点。
+
+需求卡必须通过四个机器可检查项：
+
+```text
+source 坐标可回读      Excel/Markdown 位置存在
+implementation 可定位  文件存在，并能找到目标类型/函数
+tests 可执行            UT 文件或 Case JSON 存在
+claim 不越过证据        mode_cards 只证明模式卡可见，不证明策略已下发
+```
+
+### 怎么做 / 怎么判断 / 不对怎么办
+
+- 怎么做：把 Excel 行转换成稳定 ID，并附来源坐标、决策、实现和测试路径。
+- 怎么判断：不打开长 Session，仅凭需求卡即可复述“原始需求是什么、AI 改了什么、最终为何这样做”。
+- 不对怎么办：状态仍为 OPEN/UNKNOWN 的冲突不能进入正式 RFC，先作为澄清或穿刺任务。
 
 ### 讲师备注
 
-`harmonyos-dev-mcp` 当前明确提供设备发现、构建、安装、运行、UI 自动化、日志查询和截图。`security_tool` 的 action map 有 `firewall.toggle_status → toggle_firewall`，但没有 `firewall.get_runtime_state`。
+- 解释“结构化”不是为了机器好看，而是为了让下一步可自动检查：路径是否存在、测试是否映射、状态是否关闭。
+- 这张需求卡后续可以做截图，也可以作为 Ralph 每轮读取的最小上游材料。
 
-现有 `status_toggle.json` 主要确认页面文字仍可见，并允许 `allow_unknown:true`；它不能证明所有账号的 `getNetFirewallPolicy(userId)` / `getNetFirewallRules(userId)` 正确。提交 `72cd7d47` 删除正式 E2E 的 mock/scripted 结果通道，正好强调：模拟结果不能冒充真机验收。
+### 现场实操
 
-**Anthropic 方法锚点**：`Writing Effective Tools for Agents` 建议优先建设少量高价值、边界清晰的工具，而不是把每个底层 API 薄包装后全部暴露；工具返回也应优先提供与下一步决策相关的高信号上下文。映射到本课：`build_app`、`logs_query`、`firewall.get_runtime_state` 应分别回答“能否构建”“最早异常在哪”“系统最终事实是什么”；默认返回状态、原因码、关键对象和 evidence path，大日志按需读取，避免一次调用污染 Agent 上下文。
+- 给学员一张故意有错的需求卡：把 `mode_cards.json` 写成“证明系统 policy 已生效”。
+- 要求学员把结论改成“公共/私有模式卡文本可见”，并追加缺失证据：`getNetFirewallPolicy(userId)` readback。
+- 最终产物不是一句评价，而是修正后的 `requirement-card.yaml`，包含 `claim_scope` 和 `missing_evidence`。
 
-可选方法图放讲师备注，不与真实证据争夺画面中心：
+### 文档 / 截图
 
-![Augmented LLM：Retrieval、Tools 与 Memory 共同扩展模型](harmonyos-sdd-workshop-media/anthropic/augmented-llm.png)
+- 文档：`case-materials/mdm/01-资产同步与冲突清单.md#同步后的需求卡示例`
+- **【补充素材】**：需求卡 Markdown 实际渲染截图。
 
-<sub>讲师读图：MCP 位于 Tools，不是“第三个大脑”；Retrieval 负责取上下文，Memory / progress 负责跨轮保留事实，三者都只能为判断提供输入。图源：Anthropic《Building Effective Agents》。</sub>
+---
 
-### 演示动作
+## 第 13 页｜方案推导先比较失败模式，再决定类和接口
 
-给学员一份“tool returned ok，但设备策略未改变”的结果，让他们分别填写 Protocol、Tool、Business、System；再打开 action map 与 `status_toggle.json` 找出缺失的最终事实。
+### PPT 内容
 
-### 通过条件
+以“账号变化后同步防火墙”为 Feature，展示四个方案：
 
-没有人把截图、UI 文案或 mock JSON 当作系统 policy/rules 的最终证据。
+| 方案 | 主要问题 | 决策 |
+|---|---|---|
+| Provider 读取后直接同步防火墙 | 真相源和副作用耦合，其他模块无法复用 | 拒绝 |
+| 直接使用事件里的账号 ID | 不是完整集合，删除/并发语义不完整 | 拒绝 |
+| MainPage/页面重进强刷 | UI 看似更新，系统 policy 仍可能错误 | 拒绝 |
+| Coordinator + 全量快照 + Handler | 真相源单一、可扩展、可测试 | 选择 |
 
-### 素材
+方案不是因为“结构优雅”被选择，而是因为它能同时满足：完整账号真相、模块可扩展、失败不误删、UI 不承担修复。
 
-- `repos/harmonyos-dev-mcp/README.md`
-- `scripts/e2e/tools/bridge_action_map.json`
-- `scripts/e2e/cases/firewall/status_toggle.json`
-- commit `72cd7d47`
-- MCP 全工具真机测试 Session 证据卡（附录 L2）
-- `evidence/mdm/firewall-runtime-readback.md`
+选中方案落实到现有代码责任：
+
+| 决策问题 | 选中的代码责任 | 为什么不放到别处 |
+|---|---|---|
+| 谁接事件 | `EnterpriseAdminAbility.onAccountAdded/Removed` | 这里只拿触发信号，不知道防火墙语义 |
+| 谁读完整集合 | `SystemUserProvider.loadAvailableUserIds` | Provider 只读取事实，不产生副作用 |
+| 谁处理时序/并发 | `AccountChangeCoordinator.schedule/runPending/loadStableSnapshot` | 公共协调逻辑可复用，不绑定页面 |
+| 谁决定防火墙分支 | `FirewallAccountChangeHandler.handle` | public/private/custom 是模块业务 |
+| 谁写系统状态 | `FirewallSystemRepository` | 把 MDM API 和错误封装在系统边界 |
+| 谁刷新 UI | `ApplicationRuntimeManager → ViewModel` | 只消费稳定事实，不承担修复 |
+
+### 怎么做 / 怎么判断 / 不对怎么办
+
+- 怎么做：每个方案写“优点、失败模式、需要新增的状态、验证成本”。
+- 怎么判断：选中的方案能否解释正常、失败、并发和未来扩展；而不只是主路径能跑。
+- 不对怎么办：只有一个方案时，要求 AI 至少给出两个可行替代和拒绝证据，避免把第一反应包装成架构。
+
+### 讲师备注
+
+- 先只展示方案名，让学员投票；再逐行展开失败模式。
+- 尤其要讲 UI 强刷：它是最容易演示成功、也最容易把业务错误藏起来的方案。
+- 投票后不是宣布正确答案，而是让每组用一个失败场景攻击自己的方案：新增事件早到、读取空集合、Handler 失败、页面未打开、连续事件。只有能解释这些场景的方案才进入穿刺。
+
+### 现场实操
+
+- 每组领取一个拒绝方案，写出最短反例和“错误会藏在哪一层”。
+- 选择方案 D 的小组必须补充一个它仍未解决的问题，例如账号列表何时稳定、Handler 失败如何重试、跨进程结果如何传递。
+- 当场产物：方案评分表，不允许只写“扩展性好/耦合低”，必须包含失败输入、错误状态和验证成本。
+
+### 文档 / 截图
+
+- 文档：`case-materials/mdm/02-方案推导与决策记录.md#方案对比`
+- **【补充素材】**：四方案对比表或白板投票结果。
+
+---
+
+## 第 14 页｜最小穿刺发现：事件已经到达，完整账号列表却仍是旧的
+
+### PPT 内容
+
+穿刺只验证一个关键假设：账号新增回调与账号列表是否在同一时刻一致。
+
+真实时间线：
+
+```text
+onAccountAdded(accountId=123)
+→ 首次 loadAvailableUserIds() = [100,112,122]
+→ lastApplied signature 仍为 100,112,122
+→ 旧逻辑判断集合没有变化，跳过模式补下发
+→ 账号 123 没有获得当前 policy/预置规则
+```
+
+这条证据否定“事件后读一次就够”，并引出稳定快照条件：只有完整集合包含 `triggerAccountId` 才能继续。
+
+页面右侧放真实函数链，不只放时间线：
+
+```text
+EnterpriseAdminAbility.onAccountAdded(123)
+→ scheduleAccountReconcile('account-added', 123)
+→ AccountChangeCoordinator.schedule(...)
+→ runPending() / runOnce(request)
+→ loadStableSnapshot(request)
+→ SystemUserProvider.loadAvailableUserIds()
+→ getOsAccountLocalIds()
+```
+
+稳定条件对应当前代码：
+
+```text
+source == account-added
+AND triggerAccountId 已定义
+AND currentUserIds 不包含 triggerAccountId
+→ wait 200ms and retry，最多 5 次
+```
+
+### 怎么做 / 怎么判断 / 不对怎么办
+
+- 怎么做：在同一时间轴记录事件 ID、每次完整集合、账号签名、Handler 是否执行和最终系统状态。
+- 怎么判断：事件是触发信号；`SystemUserProvider` 的完整集合是账号真相；系统 policy/规则是最终业务真相。
+- 不对怎么办：不要把 123 手工 append 到列表，不要用 UI 出现新账号证明策略已同步；先冻结稳定条件和失败语义。
+
+### 讲师备注
+
+- 让学员回答：“如果过 200ms 列表出现 123，应该怎么处理？如果 1 秒后仍没有呢？”
+- 再揭示当前方案：400ms 防抖、200ms 间隔、最多 5 次；数字是项目策略，通用思想是条件重试、有上限、失败保持旧真相。
+- 现场打开 `AccountChangeCoordinator.loadStableSnapshot()` 和 `shouldWaitForAddedAccount()`；让学员先指出“退出条件”，再解释三个时间常量。不要把本页讲成 sleep/retry 技巧。
+- 补充当前边界：Provider 的读取异常和真实空列表都会降级为 `users=[]`。当前处理选择保守跳过 prune/重放，但仅靠结果无法区分二者，这是可观测性缺口。
+
+### 文档 / 截图
+
+- 文档：`case-materials/mdm/02-方案推导与决策记录.md#技术穿刺如何改变方案`
+- 源文档：SecurityTool `docs/superpowers/plans/2026-07-02-firewall-account-added-stable-snapshot.md`
+- 代码穿刺：`08-代码级调用链与课堂穿刺.md#3-协调器400ms-防抖单飞执行条件重试`
+- **【补充素材】**：事件 123 与旧集合日志；补入前只展示“待补真实日志”，不生成模拟控制台内容。
+
+---
+
+## 第 15 页｜穿刺结束要形成 ADR：真相源、所有权和失败语义一次写清
+
+### PPT 内容
+
+展示 `ADR-FW-ACCOUNT-001` 的核心字段：
+
+```yaml
+question: 账号事件后以什么作为同步输入
+selected: 稳定的完整账号快照
+truth_source: SystemUserProvider.loadAvailableUserIds
+trigger: EnterpriseAdminAbility account event
+rejected:
+  - 直接使用事件 ID
+  - Provider 内执行业务副作用
+  - UI 强刷作为修复
+failure_semantics:
+  empty_or_error: preserve local truth
+  added_not_visible: bounded retry, then incomplete
+```
+
+ADR 的作用：让 RFC 不再重新讨论已解决的问题，让实现 Session 不再偷偷选择另一套方案。
+
+ADR 还要记录重新打开条件，避免把历史决定永久冻结：
+
+```yaml
+reopen_when:
+  - getOsAccountLocalIds 在目标设备上长期不包含新增 ID
+  - handler failure 需要自动重试或补偿队列
+  - 新模块需要与防火墙共享同一账号快照
+  - 设备证据证明 400/200/5 不满足稳定窗口
+verification:
+  - coordinator protocol UT
+  - same-timeline device trace
+  - policy/rules readback
+```
+
+### 怎么做 / 怎么判断 / 不对怎么办
+
+- 怎么做：每个关键决策记录问题、选择、拒绝项、证据、影响和重新打开条件。
+- 怎么判断：后续代码出现 Provider 副作用或 UI 补偿时，可以直接判定违反 ADR，而不是重新争论风格。
+- 不对怎么办：新设备证据否定原假设时，重新打开 ADR、更新 RFC 和 Story；不能只改代码绕过。
+
+### 讲师备注
+
+- ADR 不需要很长，重点是保留“为什么不选另外三个”。
+- 这一页完成“方案推导”阶段，下一页才进入 RFC。
+
+### 现场实操
+
+- 学员为 ADR 补一条 `reopen_when` 和一条能触发它的真实证据。
+- 讲师故意提出“把重试次数改成 10”，让学员判断这是实现参数调整，还是需要重新打开稳定窗口决策；答案取决于是否有新设备证据。
+- 产物：可被后续 RFC 引用的 ADR，而不是一次性会议结论。
+
+### 文档 / 截图
+
+- 文档：`case-materials/mdm/02-方案推导与决策记录.md#生成的决策记录`
+- **【补充素材】**：ADR 渲染截图。
+
+---
+
+## 第 16 页｜RFC 不是一张架构图，而是范围、状态、不变量和失败语义的共同契约
+
+### PPT 内容
+
+RFC 必须至少包含六块：
+
+1. 目标与非目标。
+2. 上下游边界与代码责任。
+3. 状态字段、所有者和写入时机。
+4. 正常/失败/并发场景。
+5. 系统能力、权限和跨进程依赖。
+6. 测试边界与验收信号。
+
+本 RFC 的关键不变量：
+
+- 事件只触发，不作为完整账号真相。
+- 空/失败账号集合不 prune、不重放。
+- public/private 对最新集合生效。
+- custom 同步默认 policy，但不扩历史规则作用域。
+- 失败不能保存新签名。
+- UI 只消费稳定结果，不承担修复。
+
+将不变量变成代码审查问题：
+
+| RFC 不变量 | 应检查的函数 | 反例 |
+|---|---|---|
+| 事件不是完整真相 | `onAccountAdded`、`loadStableSnapshot` | 直接 append trigger ID |
+| 空集合不 prune | `FirewallAccountChangeHandler.handle` | `users=[]` 仍清理 intent |
+| public/private 对最新集合生效 | `applyModeToUsers`、`buildRulesForMode` | 新 ID 未进入模板展开 |
+| custom 不扩历史规则 | `buildCustomRules` | 把新增 ID 注入旧 targetUserIds |
+| 失败不保存成功签名 | `saveModeApplyState`、`rollbackToSnapshot` | 部分写后 signature 残留 |
+| UI 不承担修复 | `ApplicationRuntimeManager`、ViewModel | 页面 onShow 触发业务下发 |
+
+### 怎么做 / 怎么判断 / 不对怎么办
+
+- 怎么做：把每个业务规则写成“前置—动作—成功状态—失败保持”。
+- 怎么判断：任意失败分支都能回答“哪些状态绝对不能改变”；每个字段有唯一所有者。
+- 不对怎么办：RFC 只有类图没有失败保持、测试边界和非目标时，不允许进入 Story 拆分。
+
+### 讲师备注
+
+- 这页不展示完整 RFC 全文，只展示目录和六条不变量。
+- 强调“失败保持”是 AI 实现复杂需求最容易漏掉的部分，也是后续测试最重要的 oracle。
+- 这里明确告诉学员：六条是 RFC 目标契约，不代表当前实现已经全部满足；第 22 页会用真实代码反查出本地 apply-state 原子性和回滚缺口。
+
+### 现场实操
+
+- 每组选一条不变量，在代码里找到“满足它的分支”与“最可能违反它的分支”。
+- 输出格式固定为 `invariant → owner → code anchor → counterexample → test oracle`。
+- 如果找不到唯一 owner，不进入 Story 拆分，先回到 RFC 重划责任。
+
+### 文档 / 截图
+
+- 文档：`case-materials/mdm/03-防火墙账号同步RFC.md`
+- 源文档：SecurityTool `docs/02-总体设计/总体设计RFC.md`、`docs/03-模块设计/防火墙管理组件设计说明.md`
+- **【补充素材】**：RFC 目录 + 不变量表。
+
+---
+
+## 第 17 页｜RFC 要把抽象责任映射到真实文件，AI 才知道在哪一层修改
+
+### PPT 内容
+
+展示两个真实闭环，避免把业务同步和 UI 刷新画成一条模糊直线：
+
+```text
+后台业务闭环
+onAccountAdded
+→ schedule / loadStableSnapshot
+→ getOsAccountLocalIds
+→ dispatchHandlers
+→ FirewallAccountChangeHandler.handle
+→ pruneUnavailableUsers
+→ custom: applyPolicyForMode + saveModeApplyState
+  public/private: applyModeToUsers + rollback on failure
+
+前台展示闭环
+publishSnapshot
+→ commonEventManager.publish/subscribe
+→ AccountRuntimeService
+→ ApplicationRuntimeManager
+→ FirewallRulesViewModel.refreshForAccountChange
+```
+
+页脚用四个函数锚点连接到系统 API：
+
+```text
+getPolicy  → netFirewall.getNetFirewallPolicy
+setPolicy  → netFirewall.setNetFirewallPolicy
+listRules  → netFirewall.getNetFirewallRules
+addRule    → netFirewall.addNetFirewallRule
+```
+
+同时展示关键状态及写入门：
+
+| 字段 | 所有者 | 什么时候更新 |
+|---|---|---|
+| `previousUserIds` | Coordinator | 快照稳定后、Handler 分发前 |
+| `desiredEnabled` | LocalRepository | 总开关成功后 |
+| `lastAppliedMode` | LocalRepository | 本地提交阶段写入；当前非原子 |
+| `lastAppliedUserIdsSignature` | LocalRepository | 幂等门；当前需检查部分写风险 |
+| intents/deployments | LocalRepository | 系统规则成功建立并保存映射后 |
+
+### 怎么做 / 怎么判断 / 不对怎么办
+
+- 怎么做：RFC 每个架构节点都引用当前文件，每个字段说明读写者和失败时是否更新。
+- 怎么判断：页面不会直连系统 API；Provider 不产生业务副作用；Coordinator 不内置防火墙实现。
+- 不对怎么办：一个规则在两层重复决定，或字段没有唯一写入者时，先重划责任，不直接拆 Story。
+
+### 讲师备注
+
+- 现场按固定顺序点开四个文件：`EnterpriseAdminAbility.ets#onAccountAdded` → `AccountChangeCoordinator.ets#loadStableSnapshot` → `FirewallAccountChangeHandler.ets#handle` → `FirewallModeSwitchService.ets#applyModeToUsers`。
+- 让学员在 Handler 里找出三条分支：空集合、custom、public/private；再回答每条分支成功后写什么、失败时不能写什么。
+- 继续追 `FirewallModeSwitchService` 的十步事务：创建系统快照、清规则、下 policy、建规则、存 deployment、最后存 mode/signature；任一步失败进入 `rollbackToSnapshot()`。明确它是补偿式回滚，回滚本身仍可能失败。
+- 最后再看前台链，说明 `refreshForAccountChange()` 只是重读 `userOptions/policy/rules`，不是后台同步的补丁。
+- 不要把 RFC 不变量直接当实现事实。现场指出当前缺口：`saveCurrentMode()` 失败后仍可能写 apply state；`saveModeApplyState()` 两个 key 非原子；rollback 不恢复 last-applied state；`listRules()` 失败与空规则混淆。这一段正好演示 Reviewer 如何判断“AI 写完了但还不能交付”。
+
+### 文档 / 截图
+
+- 文档：`case-materials/mdm/03-防火墙账号同步RFC.md#总体架构`、`#状态模型`、`#代码映射`
+- 代码手册：`case-materials/mdm/08-代码级调用链与课堂穿刺.md#1-一句话讲清这条-feature` 至 `#7-前台消费页面为什么不直接订阅系统账号事件`
+- **【补充素材】**：代码目录和 RFC 架构节点对应截图。
+
+---
+
+## 第 18 页｜Feature 按“可独立证明的能力”拆成六个 Story
+
+### PPT 内容
+
+展示 Story 依赖图：
+
+```text
+S1 账号真相源与资产对齐
+  ↓
+S2 删除账号的本地数据清理
+  ↓
+S3 Coordinator + Handler
+  ↓
+S4 跨进程稳定事实与 UI 运行时消费
+  ↓
+S5 新增账号稳定快照门
+  ↓
+S6 custom 模式签名与全链验收
+```
+
+拆分依据：
+
+- 每个 Story 有独立职责和 oracle。
+- 高风险平台假设先证明。
+- 一轮只需要读取有限文件。
+- 失败能回到明确层级。
+- 后续 Story 复用前一 Story 已证明的事实。
+
+每个 Story 必须落到函数和 oracle，而不是只落到文件：
+
+| Story | 主要函数 | 独立 oracle |
+|---|---|---|
+| S1 Provider | `loadAvailableUserIds / normalizeUserIds` | 去重、排序、前台标识、失败空态 |
+| S2 本地清理 | `pruneUnavailableUsers` | intent/deployment/policy history 同步删失效 ID |
+| S3 协调与 Handler | `schedule / runPending / dispatchHandlers / handle` | 防抖、串行、模块分支与失败汇总 |
+| S4 跨进程消费 | `publishSnapshot / subscribe / refreshForAccountChange` | 稳定事实只经一条运行时链消费 |
+| S5 稳定快照 | `loadStableSnapshot / shouldWaitForAddedAccount` | old→new、never-visible、removed 三组计数 |
+| S6 custom 签名 | `applyPolicyForMode / saveModeApplyState` | 不重放旧规则；保存失败返回 false |
+
+代码审阅产生的新 Story 候选：
+
+```text
+S7 apply-state 原子提交与完整回滚
+S8 rule snapshot 区分 read failure 与 empty
+S9 handler failure 的重试/可观测性
+```
+
+这些不是为了让范围无限增长，而是展示：Reviewer 发现新风险后，应创建独立 Story，不偷偷塞回 S5。
+
+### 怎么做 / 怎么判断 / 不对怎么办
+
+- 怎么做：从 RFC 的节点、状态和风险生成 Story，不按文件数量平均分配。
+- 怎么判断：每个 Story 做完都能得到 PASS/FAIL/UNKNOWN，而不是等 Feature 结束才能知道。
+- 不对怎么办：一个 Story 同时跨 Ability、Provider、Service、ViewModel、UI 和所有测试时，继续拆或先做穿刺。
+
+### 讲师备注
+
+- 展开 S1–S6 时，同步展示真实提交：`9ea957d2`、`09209bb9`、`94ff17e7`、`53751b2e`、`586880a3`、`4b372d0d`、`c0c1bc9f`、`9c7fb186`、`cecf6d17`。
+- 说明一个 Story 不一定等于一个提交；真实提交用于证明这些能力边界确实在项目演进中出现过。
+
+### 现场实操
+
+- 给出 RFC 六条不变量和九个代码文件，让学员先不看答案拆 Story。
+- 评审标准不是“拆得细”，而是每个 Story 是否有独立失败信号、有限上下文和明确回滚点。
+- 最后用 S7–S9 演示需求拆解是可增量修正的：新证据进入 backlog，但不改变已完成 Story 的历史结论。
+
+### 文档 / 截图
+
+- 文档：`case-materials/mdm/04-Feature与Story拆解.md#Story地图`、`#Story明细`
+- **【补充素材】**：Story 依赖图和真实提交时间线对照。
+
+---
+
+## 第 19 页｜Worker Packet 把一个 Story 变成新 Session 可以直接执行的任务
+
+### PPT 内容
+
+展示 S5 Worker Packet 的关键字段：
+
+```yaml
+story_id: FW-ACCOUNT-S5-STABLE-SNAPSHOT
+goal: 只分发包含 triggerAccountId 的稳定快照
+allowed_paths:
+  - 防火墙模块设计
+  - AccountChangeCoordinator.ets::loadStableSnapshot/shouldWaitForAddedAccount
+  - account-change-coordinator.test.ets::old→new/never-visible/removed
+forbidden:
+  - FirewallPage.ets
+  - Provider 内业务副作用
+acceptance:
+  - old_then_new: query=2, handler=1, publish=1, signature=100,122,123
+  - never_visible: query=6, handler=0, publish=0, success=false
+  - removed: query=1, handler=1, publish=1
+stop:
+  - repeated_failure_without_new_evidence
+  - need_to_modify_forbidden_path
+```
+
+Worker Packet 同时写验证命令和证据目录，不允许 AI 用“我已修复”作为完成条件。
+
+### 怎么做 / 怎么判断 / 不对怎么办
+
+- 怎么做：Planner 从 RFC 生成目标、范围、AC、命令、保护路径和停止条件。
+- 怎么判断：新 Session 不读取历史聊天，也能正确复述目标、边界、失败保持和 Done。
+- 不对怎么办：实现中确实需要越过禁止路径时标 `NEEDS_REPLAN`，先更新 RFC/Story，而不是静默扩大修改面。
+
+### 讲师备注
+
+- 对比一句“修复账号同步问题”和完整 Worker Packet，让学员说出 AI 少猜了哪些事情。
+- 重点讲禁止路径和 stop：这是复杂需求控制范围的实际机制。
+- 要求学员把 AC 写成“输入序列 + 调用次数 + 输出状态”，不能只写“正确等待”“异常处理正常”。这一步直接决定后面能否写出反证旧实现的测试。
+
+### 文档 / 截图
+
+- 文档：`case-materials/mdm/04-Feature与Story拆解.md#Worker-Packet-示例`
+- **【补充素材】**：Worker Packet Markdown 截图。
+
+---
+
+## 第 20 页｜Ralph 不是无限循环，而是“一个 Story、一份外部记忆、一组停止条件”
+
+### PPT 内容
+
+本案例的受控循环：
+
+```text
+取一个 Ready Story
+→ 读取 AGENTS + RFC + Worker Packet + progress
+→ 只在 allowed paths 内执行
+→ 运行该 Story 的测试/检查
+→ Reviewer 对照 AC、Diff、证据
+→ 写回 PASS / FAIL / UNKNOWN 和下一步
+→ 新上下文开始下一 Story
+```
+
+外部记忆：
+
+- RFC：不能重新猜的业务/架构契约。
+- Story：本轮目标和范围。
+- progress：已证明、已否定、下一步。
+- evidence：RED/GREEN、命令输出、设备证据。
+
+一轮 S5 的真实执行脚本：
+
+```text
+1 Read
+  AGENTS.md
+  03-防火墙账号同步RFC.md#核心不变量
+  Worker Packet S5
+
+2 Inspect
+  git show 4b372d0d
+  AccountChangeCoordinator.loadStableSnapshot
+  account-change-coordinator.test.ets
+
+3 Verify
+  python scripts/check_docs_consistency.py
+  hvigorw test --mode module -p product=default -p module=entry@default
+
+4 Review
+  allowed paths 是否越界
+  old→new / never-visible / removed 是否逐条满足
+  是否发现新的 RFC 缺口
+
+5 Write back
+  status / evidence / discovered_gaps / next_story / stop_reason
+```
+
+`progress.yaml` 不写“已优化”“基本完成”，只写可复现事实：
+
+```yaml
+status: PASS_WITH_GAPS
+verified:
+  - stable snapshot protocol UT PASS
+evidence:
+  - test_result.txt: 816/816
+discovered_gaps:
+  - apply-state commit is not atomic
+next_story: S7-APPLY-STATE-ATOMICITY
+device_truth: UNKNOWN
+```
+
+### 怎么做 / 怎么判断 / 不对怎么办
+
+- 怎么做：每轮只领取一个 Ready Story；结束前必须写回状态和证据路径。
+- 怎么判断：新一轮是否产生了新证据、缩小了未知项、没有越界。
+- 不对怎么办：连续两轮无新证据、重复已否定方案或需要改禁止路径时停止自治，进入重规划/人工评审。
+
+### 讲师备注
+
+- 明确标注：当前仓库没有把这套课堂文件命名为正式 Ralph Harness；这里是用真实提交复盘可迁移运行协议。
+- 这样既能讲 Ralph 思想，也不会把培训重构误写成历史事实。
+
+### 现场实操
+
+- 一名学员扮演 Implementer，只能看 Worker Packet 和 allowed paths；另一名学员扮演 Reviewer，只能看 RFC、Diff 和证据。
+- Reviewer 必须给出 `PASS / FAIL / UNKNOWN / NEEDS_REPLAN` 之一，并引用具体 AC 和文件位置。
+- 如果 Reviewer 发现 S7 缺口，正确动作是写入 `discovered_gaps` 和下一 Story，而不是让 Implementer 当场扩大范围。
+
+### 文档 / 截图
+
+- 文档：`case-materials/mdm/05-Ralph迭代运行账.md#Ralph在本案例中的最小循环`
+- **【补充素材】**：Story/progress/evidence 文件树。
+
+---
+
+## 第 21 页｜真实项目经历了九轮收敛，每一轮都暴露下一层未知
+
+### PPT 内容
+
+展示真实 Git 迭代：
+
+| 轮次 | 提交 | 本轮结果 | 新暴露的问题 |
+|---:|---|---|---|
+| R1 | `9ea957d2` | 账号枚举统一 | 还没有事件同步 |
+| R2 | `09209bb9` | 本地清理 | 缺统一协调入口 |
+| R3 | `94ff17e7` | Coordinator/Handler | 跨进程消费不完整 |
+| R4 | `53751b2e` | 发布稳定账号事实 | 规则展示仍需收敛 |
+| R5 | `586880a3` | 规则从快照 reconcile | 发现新增事件时序差 |
+| R6 | `4b372d0d` | 先定义稳定快照 | 等待实现和反证测试 |
+| R7 | `c0c1bc9f` | 等待触发 ID 可见 | custom 签名仍缺 |
+| R8 | `9c7fb186` | custom 保存签名 | 运行时职责仍可收口 |
+| R9 | `cecf6d17` | 收口 RuntimeManager | 进入整体验收 |
+
+时间线下方补一条“代码责任如何逐轮长出来”：
+
+```text
+Provider(getOsAccountLocalIds)
+→ Repository(pruneUnavailableUsers)
+→ Coordinator(schedule/loadSnapshot/dispatch)
+→ EventBus(common event)
+→ ViewModel(refreshForAccountChange)
+→ Stable Gate(loadStableSnapshot)
+→ Custom Signature(saveModeApplyState)
+```
+
+### 怎么做 / 怎么判断 / 不对怎么办
+
+- 怎么做：每轮 progress 只记录事实、失败、证据和下一任务，不写泛泛总结。
+- 怎么判断：下一轮来自上一轮真实暴露的问题，而不是 AI 随机继续优化。
+- 不对怎么办：发现修改跨越多个风险层时建立 checkpoint，拆出新 Story，不把所有修复留在同一 Session。
+
+### 讲师备注
+
+- 这是 MDM 案例的真实感核心：复杂需求不是一次 Prompt 成功，而是九个可追踪的收敛动作。
+- 不逐个念 Diff，但必须点出每轮新增的函数责任。学员要看到“下一轮”来自前一轮调用链中的断点，而不是抽象的持续优化。
+
+### 文档 / 截图
+
+- 文档：`case-materials/mdm/05-Ralph迭代运行账.md#真实提交映射成迭代账`
+- **【补充素材】**：Git log 图形化时间线。
+
+---
+
+## 第 22 页｜文档先行能把一次错误假设变成五分钟后可验证的实现
+
+### PPT 内容
+
+展开 R6 → R7：
+
+```text
+21:58:55  4b372d0d
+docs: 定义账号新增的稳定快照同步
+  - 更新模块设计
+  - 新增专项方案
+  - 冻结等待条件、重试上限和失败保持
+
+22:03:53  c0c1bc9f
+fix: 等待新增账号快照再 reconcile
+  - 修改 Coordinator
+  - 新增先旧后新、一直旧、removed 单读测试
+```
+
+约五分钟不是重点；重点是顺序：先让行为可审查，再让 AI 执行。
+
+把文档规则和实现逐项对齐：
+
+| 文档契约 | 代码位置 | 可执行断言 |
+|---|---|---|
+| 新增账号必须等触发 ID 可见 | `shouldWaitForAddedAccount()` | 第一次旧集合不能 dispatch |
+| 重试有上限 | `MAX_RETRIES=5` + 首次读取 | 总 query 次数为 6 |
+| 超时不能伪成功 | `stable=false → return false` | Handler=0、publish=0 |
+| 删除不等待被删 ID | source 判断仅命中 added | removed query=1 |
+
+再增加一张 Reviewer 缺口卡：
+
+```text
+设计要求：失败不能保存新 signature
+代码事实：saveCurrentMode 失败后仍可能调用 saveModeApplyState
+回滚事实：rollbackToSnapshot 不恢复 last-applied signature
+当前判定：核心协议 PASS；事务原子性 INCOMPLETE
+下一 Story：本地 apply-state 原子提交 + 回滚断言
+```
+
+### 怎么做 / 怎么判断 / 不对怎么办
+
+- 怎么做：行为、状态、失败或验收口径变化时，先更新模块设计/专项 RFC，再改代码和测试。
+- 怎么判断：代码 Diff 每条关键分支都能找到文档契约；测试断言能映射到 AC。
+- 不对怎么办：AI 已写完代码但无法解释对应设计变化时，不补“事后合理化”文档；先重新评审需求、现状和失败语义。
+
+### 讲师备注
+
+- 现场打开两个 `git show --stat`，左边是真实文档文件，右边是 Coordinator 与测试。
+- 再打开测试中的 `[100,122] → [100,122,123]`，让学员看到文档里的时序如何变成可执行断言。
+- 继续看 `runOnce()`：只有稳定后才更新 `previousUserIds`、dispatch、publish。提醒学员不要只检查“多了一个循环”，而要检查过期快照是否仍可能越过业务门。
+- 最后反向找一个“测试尚未覆盖的契约”：模拟 `saveCurrentMode=false、saveModeApplyState=true`，检查新 signature 是否残留。这样学员能看到 Reviewer 不只确认绿色用例，还要从 RFC 不变量生成新的反例。
+
+### 文档 / 截图
+
+- 文档：`case-materials/mdm/05-Ralph迭代运行账.md#展开一轮-R6-R7`
+- 代码手册：`case-materials/mdm/08-代码级调用链与课堂穿刺.md#8-单元测试怎样证明旧实现会失败`
+- **【补充素材】**：两个 commit 的真实详情和测试片段。
+
+---
+
+## 第 23 页｜MCP 把 AI 接到真实环境：本页使用讲师已有材料
+
+### PPT 内容
+
+**【补充素材｜MCP 介绍页】**
+此页正文、示意图和讲解内容由讲师使用已有 MCP 材料替换，本稿不重复编写。
+
+建议本页只完成一个转场：
+
+```text
+前面已经定义“验什么”
+→ MCP / HDC 负责把 Build、Install、Operate、Observe 接到真实环境
+→ 下一页进入 E2E Runner 怎样调用这些能力
+```
+
+### 怎么做 / 怎么判断 / 不对怎么办
+
+- 怎么做：讲师放入已有 MCP 架构、工具清单和演示素材。
+- 怎么判断：学员能区分 MCP 工具执行成功与业务验收成功。
+- 不对怎么办：本页不展开产品历史或完整协议细节，避免挤压后面 E2E 实操时间。
+
+### 讲师备注
+
+- 此页控制在 3–4 分钟，目标只是把 MCP 放到验证链里。
+- 必须保留一句边界：tool success 只证明调用执行，最终业务状态仍需 Assertion/getter/log 判定。
+
+### 文档 / 截图
+
+- **【补充素材】**：讲师已有 MCP 介绍页，整页替换。
+
+---
+
+## 第 24 页｜E2E 第一页：一个 Case JSON 如何走到 MCP/HDC，再留下结果与证据
+
+### PPT 内容
+
+主视觉使用用户提供的 E2E 架构图：
+
+![SecurityTool E2E Runner 架构](C:/Users/mu/AppData/Local/Temp/codex-clipboard-6778939b-3ce1-44ae-baf5-06a00b13fb43.jpg)
+
+图下保留一条真实路由，不再只写三句抽象结论：
+
+```text
+rule_create.json
+→ validate_case_contract
+→ normalize_case_definition(flow/assertions → execution_steps)
+→ E2ERunner.run_case / run_step
+→ SecurityToolFlowExecutor.execute
+→ resolve_operation_binding(entity.create)
+→ template_key=firewall.rule.create.domain
+→ execute_template_action
+→ MCP Driver / Bridge / Backend
+→ AssertionExecutor.assert_text_presence
+→ CaseResult(primary + secondary evidence)
+```
+
+读图结论：Case 描述业务动作；Adapter/Template 决定怎么操作；Driver 只执行；Assertion 和 `result_policy` 才决定 PASS/FAIL/UNKNOWN。
+
+### 现场实操
+
+- 输入：`scripts/e2e/cases/firewall/rule_create.json`。
+- 学员动作：把 `entity.create(domain=firewall, entity=rule, variant=domain)` 展开成 `firewall.rule.create.domain`，再在 `ACTION_TEMPLATES` 中找出 `open_firewall_rules_page` 与 `submit_firewall_rule_form`。
+- 当场产物：一张 `case step → adapter action → driver → assertion → artifact` 路由表。
+
+### 怎么做 / 怎么判断 / 不对怎么办
+
+- 怎么做：先读 Case JSON，再沿 Runner/Adapter/Driver 追到真实工具；不要从 MCP Tool 反推业务用例。
+- 怎么判断：动作和断言分离；MCP/HDC 可替换；每个步骤能找到结果和证据落点。
+- 不对怎么办：工具调用成功但 Assertion 失败时保持用例 FAIL；不要让 Driver 的 success 覆盖业务断言。
+
+### 讲师备注
+
+- 图片尺寸约 1865×382，适合横向铺满页面中部；不要裁掉右侧 `HarmonyOS MCP Tools`，也不要纵向拉伸。当前图仅作结构参考，正式页应重绘执行泳道与证据泳道。
+- 这页讲架构与路由，不重复讲 MCP 产品能力。
+- 如果现场没有设备，仍然可以完成 Case JSON 到 Driver/Assertion 的静态走读。
+- 现场至少打开五个真实位置：`rule_create.json`、`normalizer.py`、`runner.py#run_step`、`operations.py#resolve_operation_binding`、`action_templates.py`。只展示目录树不算代码穿刺。
+
+### 文档 / 截图
+
+- 正式媒体：`harmonyos-sdd-workshop-media/e2e/e2e-runner-current-reference.jpg`
+- 真实代码：SecurityTool `scripts/e2e/core/`、`adapters/security_tool/`、`drivers/`、`reporters/`。
+- 代码手册：`case-materials/mdm/08-代码级调用链与课堂穿刺.md#9-e2e从-case-json-到-mcphdc-和报告的真实代码链`
+
+---
+
+## 第 25 页｜E2E 第二页：现场跑一个用例，再判断它证明了什么、还缺什么
+
+### PPT 内容
+
+建议使用真实用例 `FW-STATUS-001`：
+
+```text
+launch_app
+→ reset_previous_page / relaunch_app
+→ open_firewall_page
+→ toggle_firewall(require_auth_prompt=true)
+→ assert “公共网络模式”仍可见
+→ reporter 输出 result + artifacts
+```
+
+用例状态的代码级判定：
+
+```text
+flow_action PASS/FAIL/UNKNOWN
+→ assertion_action PASS/FAIL/UNKNOWN
+→ FAIL：记录 failure_stage，默认 stop_on_failure
+→ UNKNOWN：保留 UNKNOWN；allow_unknown=false 时升级 FAIL
+→ evidence：primary_evidence + secondary_evidence
+→ validate_result_contract(CaseResult)
+```
+
+现场执行分两档：
+
+**有设备**
+
+```bash
+python scripts/e2e/tools/validate_test_assets.py
+python scripts/e2e/run_e2e.py --adapter security_tool --case scripts/e2e/cases/firewall/status_toggle.json
+```
+
+**无设备**
+
+```text
+运行测试资产校验
+→ 静态展开 action plan / resolver
+→ 人工给出预期 Tool、Assertion、Artifact
+→ 设备相关结果标 UNKNOWN
+```
+
+### 现场实操
+
+- 小组读取生成的 JSON/Markdown 报告，给出 `PASS / FAIL / UNKNOWN`。
+- 必须回答：本用例证明了页面操作链，还是证明了系统防火墙 policy？
+- 当场产物：一份 E2E 结果卡和下一条缺失证据。
+
+### 怎么做 / 怎么判断 / 不对怎么办
+
+- 怎么做：先校验资产，再运行 Case，最后读取 Assertion、日志、截图和系统 getter。
+- 怎么判断：当前 `FW-STATUS-001` 主要证明认证后页面回到稳定状态；其 notes 已说明未来仍需 service-backed getter，因此不能单独证明系统 policy。
+- 不对怎么办：页面绿但 getter 缺失时标 `UNKNOWN/INCOMPLETE`；下一轮领取设备业务验收 Story，不继续扩业务代码。
+
+### 讲师备注
+
+- 预留第二张真实材料：Case JSON、运行命令、报告和截图，讲师可用之前页面直接替换。
+- 可在页脚保留本轮基线：docs PASS、E2E assets PASS、UT 816/816；设备/业务门未执行时 overall 仍为 INCOMPLETE。
+- 最后让学员投票：Runner 成功、页面可见、系统 getter 未采集，是否能宣布完成？正确答案不是 PASS。
+- 打开 `AssertionExecutor.execute()` 的 `assert_text_presence` 分支：Backend 不能判定返回 UNKNOWN；文本状态与预期不符返回 FAIL；只有相符才 PASS。让学员看到三态不是课件概念，而是 Runner 的真实分支。
+- 如果演示 `FW-RULE-001`，明确列表出现 `www.baidu.com` 只给 UI E2E PASS；缺少 `getNetFirewallRules(userId, ...)` 的逐字段 readback 时，系统规则结论仍为 UNKNOWN。
+
+### 文档 / 截图
+
+- 真实用例：SecurityTool `scripts/e2e/cases/firewall/status_toggle.json`
+- 验收边界：`case-materials/mdm/06-测试验收报告.md#E2E与业务事实的边界`
+- 代码手册：`case-materials/mdm/08-代码级调用链与课堂穿刺.md#9-e2e从-case-json-到-mcphdc-和报告的真实代码链`
+- **【补充素材】**：讲师已有 E2E 执行页、真实报告、截图和系统状态回读。
 
 ---
 
