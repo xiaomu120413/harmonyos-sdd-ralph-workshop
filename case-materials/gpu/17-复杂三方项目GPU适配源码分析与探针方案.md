@@ -235,3 +235,188 @@ flowchart LR
 - 第 38 页保留一张大图/视频封面；后续有更清晰的流畅播放截图时直接替换，不改叙事。
 
 > 复杂三方项目的适配，不是先写平台代码，而是先沿参考实现追到稳定契约；再用平台探针证明最危险的互操作边界；最后把已证实的链路冻结成方案，按最小可验证增量迭代。
+
+## 11. 探针必须留下可审阅记录
+
+探针不是一句“调研完成”。每个探针都使用同一份记录结构，让下一轮 AI 只读结论和未关闭问题，不必重新扫描整个仓库。
+
+```text
+Probe ID:
+Question:          本探针只回答哪一个问题
+Entry / Exit:      从哪个函数开始，追到哪个函数即停止
+Read Set:          实际读取的文件和符号
+Observed Contract: 输入、输出、owner、生命周期、失败语义
+Evidence:          path::symbol:line + 日志/截图/命令
+Verdict:           CONTINUE / REPLAN / STOP
+Unknowns:          尚未关闭的问题
+Next Command:      下一条只读或验证命令
+```
+
+### Probe-Linux-01
+
+| 字段 | 内容 |
+|---|---|
+| Question | Linux/X11 在什么扩展点接收 RDPGFX 帧，并在什么边界提交屏幕更新？ |
+| Entry / Exit | `rdpgfx_recv_wire_to_surface_1_pdu` → `xf_OutputUpdate` |
+| Read Set | `rdpgfx_main.c`、`rdpgfx_codec.c`、`libfreerdp/gdi/gfx.c`、`client/X11/xf_gfx.c` |
+| Contract | `SurfaceCommand` 消费 surface command；`EndFrame` 触发 `UpdateSurfaces`；平台后端负责最终显示 |
+| Verdict | `CONTINUE`：HarmonyOS 实现同一回调契约，不修改 RDPGFX PDU 解析 |
+| Unknowns | surface 生命周期、硬解输出格式、native buffer 导入、owner 切换 |
+| Next | 启动 `Probe-OHOS-01`，只验证一帧 XComponent → AVCodec → EGL → EndFrame |
+
+### Probe-OHOS-01
+
+| 字段 | 内容 |
+|---|---|
+| Question | HarmonyOS 能否在不破坏原 GDI 路径的前提下，把一帧 AVC420 硬解输出显示到 XComponent？ |
+| Entry / Exit | `OnXComponentSurfaceCreated` / `OhosRdpgfxAvc420SurfaceCommandCallback` → `PresentQueuedUpdate → PresentComposite → eglSwapBuffers` |
+| Read Set | `xcomponent_native_host.cpp`、`native_bridge_context.cpp`、`rdpgfx_pipeline.cpp`、`ohos_rdpgfx_bridge.c`、`ohos_rdpgfx_surface.c`、`avc420_gpu_compositor_internal.cpp` |
+| Contract | target ready 后才建链；candidate 未消费必须调用 original；decode/composite 只写 pending；matched EndFrame 才 present |
+| Verdict | `CONTINUE`：五个互操作 Gate 均存在明确源码实现，允许形成工程方案 |
+| Unknowns | 当前版本同 run 的 before/after、resize/后台/重连长稳、AVC444 完整回归 |
+
+## 12. 适配缝隙的执行语义
+
+### 12.1 Hook 必须可逆
+
+源码依据：`client/OHOS/ohos_rdpgfx_bridge.c:569-606,609-666`。
+
+```cpp
+attach(gfx, config):
+    original.startFrame     = gfx->StartFrame
+    original.endFrame       = gfx->EndFrame
+    original.surfaceCommand = gfx->SurfaceCommand
+    gfx->StartFrame     = ohos_start_frame
+    gfx->EndFrame       = ohos_end_frame
+    gfx->SurfaceCommand = ohos_surface_command
+
+detach(gfx):
+    gfx->StartFrame     = original.startFrame
+    gfx->EndFrame       = original.endFrame
+    gfx->SurfaceCommand = original.surfaceCommand
+```
+
+验收不是“attach 返回成功”，而是 attach 前后的函数指针、detach 后的恢复结果和目标 HAP 中的符号身份都能被记录。
+
+### 12.2 Candidate 只有真正消费后才能截断旧路径
+
+源码依据：`client/OHOS/ohos_rdpgfx_surface.c:112-138`。
+
+```cpp
+surfaceCommand(command):
+    record(command)
+    if avc420Candidate(command).consumed:
+        return avc420Candidate.status
+    if avc444Candidate(command).consumed:
+        return avc444Candidate.status
+    return originalSurfaceCommand(command)
+```
+
+`consumed` 必须同时意味着 codec/surface/target 合法、decoder ready、native output 合法且 GPU import/composite 成功。缺一项都不能把 command 宣布为已消费。
+
+### 12.3 Decode 与 Present 必须分离
+
+源码依据：`avc420_gpu_compositor_internal.cpp:2254-2289,2292-2393`。
+
+```cpp
+onSurfaceCommand(command):
+    frame = hardwareDecode(command.stream, command.pts)
+    texture = importNativeBuffer(frame.nativeBuffer)
+    compositeDirtyRects(texture, command.regionRects, retainedFbo)
+    pending = { valid: true, frameId: command.frameId }
+    return CONSUMED
+
+onEndFrame(endFrame):
+    if !pending.valid: return NOT_HANDLED
+    if !matchedFrame || endFrame.frameId != pending.frameId:
+        clear(pending); recordMismatch(); return outputActive
+    if !surfaceTarget.ready:
+        preserveOrClearAccordingToOwnerPolicy(); return outputActive
+    presentComposite(); clear(pending); return HANDLED
+```
+
+如果 SurfaceCommand 内直接 swap，局部更新、帧顺序和 GDI 背景合成都失去统一提交边界。这也是历史上“立即 present”修改没有解决黑屏后必须回退的原因。
+
+### 12.4 Surface 生命周期驱动 owner 回收
+
+源码依据：`native_bridge_context.cpp:284-323`。
+
+```text
+Created   → target.ready=true  → 更新 RDPGFX target → 允许预热
+Changed   → generation++       → 拒绝旧 target      → 重新确保 renderer
+Destroyed → target.ready=false → owner GPU→GDI     → 停止向旧 window swap
+```
+
+## 13. 候选方案对比
+
+| 候选 | 优点 | 关键风险 | 结论 |
+|---|---|---|---|
+| 直接修改 `rdpgfx_main/codec` | 入口直接 | 污染通用协议层，平台耦合和回归面最大 | 拒绝 |
+| 在 GDI RGBA 后上传纹理 | 改动较小 | 仍保留软件解码、格式转换和 CPU 拷贝 | 仅作过渡观测 |
+| Hook 回调 + AVCodec native output + EGL import | 保留三方协议资产，减少 CPU 中转，可回退 | owner、EndFrame、生命周期复杂 | 采用 |
+| 绕开 FreeRDP 自建 RDPGFX pipeline | 自由度高 | 重复实现协议、surface 和 frame 状态机 | 拒绝 |
+
+选择回调 Hook 方案的依据是：改动边界可控、原路径可达、关键假设能分别穿刺、最终实现可按 FreeRDP 帧语义验收。
+
+## 14. 五个 Gate 的输入、观测与停止条件
+
+| Gate | 输入 | 必须观测 | PASS | FAIL 后动作 |
+|---|---|---|---|---|
+| G1 Surface | XComponent NodeContent | created/changed/destroyed、window、size、generation | target 非空且 generation 一致 | 停在 surface 层，不启动 decoder |
+| G2 Decoder | AVC420 SPS/PPS + sample | decoder name、category、configure/prepare/start rc | 明确选择 HARDWARE 且启动成功 | 回退 GDI；记录设备/格式能力 |
+| G3 Output | 带 PTS 的 input sample | output PTS、buffer、format/width/height/stride | 对应 output 且 NativeBuffer 非空 | 禁止 mapped-buffer 猜测；回退 |
+| G4 Import | OH_NativeBuffer | NativeWindowBuffer、EGLImage、OES target、GL/EGL error | import 与 dirty composite 成功 | `consumed=false`，保留 original GDI |
+| G5 Frame | pendingFrameId + EndFrame | active/pending/endFrameId、owner、swap result | frameId 匹配且单 owner present | 丢弃 pending；记录 mismatch；不得提前 swap |
+
+## 15. 一帧日志字段
+
+建议把一帧的证据收敛为一条结构化记录：
+
+```text
+runId=<build+device+scene> sessionId=<rdp-session>
+generation=<surface-generation> codec=AVC420 surfaceId=<id>
+frameId=<id> pts=<input/output pts> decoder=<hardware decoder name>
+native=<format,width,height,stride> import=<ok|fail:reason>
+owner=<gdi|avc420_gpu|avc444_gpu> pending=<yes|no>
+endFrame=<id> present=<ok|skip|fail:reason>
+fallback=<none|original_gdi:reason> queueDepth=<n>
+commandGapUs=<n> endFrameGapUs=<n> presentGapUs=<n>
+```
+
+判断第一异常点时，固定按 `input → decoder → output → native format → import → pending → EndFrame → target → swap` 读取。禁止把不同 runId 的视频、日志和性能数据拼成一个结论。
+
+## 16. 源码审阅检查表
+
+### Bridge
+
+- 覆盖回调前是否保存 original？detach 是否恢复全部回调？
+- candidate 返回 not-ready/not-consumed 时是否只调用一次 original？
+- `consumed=true` 是否发生在 native import 和 composite 成功之后？
+- 日志是否区分 disabled、not-ready、not-consumed、consumed、fallback？
+
+### Decoder / Buffer
+
+- 是否查询 `HARDWARE` capability 并记录实际 decoder name？
+- SPS/PPS、关键帧和普通帧输入顺序是否保留？
+- input/output 是否通过 PTS 或等价标识关联？
+- 是否拒绝空 NativeBuffer、未知 format 和非法 stride？
+- output buffer 的 release/unreference 是否只有一个 owner？
+
+### EGL / Composite
+
+- `OH_NativeBuffer → NativeWindowBuffer → EGLImage → OES` 每一步是否检查错误？
+- external OES texture 是否使用匹配 shader？
+- dirty rect 是否只更新有效区域并保留其他区域？
+- EGLImage、texture、FBO、surface 是否可以重复释放？
+
+### Frame / Lifecycle
+
+- 是否只在 matched EndFrame present？
+- mismatch 的 pending 处理策略是否明确？
+- resize/后台/重连后是否拒绝 stale generation？
+- surface destroy 是否把 GPU owner 归还 GDI？
+- 同一帧是否可能同时被 GDI 和 GPU 写入目标窗口？
+
+## 17. 完整实施任务包
+
+方案文档回答“为什么这样做”；实际开发使用 `case-materials/gpu/18-GPU适配实施任务包与验收点.md`。该文档把方案展开成 G0–G8 Story，逐轮列出 Read First、Allowed、伪代码、AC、故障注入、证据和 Stop 条件。

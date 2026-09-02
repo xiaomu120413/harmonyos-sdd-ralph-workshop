@@ -1724,7 +1724,7 @@ flowchart LR
 
 <!-- type: LAB; section: CASE2_STORY; time: 3m -->
 
-直接展示 `case-materials/gpu/17-复杂三方项目GPU适配源码分析与探针方案.md` 第 7 节：
+左侧展示 `case-materials/gpu/17-复杂三方项目GPU适配源码分析与探针方案.md` 的方案推导与十步路径，右侧展示 `case-materials/gpu/18-GPU适配实施任务包与验收点.md` 的任务入口。先回答“为什么这样改”，再回答“下一轮 AI 具体改什么”：
 
 1. 建立 `ContentSlot → Native XComponent → OHNativeWindow`；
 2. 保存 original callbacks，安装 OHOS Bridge；
@@ -1737,13 +1737,20 @@ flowchart LR
 9. 首帧成功后切 owner，失败回 original；
 10. 补齐 frameId/PTS/import/present/fallback/gap 日志。
 
-这一页要把真实步骤文档贴出来，让观众看见方案如何从源码推导成执行顺序。
+这一页不只放步骤摘要，还要保留 `path::symbol`、candidate gate、original fallback 和 matched EndFrame 等源码约束，让观众看见执行顺序是由代码证据推导出来的。
 
 ---
 
 ## 第 36 页｜迭代开发：每轮只增加一个已验证能力
 
 <!-- type: LAB; section: CASE2_WORKER_PACKET; time: 3m -->
+
+直接截取 `case-materials/gpu/18-GPU适配实施任务包与验收点.md`，并用统一 Worker Packet 说明每轮怎样约束 AI：
+
+```text
+Read First → RED/基线 → 只开放本轮文件 → 实现伪代码
+→ 逐条 AC → 失败注入 → 保存证据 → 更新 Progress Ledger → Exit Gate
+```
 
 | 迭代 | 唯一目标 | 验收点 |
 |---|---|---|
@@ -1756,6 +1763,8 @@ flowchart LR
 | I6 | resize/reconnect/fallback | generation 和 owner 可恢复 |
 
 探针通过后才生成下一轮计划；不要一次把 decoder、队列、生命周期、AVC444 和性能优化全部交给 AI。
+
+课堂重点展示 G3（Bridge 可逆）、G4（硬解与 NativeBuffer）、G6（EndFrame/owner/fallback）三张任务卡。任一 AC 或证据位不闭合，后续 Story 保持 `BLOCKED`。
 
 ---
 
