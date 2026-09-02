@@ -12,6 +12,7 @@
 | 完整套件 | `8 PASS / 0 FAIL / 0 UNKNOWN` |
 | 执行时间 | 2026-09-02 10:51:40—11:01:24（Asia/Shanghai） |
 | 原始结果 | [`02-final-pass`](./e2e-runs/2026-09-02-peripheral-real/02-final-pass/) |
+| 测试资产看板 | 44 条总用例；外设 8 条均为 `implemented + PASS + partial` |
 
 | Case | Status | 关键步骤 | 结论边界 |
 |---|---|---|---|
@@ -42,6 +43,12 @@
 ![外设管理黑白名单最终状态](./e2e-runs/2026-09-02-peripheral-real/02-final-pass/peripheral-final-state.jpeg)
 
 截图显示 `Kingston DataTraveler 3.0` 已被识别，USB 默认策略和设备当前策略均回显为“允许接入”。
+
+## 测试资产看板为什么直接打开没有数据
+
+`test-assets-dashboard.html` 会请求 `/api/catalog`，必须由 `python scripts/e2e/tools/test_assets_server.py` 提供接口。用 `file://` 直接打开只有页面壳，没有 API 数据；应访问 `http://127.0.0.1:8765/`。
+
+看板数据快照已补到 [`dashboard-data`](./e2e-runs/2026-09-02-peripheral-real/dashboard-data/)：当前共 44 条正式用例，外设 8 条全部是 `PASS`，但自动化桥接覆盖仍为 `partial`。这正好可以用于课堂区分“用例跑过”和“证据链完全覆盖”。
 
 ## 共同证据边界
 

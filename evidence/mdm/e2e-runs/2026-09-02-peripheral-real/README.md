@@ -37,6 +37,30 @@ $env:HARMONYOS_E2E_MCP_BACKEND_MODULE="scripts\e2e\bridges\real_harmonyos_mcp_ba
 python scripts/e2e/run_e2e.py --adapter security_tool --suite peripheral --device-id 3QC0124C11000711 --output-dir <run-dir>
 ```
 
+### 测试资产看板数据补录
+
+项目里的 `docs/04-测试文档/e2e测试/test-assets-dashboard.html` 不是独立静态报告。页面初始化时会请求 `/api/catalog`，所以用 `file://` 直接打开时没有对应的 HTTP API，页面会显示不出数据。
+
+正确入口是先在 `security_tool` 根目录启动配套服务，再访问服务地址：
+
+```powershell
+python scripts/e2e/tools/test_assets_server.py
+```
+
+```text
+http://127.0.0.1:8765/
+```
+
+2026-09-02 的看板数据快照已归档到 [`dashboard-data`](./dashboard-data/)：
+
+- 用例总数：44；状态均为 `implemented`；最近结果均为 `PASS`；
+- 外设模块：8 条，8 条均为 `implemented + PASS`；
+- 外设 8 条的 `bridge_coverage_status` 均为 `partial`；
+- 全仓桥接覆盖聚合：`24 covered / 19 partial / 1 missing`；
+- 资产校验：`0 error / 0 warning`。
+
+这里的 `PASS` 是用例结果索引，`partial` 是自动化动作覆盖程度，两者不能混为一谈。页面中“默认这 17 条是仓库里已有的正式用例”是硬编码旧文案，当前真实目录已经是 44 条。
+
 ## 3. 第一次真实运行：8 FAIL
 
 - 时间：2026-09-02 10:45:24—10:48:30（Asia/Shanghai）
@@ -95,6 +119,7 @@ UI 树已经找到外设管理侧栏节点和坐标，但点击结果为空。�
 2026-09-02-peripheral-real/
 ├─ README.md
 ├─ cases/                 # 本次执行的 8 份 case JSON 快照
+├─ dashboard-data/        # 看板使用的 catalog、coverage、validation 快照
 ├─ 01-initial-fail/       # 8 份失败结果、suite summary、console log
 └─ 02-final-pass/         # 8 份通过结果、suite summary、console log、真机截图
 ```
