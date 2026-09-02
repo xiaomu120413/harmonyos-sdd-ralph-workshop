@@ -7,7 +7,7 @@
 | 项目 | 值 |
 |---|---|
 | SecurityTool 基线提交 | `714d68e2038ef6570b82dee866697a764329b273` |
-| E2E 桥接修复提交 | `836ddffd8fdea12c15edbcf5f4325c05f5b238b9` |
+| E2E 桥接修复提交 | `a3f2023e60fbaecd5260b3ec4d179361866fecc7` |
 | 分支 | `codex/log-import-large-archive` |
 | 应用 | `com.huawei.securitytool` / `1.0.7` / `1000007` |
 | 设备 | `HAD-W32` / `3QC0124C11000711` |

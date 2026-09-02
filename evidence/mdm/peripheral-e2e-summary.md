@@ -26,7 +26,7 @@
 
 ## 真实问题处理证据
 
-第一次运行是 `0 PASS / 8 FAIL / 0 UNKNOWN`，8 条都失败在 `open_peripheral_manage`。UI 树已找到侧栏节点，但桥接调用的是旧 MCP 动作名；本机 `harmonyos-dev-mcp 0.9.1` 已改为新动作名。桥接兼容修复提交为 `836ddffd8fdea12c15edbcf5f4325c05f5b238b9`。
+第一次运行是 `0 PASS / 8 FAIL / 0 UNKNOWN`，8 条都失败在 `open_peripheral_manage`。UI 树已找到侧栏节点，但桥接调用的是旧 MCP 动作名；本机 `harmonyos-dev-mcp 0.9.1` 已改为新动作名。桥接兼容修复提交为 `a3f2023e60fbaecd5260b3ec4d179361866fecc7`。
 
 这组证据适合课堂讲清楚：
 
