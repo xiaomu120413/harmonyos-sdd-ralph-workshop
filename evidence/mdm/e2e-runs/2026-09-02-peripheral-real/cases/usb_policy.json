@@ -1,0 +1,62 @@
+{
+  "case_id": "PER-USB-001",
+  "case_name": "Peripheral USB Storage Policy",
+  "module": "peripheral",
+  "flow": [
+    {
+      "name": "launch_app",
+      "ref": "app.launch",
+      "params": {
+        "timeout_sec": 20
+      }
+    },
+    {
+      "name": "open_peripheral_manage",
+      "ref": "navigation.open_page",
+      "params": {
+        "page_id": "peripheral-manage"
+      }
+    },
+    {
+      "name": "open_peripheral_interface_tab",
+      "ref": "ui.click_text",
+      "params": {
+        "text": "接口管控",
+        "bundle_name": "{{bundle_name}}"
+      }
+    },
+    {
+      "name": "update_usb_storage_policy",
+      "ref": "entity.update",
+      "params": {
+        "domain": "peripheral",
+        "entity": "usb_storage_policy",
+        "data": {
+          "policy": "read_only"
+        }
+      }
+    }
+  ],
+  "assertions": [
+    {
+      "name": "peripheral_usb_storage_visible",
+      "type": "assert_text_presence",
+      "value": "USB 存储设备",
+      "level": "primary",
+      "params": {
+        "bundle_name": "{{bundle_name}}",
+        "present": true,
+        "timeout_ms": 2000,
+        "interval_ms": 250
+      }
+    }
+  ],
+  "result_policy": {
+    "allow_unknown": true,
+    "stop_on_failure": true
+  },
+  "notes": [
+    "Current primary evidence confirms the flow stays within the expected interface-control context.",
+    "Getter-backed USB storage policy assertion will be added later."
+  ]
+}

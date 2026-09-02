@@ -1,0 +1,63 @@
+{
+  "case_id": "PER-IF-001",
+  "case_name": "Peripheral Interface Panel Visible",
+  "module": "peripheral",
+  "flow": [
+    {
+      "name": "launch_app",
+      "ref": "app.launch",
+      "params": {
+        "timeout_sec": 20
+      }
+    },
+    {
+      "name": "open_peripheral_manage",
+      "ref": "navigation.open_page",
+      "params": {
+        "page_id": "peripheral-manage"
+      }
+    },
+    {
+      "name": "open_interface_tab",
+      "ref": "ui.click_text",
+      "params": {
+        "text": "接口管控",
+        "bundle_name": "{{bundle_name}}"
+      }
+    }
+  ],
+  "assertions": [
+    {
+      "name": "peripheral_interface_page_visible",
+      "type": "assert_text_presence",
+      "value": "接口管控",
+      "level": "primary",
+      "params": {
+        "bundle_name": "{{bundle_name}}",
+        "present": true,
+        "timeout_ms": 2000,
+        "interval_ms": 250
+      }
+    },
+    {
+      "name": "usb_interface_row_visible",
+      "type": "assert_text_presence",
+      "value": "USB 接口",
+      "level": "secondary",
+      "params": {
+        "bundle_name": "{{bundle_name}}",
+        "present": true,
+        "timeout_ms": 2000,
+        "interval_ms": 250
+      }
+    }
+  ],
+  "result_policy": {
+    "allow_unknown": true,
+    "stop_on_failure": true
+  },
+  "notes": [
+    "This keeps the interface panel coverage on stable, visible controls.",
+    "The real USB policy roundtrip is covered separately by PER-IF-002 so this case does not disable HDC during a suite run."
+  ]
+}

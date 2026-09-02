@@ -1,0 +1,51 @@
+{
+  "case_id": "PER-BL-USB-001",
+  "case_name": "Peripheral Policy Tab Restore Entry",
+  "module": "peripheral",
+  "flow": [
+    {
+      "name": "launch_app",
+      "ref": "app.launch",
+      "params": {
+        "timeout_sec": 20
+      }
+    },
+    {
+      "name": "open_peripheral_manage",
+      "ref": "navigation.open_page",
+      "params": {
+        "page_id": "peripheral-manage"
+      }
+    },
+    {
+      "name": "open_peripheral_policy_tab",
+      "ref": "ui.click_text",
+      "params": {
+        "text": "黑白名单",
+        "bundle_name": "{{bundle_name}}"
+      }
+    }
+  ],
+  "assertions": [
+    {
+      "name": "peripheral_policy_restore_visible",
+      "type": "assert_text_presence",
+      "value": "还原策略",
+      "level": "primary",
+      "params": {
+        "bundle_name": "{{bundle_name}}",
+        "present": true,
+        "timeout_ms": 2000,
+        "interval_ms": 250
+      }
+    }
+  ],
+  "result_policy": {
+    "allow_unknown": true,
+    "stop_on_failure": true
+  },
+  "notes": [
+    "Current app version exposes policy reset in the 黑白名单 tab toolbar.",
+    "This case verifies the policy tab can be opened and its restore entry is visible."
+  ]
+}

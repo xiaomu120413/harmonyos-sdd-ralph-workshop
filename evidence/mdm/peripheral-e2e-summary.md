@@ -1,37 +1,50 @@
 # 外设管理 E2E 结果摘要
 
-源：`C:\Users\mu\Desktop\code\security_tool\scripts\e2e\results\PER-*.json`
+最新真实运行：2026-09-02。完整归档见 [`e2e-runs/2026-09-02-peripheral-real`](./e2e-runs/2026-09-02-peripheral-real/README.md)，原始 JSON 是结论真源。
 
-提取时间：2026-09-01。以下仅转录结果中的状态、关键步骤与证据边界，原始 JSON 是真源。
+## 最终结论
+
+| 项目 | 结果 |
+|---|---|
+| 真实设备 | `HAD-W32` |
+| 应用 | `com.huawei.securitytool 1.0.7` |
+| 执行后端 | `real_bridge` |
+| 完整套件 | `8 PASS / 0 FAIL / 0 UNKNOWN` |
+| 执行时间 | 2026-09-02 10:51:40—11:01:24（Asia/Shanghai） |
+| 原始结果 | [`02-final-pass`](./e2e-runs/2026-09-02-peripheral-real/02-final-pass/) |
 
 | Case | Status | 关键步骤 | 结论边界 |
 |---|---|---|---|
-| PER-IF-001 | PASS | launch → peripheral page → interface tab → USB 接口可见 | 页面/文本可见 |
-| PER-IF-002 | PASS | launch → interface tab → USB 选择器切换 → 恢复 → 行仍可见 | UI 操作往返，不等于系统状态 |
-| PER-POL-001 | PASS | launch → policy tab → “还原策略”可见 | 入口可见 |
-| PER-POLICY-002 | PASS | storage read-only → restore allow → 行与 allow 可见 | UI 操作与回显 |
-| PER-REC-001 | PASS | record tab → “导出记录”可见 | 记录页入口可见 |
-| PER-WL-USB-001 | PASS | policy tab → “导出名单”可见 | 名单页入口可见 |
-| PER-BL-USB-001 | FAIL | navigation UNKNOWN → tab UNKNOWN → “还原策略”断言 FAIL | 旧运行的页面驱动失败，不直接等于产品缺陷 |
+| `PER-IF-001` | PASS | launch → 外设管理 → 接口管控 → USB 接口可见 | 页面/文本可见 |
+| `PER-IF-002` | PASS | 接口管控 → USB 选择器交互 → 恢复 → 行仍可见 | UI 操作与页面回显 |
+| `PER-REC-001` | PASS | 设备连接记录 → 导出记录可见 | 记录页入口可见 |
+| `PER-POL-001` | PASS | 黑白名单 → 还原策略可见 | 策略页入口可见 |
+| `PER-POLICY-002` | PASS | 存储只读交互 → 恢复允许 → 行与策略可见 | UI 操作与页面回显 |
+| `PER-USB-001` | PASS | 黑白名单 → USB 默认策略选项可见 | 默认策略入口可见 |
+| `PER-WL-USB-001` | PASS | 黑白名单 → 导出名单可见 | 名单页入口可见 |
+| `PER-BL-USB-001` | PASS | 黑白名单 → 还原策略可见 | 策略页入口可见 |
 
-## FAIL → PASS 的课堂用法
+## 真实问题处理证据
 
-`PER-BL-USB-001` 的 primary evidence 是 `peripheral_policy_restore_visible` 断言失败；上游导航和 Tab 点击已经是 UNKNOWN。后续 `PER-POL-001` 中相同目标入口全部 PASS。
+第一次运行是 `0 PASS / 8 FAIL / 0 UNKNOWN`，8 条都失败在 `open_peripheral_manage`。UI 树已找到侧栏节点，但桥接调用的是旧 MCP 动作名；本机 `harmonyos-dev-mcp 0.9.1` 已改为新动作名。桥接兼容修复提交为 `836ddffd8fdea12c15edbcf5f4325c05f5b238b9`。
 
-这组证据用于说明：
+这组证据适合课堂讲清楚：
 
-1. 失败报告必须保留；
-2. 先判断失败发生在驱动、环境还是业务；
-3. 后续 PASS 是新证据，不应覆盖或删除旧 FAIL；
-4. 两份结果都没有系统 MDM readback，不能证明还原动作真实清理了系统策略。
+1. 失败首先说明“验收链路没有闭环”，不自动等于产品缺陷；
+2. 要从 failure stage、UI 树、MCP 工具清单逐层定位；
+3. 先单条复验，再跑完整回归；
+4. 最终 PASS 不能覆盖第一次 FAIL，两轮原始证据都要保留。
 
-## 共同缺口
+第一次失败证据见 [`01-initial-fail`](./e2e-runs/2026-09-02-peripheral-real/01-initial-fail/)。
 
-所有这些 E2E JSON 的 `artifacts` 均为空。课件可以引用 step evidence 和 UI tree，但不能声称已有自动录屏或系统策略截图。
+## 真机截图
 
-补齐方向：
+![外设管理黑白名单最终状态](./e2e-runs/2026-09-02-peripheral-real/02-final-pass/peripheral-final-state.jpeg)
 
-- 每次运行绑定 runId、commit、device、HAP hash；
-- 操作前后读取 global USB、storage policy、disallowed type；
-- 录制 USB 实物插拔/可用性；
-- 将截图、视频、readback JSON 写入 artifacts。
+截图显示 `Kingston DataTraveler 3.0` 已被识别，USB 默认策略和设备当前策略均回显为“允许接入”。
+
+## 共同证据边界
+
+本轮证明了真实设备上的 UI 流程、策略交互和页面回显；还没有补齐 USB 物理可用性视频、MDM 系统 readback、重启持久化和三层策略冲突矩阵。因此不能仅凭这 8 条 PASS 宣称“系统层强制策略全部验收完成”。
+
+待补素材已在完整归档中按 `[需用户补充]` 标记。
