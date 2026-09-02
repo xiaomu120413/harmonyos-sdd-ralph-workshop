@@ -1578,7 +1578,7 @@ flowchart LR
 - 真源：`case-materials/gpu/14-GPU案例第28-38页详细讲稿与文档证据.md`
 - 输入：`01-问题与基线.md`、`00-证据状态总表.md`
 - 场景图：`freerdp-stutter-scenario.jpeg`
-- 待补：`GPU-VIDEO-BEFORE`、`GPU-PATH-BEFORE`、`GPU-PERF-A-B`
+- **需要讲师补充 U-GPU-01**：`gpu-u01-before.mp4`、`gpu-u01-software-path.log`、`gpu-u01-before-metrics.csv` 与同 run identity；精确采集条件见 `case-materials/gpu/15-用户补充素材清单.md`。
 
 ---
 
@@ -1719,6 +1719,8 @@ flowchart LR
 
 生成链：ADR Evidence Gate → AI 倒推 SP-01～05 → Human 冻结“一帧 + fallback” → verdict 决定 CONTINUE/REPLAN/STOP。当前播放素材未绑定同 run decoder/trace/fallback，完整 Spike 仍为 `PENDING`。
 
+**需要讲师补充 U-GPU-02/03**：同 run 的 hardware decoder 路径、单帧 output→owner→matched EndFrame trace，以及故障注入后 original GDI 回退视频/日志。缺任一项都不宣布穿刺 PASS。
+
 ---
 
 ## 第 34 页｜穿刺后重新计划：只把已证实边界变成开发输入
@@ -1849,6 +1851,8 @@ Stop → Preserve → Locate → Falsify → Repair → Replay
 
 黑屏视频可用于练方法，但未绑定同 run frame trace，不能宣称根因已经确认。
 
+**需要讲师补充 U-GPU-06**：选一条真实问题，保留 last-good、first-abnormal、唯一 probe、最小修复与 replay，并提交 ordered trace 和 Progress Ledger。
+
 ---
 
 ## 第 38 页｜工程验收：路径、画面、性能、回退和长稳同时闭合
@@ -1878,6 +1882,8 @@ commit + package hash + runId + device + codec + scene
 ```
 
 源码、方案、Story 是 `REPO FACT`；播放/黑屏录屏是 `MEDIA FACT / UNBOUND`。硬解、同帧、fallback、A/B 与长稳未齐时，最终只能是 `NOT YET`。
+
+**需要讲师补充 U-GPU-01～05**：before、after、硬解同帧 trace、故障回退、性能 A/B、生命周期与 soak。文件名、采集条件和对应验收点统一见 `case-materials/gpu/15-用户补充素材清单.md`。
 
 ---
 
