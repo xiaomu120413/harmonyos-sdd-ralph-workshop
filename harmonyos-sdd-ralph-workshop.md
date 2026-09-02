@@ -1552,338 +1552,250 @@ result: PENDING
 
 ---
 
-## 第 28 页｜怎样证明远控视频的卡顿路径已经被替换
+## 第 28 页｜背景：双向远控已可用，主控视频链仍走 CPU
 
 <!-- type: CLAIM; section: CASE2_CONTEXT; time: 2m -->
 
-### 本页问题
+### 产品背景
 
-原始需求不是“调用 GPU”，而是：同一远端视频场景中，怎样证明 CPU/软件路径被正确、可回退的 HarmonyOS 硬解 + GPU 路径替换。
-
-```text
-现象：远端视频能播放，但操作和画面明显卡顿
-案例已知：原路径走 CPU / 软件处理，未走硬解与 GPU 合成
-工程目标：正确、可回退、可定位、可长稳、可独立验收
-证据边界：before、路径日志、CPU/FPS 尚未绑定同一 runId，保持 PENDING
-```
+- HarmonyOS 通过 FreeRDP client 做主控，通过 xrdp server 做被控。
+- 本案例只聚焦 HarmonyOS 主控连接 Windows。
+- 已经能连接、能输入、能看到画面；播放视频时，旧链路仍把解码结果落到 CPU/GDI 缓冲再复制显示，操作和画面会卡顿。
+- 目标不是“调用一个 GPU API”，而是完成一项可维护、可验证、可回退的三方库平台适配。
 
 ```mermaid
 flowchart LR
-  A["远端视频卡顿"] --> B["同设备/同片段复现"] --> C["确认 CPU/software 路径"]
-  C --> D["最小硬解/GPU 替换"] --> E["失败回 original GDI"] --> F["路径+画面+性能+长稳验收"]
+  H1["HarmonyOS 主控"] --> F["FreeRDP Client"] --> W["Windows"]
+  W -->|"RDPGFX / H.264"| F -->|"CPU decode / RGBA copy"| X1["XComponent"]
+  C["Windows / Linux 主控"] --> R["xrdp Server"] --> H2["HarmonyOS 被控"]
 ```
 
 ### 文档与证据
 
-- 真源：`case-materials/gpu/14-GPU案例第28-38页详细讲稿与文档证据.md`
-- 输入：`01-问题与基线.md`、`00-证据状态总表.md`
-- 场景图：`freerdp-stutter-scenario.jpeg`
-- **可选补充**：如果能找到原始 CPU/软件路径卡顿 before，放 20～30 秒增强开场；没有时按已冻结的 `CASE FACT` 讲，不影响本案例的方法论主线。
+- 真源：`case-materials/gpu/17-复杂三方项目GPU适配源码分析与探针方案.md`
+- 讲师强调：xrdp 是完整产品背景；接下来追踪和改造的是 FreeRDP 客户端视频链。
+- 如果能找到原始 CPU/软件路径卡顿 before，可放 20～30 秒增强开场；没有不影响方法主线。
 
 ---
 
-## 第 29 页｜55.9 万行代码怎么读：先形成一张源码地图
+## 第 29 页｜面对大代码库，先用两个探针缩小未知
 
 <!-- type: LAB; section: CASE2_LOCATE; time: 3m -->
 
-### 文档生成卡
-
-| Document | Input | AI action | Human Review | Why / Next |
-|---|---|---|---|---|
-| `02-大代码库认知地图.md` | 问题、文件清单、`SurfaceCommand` 入口 | `rg` 找定义/赋值/调用；记录 path::symbol、输入、输出、owner、fallback、未知 | 锚点必须可跳转；代码存在不冒充运行事实 | 压缩上下文；限定下一页源码追踪 |
-
 ```text
-上下文预算 = 1 个问题 + 1 条调用链 + 3–7 个符号 + 1 个假设 + 1 条下一步命令
+探针 1：Linux/X11 收到一帧后，经过哪些回调，何时提交显示？
+探针 2：HarmonyOS 能否把同一份 H.264 输入，经硬解和 native buffer 显示到 XComponent？
 ```
+
+只搜索 `WireToSurface / SurfaceCommand / AVC420 / EndFrame / UpdateSurfaces`。每个命中只记录输入、下一跳、owner、失败去向。
 
 ```mermaid
-flowchart TD
-  Q["视频从哪里进入、在哪里显示？"] --> S["rg SurfaceCommand / bridge_attach"]
-  S --> E1["协议入口 gdi_SurfaceCommand"]
-  S --> E2["平台 Hook bridge_attach"]
-  S --> E3["App 输出 InstallRdpgfxDiagnosticsHooks"]
-  E1 --> M["codebase-map.md"]; E2 --> M; E3 --> M
-  M --> U["UNKNOWN：decoder / output / owner / present / fallback"]
+flowchart LR
+  Q["远控视频卡顿"] --> L["Probe 1：Linux 一帧"]
+  Q --> O["Probe 2：OHOS 硬解上屏"]
+  L --> S["找到扩展缝隙"]
+  O --> F["证明平台互操作可行"]
+  S --> A["形成适配方案"]
+  F --> A
 ```
 
-截图：`harmonyos-sdd-workshop-media/gpu-docs/doc-29-codebase-map.png`。
+文档证据：`case-materials/gpu/17-复杂三方项目GPU适配源码分析与探针方案.md` 第 2 节。
 
 ---
 
-## 第 30 页｜源码级定位：CPU 旧路径和 GPU 候选路径在哪里分叉
+## 第 30 页｜探针一：Linux 一帧从 RDPGFX 到 X11 的时序
 
 <!-- type: MAP; section: CASE2_LOCATE; time: 3m -->
 
 ```mermaid
 sequenceDiagram
-  participant Server as RDP Server
-  participant GFX as FreeRDP GFX
-  participant Bridge as OHOS Bridge
-  participant Policy as GPU Candidate
-  participant Comp as App Compositor
-  participant HW as OH_AVCodec/EGL
-  participant GDI as Original GDI/Software H264
-  Server->>GFX: SurfaceCommand(codec, stream, rects)
-  GFX->>Bridge: gfx->SurfaceCommand(command)
-  Bridge->>Policy: record_avc420_gpu_candidate(command)
-  alt 可安全接管
-    Policy->>Comp: OnSurfaceCommand(frameId, stream, rects)
-    Comp->>HW: input → native output → composite
-    HW-->>Comp: pendingFrameId
-    Server->>Bridge: EndFrame(frameId)
-    Bridge->>Comp: PresentEndFrame(matched=true)
-    Comp->>HW: PresentComposite
-  else 接管前失败
-    Policy-->>Bridge: not consumed + reason
-    Bridge->>GDI: original SurfaceCommand
-  end
+  participant S as RDP Server
+  participant P as rdpgfx_main
+  participant C as rdpgfx_codec
+  participant G as GDI pipeline
+  participant X as X11 client
+  S->>P: WireToSurface(AVC420, H.264, rect)
+  P->>C: rdpgfx_decode
+  C->>G: context->SurfaceCommand
+  G->>G: AVC420 decode + invalidRegion
+  S->>P: EndFrame(frameId)
+  P->>G: context->EndFrame
+  G->>X: UpdateSurfaces
+  X->>X: xf_OutputUpdate → XPutImage / XSync
 ```
 
-| 边界 | REPO FACT | RUN FACT 待补 |
-|---|---|---|
-| Hook | original callback 先保存再替换 | 目标 HAP 确实包含 bridge |
-| Candidate | ready/consumed 才接管 | 当前 command 的真实分支 |
-| Decoder | 存在 hardware category 调用 | decoder name/configure/start |
-| Present | pending 后等 matched EndFrame | 同 frameId output→present |
-| Fallback | takeover 前可回 original GDI | 故障注入日志与画面 |
+```text
+rdpgfx_main.c::rdpgfx_recv_wire_to_surface_1_pdu
+rdpgfx_codec.c::rdpgfx_decode_AVC420
+libfreerdp/gdi/gfx.c::gdi_SurfaceCommand_AVC420 / gdi_EndFrame
+client/X11/xf_gfx.c::xf_UpdateSurfaces / xf_OutputUpdate
+```
 
-真源：`09-源码调用链与任务拆解.md` 第 1–4 节。定位到的是“分叉与所有权”，不是一个 decoder 文件名。
+结论：要迁移的是 `SurfaceCommand + EndFrame` 契约，不是 X11 API。源码行号与解释见 `17` 第 3 节。
 
 ---
 
-## 第 31 页｜跨平台调研：只迁移生命周期契约，不迁移平台假设
+## 第 31 页｜从 Linux 找到真正的适配点：回调表，而不是协议解析器
 
 <!-- type: MAP; section: CASE2_RESEARCH; time: 3m -->
 
-| Document | Input | AI action | Human Review | Output |
-|---|---|---|---|---|
-| `03-跨平台实现调研.md` | codebase-map + FFmpeg/OpenH264/MF/MediaCodec/OH_AVCodec | 对齐 Init、input/output、flush、release、失败传播 | 事实回到源码/官方 API；推断标 INFERENCE | Alternatives、Risk、Deferred、Evidence Gate |
-
 ```mermaid
-sequenceDiagram
-  participant R as FreeRDP Contract
-  participant A as Platform Adapter
-  participant D as Platform Decoder
-  R->>A: Init(codec,size)
-  A->>D: Query→Create→Configure→Start
-  R->>A: Decompress(sample,pts)
-  A->>D: Queue input
-  D-->>A: Output / format changed / failure
-  A->>A: Validate format/stride/planes
-  A-->>R: output or explicit failure
-  R->>A: Reset/Uninit
-  A->>D: Flush/Stop/Destroy
+flowchart TB
+  P["RDPGFX 协议解析｜保持通用"] --> C["SurfaceCommand / EndFrame｜稳定契约"]
+  C --> H["OHOS Bridge｜保存 original 再 Hook"]
+  H --> G{"GPU candidate 可接管?"}
+  G -->|否| O["original GDI"]
+  G -->|是| A["App GPU Compositor"]
 ```
 
-复用契约，不照抄 Windows COM、Android buffer index/Surface ownership 或软件解码线程模型。截图：`gpu-docs/doc-30-platform-research.png`。
+- `gdi_graphics_pipeline_init_ex` 把帧相关回调装进 `RdpgfxClientContext`；
+- `xf_graphics_pipeline_init` 先复用通用 GDI，再覆盖 X11 平台 surface/update；
+- `freerdp_ohos_rdpgfx_bridge_attach` 保存 original callbacks 后安装 OHOS Hook；
+- `ohos_rdpgfx_surface_command` 只有 candidate consumed 才截断，否则调用 original。
+
+判断原则：稳定适配点出现在“通用语义已经形成、平台副作用尚未发生”的位置。
 
 ---
 
-## 第 32 页｜制定并冻结方案：ADR 先定义接管、显示和回退
+## 第 32 页｜探针二：用 XComponent 穿刺 HarmonyOS 硬解上屏
 
 <!-- type: MAP; section: CASE2_DECISION; time: 3m -->
 
-| Document | AI 产出 | Human 决策 | 为什么 |
-|---|---|---|---|
-| `04-ADR-GPU-001-HarmonyOS硬解方案.md` | Alternatives / Preferred / Deferred / Risk / Evidence Gate | Bridge 受控接管 + App Compositor + original GDI fallback | 冻结 owner、EndFrame、fallback，阻止架构漂移 |
-
 ```mermaid
-flowchart LR
-  B["Bridge 保存 original callback<br/>validate + consumed"] --> C["Compositor<br/>OH_AVCodec + retained composite"]
-  C --> E["matched EndFrame<br/>pendingFrameId 后 present"]
-  B -. takeover 前失败 .-> F["original GDI / software H264"]
-  C -. 不可安全接管 .-> F
+sequenceDiagram
+  participant UI as ArkTS ContentSlot
+  participant X as Native XComponent
+  participant B as OHOS RDPGFX Bridge
+  participant D as OH_AVCodec HW Decoder
+  participant E as EGLImage / GLES
+  UI->>X: NodeContent attach
+  X-->>B: OHNativeWindow ready
+  B->>D: H.264 sample + PTS
+  D-->>E: OH_NativeBuffer
+  E->>E: EGLImage → OES texture → dirty rect FBO
+  B->>E: matched EndFrame(frameId)
+  E->>X: eglSwapBuffers
 ```
 
-四条不变量：先保存原回调；未准备好不得 suppress GDI；同帧只有一个 owner；decode/composite 与 present 分离。截图：`gpu-docs/doc-31-adr.png`。
+探针只回答：单个 AVC420 command 能否完成“硬解 output → native import → matched EndFrame → XComponent 可见”。先不加入连续流优化、AVC444、resize 或长稳。
 
 ---
 
-## 第 33 页｜最小能力穿刺：只证明一帧主链和一次可解释回退
+## 第 33 页｜探针结果：最危险的三个互操作边界已经可行
 
 <!-- type: LAB; section: CASE2_SPIKE; time: 3m -->
 
-```mermaid
-flowchart LR
-  S1["SP-01 bridge 进入 HAP"] --> S2["SP-02 hardware decoder"] --> S3["SP-03 合法 native output"]
-  S3 --> S4["SP-04 matched EndFrame 显示"] --> S5["SP-05 失败回 original GDI"]
+| 边界 | 源码行为 | Probe PASS 条件 |
+|---|---|---|
+| XComponent → NativeWindow | surface callback 更新 target | window 非空、尺寸有效、destroy 后失效 |
+| AVCodec → NativeBuffer | HARDWARE decoder + output PTS | identity 可记录、output 可关联、native buffer 非空 |
+| NativeBuffer → GLES | EGLImage + external OES | import 成功、dirty rect 合成、swap 后可见 |
+
+```text
+active=yes
+source=native-buffer-oes
+decoded=2397 / presented=2396
+mismatch=0 / failures=0 / importFallbacks=0
 ```
 
-| Spike | 必须证据 | Stop |
-|---|---|---|
-| SP-01 | symbol/library hash/attach log | 先修构建 |
-| SP-02 | capability/decoder name/start | unsupported 则停止或改 ADR |
-| SP-03 | frameId/PTS/format/stride/planes | output 不可关联则不进显示 |
-| SP-04 | owner/pending/matched present | 黑屏停在 import/present |
-| SP-05 | fallback reason/original path/video | 回退失败则不拆 Story |
-
-生成链：ADR Evidence Gate → AI 倒推 SP-01～05 → Human 冻结“一帧 + fallback” → verdict 决定 CONTINUE/REPLAN/STOP。当前播放素材未绑定同 run decoder/trace/fallback，完整 Spike 仍为 `PENDING`。
-
-**已有历史证据可复用**：Session `019e867d-*` 中有 `active=yes`、`source=native-buffer-oes`、decoded/presented 与零 mismatch/failure；仓库已有 16 秒播放和 13 秒黑屏。它们足够讲穿刺和证据分层，但因为不是同 run，最终工程 verdict 仍为 `PARTIAL`。
+结论是“方案方向验证可行”。历史日志用于证明探针方向，不冒充当前版本完整性能验收。
 
 ---
 
-## 第 34 页｜穿刺后重新计划：只把已证实边界变成开发输入
+## 第 34 页｜由探针收敛方案：协议保持通用，平台层受控接管
 
 <!-- type: LAB; section: CASE2_PLAN; time: 2m -->
 
 ```mermaid
-sequenceDiagram
-  participant H as Human Reviewer
-  participant S as Spike Evidence
-  participant P as Plan
-  participant W as Worker Packet
-  H->>S: 核对 SP-01～05
-  S-->>H: PASS / FAIL / UNKNOWN
-  H->>P: 冻结事实，保留风险
-  P->>P: P0观测→P1一帧→P2连续性→P3韧性→P4验收
-  P->>W: 生成 S0～S7
+flowchart LR
+  P["RDPGFX PDU"] --> D["通用解析"] --> H["OHOS Bridge Hook"] --> V{"candidate gate"}
+  V -->|失败| G["original GDI"]
+  V -->|通过| A["OH_AVCodec"] --> N["OH_NativeBuffer"] --> E["EGLImage / OES"]
+  E --> F["retained dirty-rect FBO"] --> M{"matched EndFrame"}
+  M -->|是| X["XComponent present"]
+  M -->|否| R["drop pending + log"]
 ```
 
-```yaml
-spike_verdict: PASS | FAIL | UNKNOWN
-commit:
-run_id:
-selected_decoder:
-input_output_identity:
-display_owner_and_boundary:
-fallback_result:
-missing_evidence:
-decision: CONTINUE | REPLAN | STOP
-```
-
-计划来自穿刺 verdict，不是穿刺前凭空生成。只有已证实边界可以变成下一阶段输入。
+冻结四条不变量：original 始终可达；首帧验证前不 suppress GDI；一帧只有一个 owner；只有 matched EndFrame 才 present。
 
 ---
 
-## 第 35 页｜把计划拆成 S0～S7 Ralph Story
+## 第 35 页｜把方案写成可执行步骤，而不是一张抽象架构图
 
 <!-- type: LAB; section: CASE2_STORY; time: 3m -->
 
-```mermaid
-flowchart LR
-  S0["S0 基线"] --> S1["S1 硬件 decoder"] --> S2["S2 合法 output"] --> S3["S3 显示与回退"]
-  S3 --> S4["S4 连续播放"] --> S5["S5 生命周期"] --> S6["S6 AVC444"] --> S7["S7 工程验收"]
-```
+直接展示 `case-materials/gpu/17-复杂三方项目GPU适配源码分析与探针方案.md` 第 7 节：
 
-| Story | 唯一可观察结果 |
-|---|---|
-| S0 | before 与路径事实可复查 |
-| S1 | 真机选择硬件 decoder |
-| S2 | 一份输入得到合法 output |
-| S3 | 唯一 owner 正确显示并可回退 |
-| S4 | 连续播放 queue/age 有界 |
-| S5 | resize/后台/重连拒绝 stale target |
-| S6 | AVC444 LC/retained 语义正确 |
-| S7 | A/B、故障、长稳与 Reviewer 验收 |
+1. 建立 `ContentSlot → Native XComponent → OHNativeWindow`；
+2. 保存 original callbacks，安装 OHOS Bridge；
+3. 定义 codec/surface/target/state candidate gate；
+4. 查询并启动 HARDWARE AVC decoder；
+5. 用 PTS 维持 input/output 关联；
+6. `OH_NativeBuffer → EGLImage → OES texture`；
+7. dirty rect 合成到 retained FBO；
+8. matched EndFrame 才提交；
+9. 首帧成功后切 owner，失败回 original；
+10. 补齐 frameId/PTS/import/present/fallback/gap 日志。
 
-详细真源：`13-GPU-Ralph-Story拆分与伪代码验收.md`。每张 Story 都含伪代码、AC、Stop 与 Exit Gate，不按文件切任务。
+这一页要把真实步骤文档贴出来，让观众看见方案如何从源码推导成执行顺序。
 
 ---
 
-## 第 36 页｜Worker Packet：文档、伪代码和 AC 先于代码
+## 第 36 页｜迭代开发：每轮只增加一个已验证能力
 
 <!-- type: LAB; section: CASE2_WORKER_PACKET; time: 3m -->
 
-```mermaid
-sequenceDiagram
-  participant H as Human/Planner
-  participant D as Design Doc
-  participant W as Worker Packet
-  participant A as AI Session
-  participant T as Test/Device Oracle
-  participant G as Git/Ledger
-  H->>D: 冻结目标、状态语义、fallback
-  D->>W: RED/Allowed/Forbidden/AC/Stop
-  H->>W: 审阅伪代码与 AC
-  W->>G: docs commit
-  W->>A: 只交付当前 Packet
-  A->>T: RED→最小修改→Verify
-  T-->>A: PASS/FAIL/UNKNOWN
-  A->>G: code commit + evidence
-  G->>D: 回写 verdict
-```
+| 迭代 | 唯一目标 | 验收点 |
+|---|---|---|
+| I0 | 一帧调用链可追踪 | Linux/OHOS path::symbol 闭合 |
+| I1 | XComponent target 生命周期 | create/change/destroy 正确 |
+| I2 | 单 sample 硬解 | hardware identity + PTS output |
+| I3 | 单帧 native-buffer 上屏 | EGLImage/OES/swap 可见 |
+| I4 | dirty rect + EndFrame | 无提前显示、残影或双写 |
+| I5 | 连续播放 | decoded/presented 前进、backlog 有界 |
+| I6 | resize/reconnect/fallback | generation 和 owner 可恢复 |
 
-```yaml
-story_id: S3
-goal: 唯一 owner 在 matched EndFrame 显示；接管前失败回原路径
-red: output 已有但 owner/present 不闭合，或 GPU/GDI 双写
-allowed_paths: candidate policy / compositor / owner / EndFrame + tests
-forbidden: queue 优化 / AVC444 重写 / 删除 original fallback
-acceptance: 场景 + 标准 + 同帧证据 + 失败结论
-stop: owner 不唯一、提前 present、fallback 不可达
-```
-
-沿用 MDM 协议：`docs commit → code commit → evidence ledger`。缺一列 AC，Story 不进入 Ralph。
+探针通过后才生成下一轮计划；不要一次把 decoder、队列、生命周期、AVC444 和性能优化全部交给 AI。
 
 ---
 
-## 第 37 页｜Ralph 循环：AI 不对时，沿第一异常处理
+## 第 37 页｜问题处理不是新方法：仍沿同一条一帧链找第一断点
 
 <!-- type: DEBUG; section: CASE2_DEBUG; time: 3m -->
 
 ```mermaid
-sequenceDiagram
-  participant H as Human Reviewer
-  participant A as Ralph Session
-  participant R as Runtime/Device
-  participant L as Progress Ledger
-  H->>A: Story + commit + runId + Allowed/Forbidden
-  A->>R: 运行并保存原始证据
-  R-->>A: 现象 + ordered trace
-  A->>A: Locate first expected != actual
-  A->>R: 一条可证伪观测
-  R-->>A: 支持或推翻假设
-  A->>R: 最小修复 + Replay 目标/回退/回归
-  R-->>A: PASS / FAIL / UNKNOWN
-  A->>L: 命令、退出码、证据、剩余未知、Next
+flowchart LR
+  A["保留现场"] --> B["最后一个正常事件"] --> C["第一处 expected != actual"]
+  C --> D["一个可证伪探针"] --> E{"证据支持?"}
+  E -->|否| B
+  E -->|是| F["最小修复"] --> G["重放目标 + fallback + 回归"]
 ```
 
-```text
-Stop → Preserve → Locate → Falsify → Repair → Replay
-```
+| 现象 | 第一条证据链 |
+|---|---|
+| 无 output | input → decoder state → PTS → SPS/PPS |
+| 绿屏/错位 | native format → stride/crop → OES texture |
+| output 已有但黑屏 | import → pending → matched EndFrame → target |
+| 开始流畅随后卡顿 | command/endFrame/present gap → queue age/depth |
 
-| 现象 | 第一证据链 | 不要先做 |
-|---|---|---|
-| output 有但黑屏 | native output→import→pending→EndFrame→target | 猜 decoder 参数/shader |
-| 色块/错位 | format/stride/planes→dirty rect→retained | 盲换色彩矩阵 |
-| 开始流畅随后卡顿 | queue depth/age→decodeUs→present gap | 加线程/无限队列 |
-
-黑屏视频可用于练方法，但未绑定同 run frame trace，不能宣称根因已经确认。
-
-**已有真实 Ralph 闭环**：历史 Session 中“立即 present”修复完成构建安装后仍黑，日志推翻假设，随后回退修改、重新构建并覆盖安装；不需要再人为制造一条问题。
+历史真实例子：“立即 present”修改构建安装成功但仍黑屏，日志证伪后回退并重建。代码成功编译不等于假设成立。
 
 ---
 
-## 第 38 页｜工程验收：路径、画面、性能、回退和长稳同时闭合
+## 第 38 页｜结果与收束：从复杂项目中找到适配点，再逐步证明
 
 <!-- type: CHECKPOINT; section: CASE2_ACCEPTANCE; time: 3m -->
 
-| 验收层 | 必须证据 | 当前状态 |
-|---|---|---|
-| Build | build log / symbol / library hash | `PENDING` |
-| Path | decoder identity + candidate/owner log | `PENDING` |
-| Frame | ordered output→pending→matched present | `PENDING` |
-| Outcome | 同场景 video + CPU/FPS/frame/queue A/B | `PENDING` |
-| Fallback | fault reason + original callback + video | `PENDING` |
-| Lifecycle | generation/owner matrix + video | `UNKNOWN` |
-| Stability | soak report，无积压/泄漏/漂移 | `UNKNOWN` |
-| Regression | 输入、窗口、AVC420/444、旧路径矩阵 | `PENDING` |
+- 中央保留大图/视频封面：`gpu-validation-video-playback-16s.mp4`。
+- 旁边小入口放 `gpu-failure-black-screen-13s.mp4`，用于回看第 37 页的问题定位。
+- 后续有更好的流畅播放截图，只替换结果图，不改变章节结构。
 
 ```text
-commit + package hash + runId + device + codec + scene
-  ├─ video-before/after.mp4
-  ├─ runtime-path.log
-  ├─ frame-trace.log
-  ├─ cpu-fps-queue.csv
-  ├─ fault-injection.md
-  ├─ lifecycle-soak-matrix.md
-  └─ reviewer-verdict.md
+参考实现追踪 → 找到稳定回调缝隙 → 平台最小探针 → 冻结边界与回退
+→ 按最小能力迭代 → 沿同一证据链处理问题 → 结果可见、过程可复查
 ```
 
-源码、方案、Story 是 `REPO FACT`；播放/黑屏录屏是 `MEDIA FACT / UNBOUND`。硬解、同帧、fallback、A/B 与长稳未齐时，最终只能是 `NOT YET`。
-
-课堂结论：现有媒体和历史 Session 已够讲；只建议可选补一段原始卡顿 before。严格 same-run identity、fault injection、A/B 与 soak 下沉到工程附录，只有要宣布当前版本正式 PASS 时才补。证据摘要见 `case-materials/gpu/16-历史Session可复用证据.md`。
+AI 可以帮助阅读和实现，但人要控制问题边界、适配点、验证门和回退策略。完整源码行号与十步文档见 `case-materials/gpu/17-复杂三方项目GPU适配源码分析与探针方案.md`。
 
 ---
 
