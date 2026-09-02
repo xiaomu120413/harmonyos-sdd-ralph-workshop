@@ -1552,810 +1552,335 @@ result: PENDING
 
 ---
 
-## 第 28 页｜案例背景：远控视频能播放，但走 CPU 时明显卡顿
+## 第 28 页｜怎样证明远控视频的卡顿路径已经被替换
 
-<!--
-type: CLAIM
-section: CASE2_CONTEXT
-layout: video-hero
-time: 2m
-progress: 需求
--->
+<!-- type: CLAIM; section: CASE2_CONTEXT; time: 2m -->
 
-### 画面
+### 本页问题
 
-> 课堂主画面以 `case-materials/gpu/12-GPU讲课版简化叙事.md` 的第 28 页为准；以下源码级内容保留为讲师备查，不再直接压到 PPT 正文。
-
-**任务背景**
-
-> 基于 30 万行级以上开源库实现 HarmonyOS 远控应用。原始视频处理走 CPU/软件路径，没有走 HarmonyOS 硬件解码和 GPU 合成，远端播放视频时出现卡顿。需要在不破坏 FreeRDP 协议语义和原生回退的前提下，实现可验证、可回退、可长时运行的硬解 + GPU 路径。
+原始需求不是“调用 GPU”，而是：同一远端视频场景中，怎样证明 CPU/软件路径被正确、可回退的 HarmonyOS 硬解 + GPU 路径替换。
 
 ```text
-本地 FreeRDP 快照：2014 个相关源文件 / 约 559,355 行
-现象：远端视频连续播放卡顿
-已知原因：CPU/软件视频路径，GPU takeover 未启用
-第一目标：保存 before 录屏、CPU/FPS 和路径日志
-最终目标：硬解路径可用、可回退、可验收、可维护
+现象：远端视频能播放，但操作和画面明显卡顿
+案例已知：原路径走 CPU / 软件处理，未走硬解与 GPU 合成
+工程目标：正确、可回退、可定位、可长稳、可独立验收
+证据边界：before、路径日志、CPU/FPS 尚未绑定同一 runId，保持 PENDING
 ```
-
-<!-- VIDEO SLOT: harmonyos-sdd-workshop-media/gpu-cpu-stutter-before.mp4 -->
-
-当前用 `freerdp-stutter-scenario.jpeg` 做场景图。正式授课应在旁边补入 20–30 秒 before 视频、CPU/software path 日志截图和 CPU/FPS/queue 基线；未采集前保留 `PLACEHOLDER`，不填假数据。
-
-![FreeRDP 视频播放卡顿场景](harmonyos-sdd-workshop-media/freerdp-stutter-scenario.jpeg)
-
-### 讲师备注
-
-先介绍为什么这是一个“较为复杂的需求”，而不是直接说“调用 `OH_AVCodec`”：
-
-- 55 万行代码不可能全部读进上下文；
-- 视频数据经过协议、codec、buffer、合成、Surface 多个边界；
-- 软件路径能显示不代表硬解路径只需替换一个函数；
-- 一张正常截图不能证明持续流畅，也不能证明走了硬件 decoder；
-- 即使平均 CPU 下降，黑屏、色块、resize 或 fallback 失效仍然算失败。
-
-这里不再让学员猜根因：本案例已冻结原始路径为 CPU/软件处理，未走 GPU。要引导学员继续问的是：这个事实如何在当前 run 中被日志看见？硬解接入后怎么证明路径真的改变？怎么确认画面正确和卡顿改善？
-
-### 演示动作
-
-当前 before 视频、CPU/software path 日志和性能数值都保留占位。先展示背景卡和静态场景，明确“已知原因”来自案例背景，而课件中要补的是可复核的原始证据。
-
-### 通过条件
-
-学员能说出：**问题是 CPU/软件路径下的远端视频卡顿；开发前先保存可重复的 before 基线，最终必须同时证明路径改变和用户结果。**
-
-### 素材
-
-- `freerdp-stutter-scenario.jpeg`
-- `harmonyos-sdd-workshop-media/VIDEO_TODO.md`
-- `evidence/gpu/01-codebase-map.md`
-
----
-
-## 第 29 页｜面对 55 万行代码，AI 先追一条“视频从哪来、到哪去”
-
-<!--
-type: LAB
-section: CASE2_CONTEXT
-layout: layered-map
-time: 3m
-progress: 设计
--->
-
-### 画面
-
-> 课堂主画面以 `case-materials/gpu/12-GPU讲课版简化叙事.md` 的第 29 页为准；正文用简化时序图解释代码阅读过程，源码符号只进入讲师备注。
-
-先亮出真实产物名：`02-大代码库认知地图.md / codebase-map.md`。旁边固定放生成卡：
-
-```text
-Input：问题背景 + 仓库文件清单 + 入口符号
-AI action：rg 定位 → 追一条调用链 → 记录未知
-Human decision：抽查 path::symbol，拒绝把文件名当运行事实
-Why：把“55 万行上下文”压缩成下一轮可检索的证据索引
-Next：给跨平台调研限定要比较的接口与边界
-```
-
-**从“读全库”改成“回答五个问题”**
-
-```text
-协议：H.264 从哪里进入？
-选择：command 被 GPU compositor consumed，还是回到 original GDI？
-输出：格式、stride、plane 是什么？
-显示：谁拥有 Surface，何时 present？
-证明：怎样把 decoder、frame、owner、present 绑定到同一 run？
-```
-
-```mermaid
-flowchart TD
-    A["gfx->SurfaceCommand"] --> B["ohos_rdpgfx_surface_command"]
-    B --> C["record_avc420_gpu_candidate"]
-    C -->|ready/consumed| D["OnSurfaceCommand → worker"]
-    D --> E["ProcessCommand → OH_AVCodec"]
-    E --> F["native buffer → CompositeFrame"]
-    F --> G["pendingFrameId"]
-    G --> H["matched EndFrame → PresentComposite"]
-    C -->|not consumed| I["original SurfaceCommand"]
-    I --> J["gdi_SurfaceCommand → H264 subsystem/GDI"]
-```
-
-右侧放上下文预算：`1 个问题 + 1 条调用链 + 3–7 个接口 + 1 个假设 + 1 条下一步命令`。
-
-文档截图放在图下方：
-
-```text
-codebase-map.md 每条只记：
-path::symbol → 输入 → 输出 → owner → 回退 → 未知
-```
-
-| 第一轮输出 | 不要输出 |
-|---|---|
-| 三个入口、一条 command 调用链、五个未知、下一轮 5 个文件 | 仓库全量摘要、全部类图、把文件名当运行路径 |
-
-### 讲师备注
-
-AI 熟悉大库的产物不是“仓库总结”，而是 `codebase-map.md`。课堂截图直接来自 `02-大代码库认知地图.md` 和 `09-源码调用链与任务拆解.md` 的三入口/调用链区块：
-
-| 层 | 本轮只读入口 | 先不读什么 |
-|---|---|---|
-| 原生 GDI/fallback | `libfreerdp/gdi/gfx.c`、`codec/h264.c` | 无关 channel |
-| 平台 decoder 对照 | `h264_ffmpeg/openh264/mf/mediacodec/ohos_*` | 编码端与非 H.264 codec |
-| OHOS hook/policy | `client/OHOS/ohos_rdpgfx_bridge.c`、`ohos_rdpgfx_surface.c`、`ohos_rdpgfx_avc444_policy.c` | ArkTS 页面业务 |
-| App GPU 输出 | `rdpgfx_pipeline.cpp`、`avc420_gpu_compositor*`、`render_output_owner.*` | 尚未触发的优化分支 |
-
-每个发现只保存 `path:line + 输入/输出 + 为什么相关 + 可信度`。AI 下一轮通过 evidence index 按需检索，而不是把整段历史 Session 再喂一遍。
-
-#### 课堂 Prompt
-
-```text
-只读。不要修改代码，不要总结全库。
-输出 SurfaceCommand → decoder → present 的调用链；
-每一段只列 path:line、输入、输出、owner；
-列出仍缺的运行时证据，以及下一轮最多打开的 5 个文件。
-```
-
-### 演示动作
-
-让学员先从 `gfx->SurfaceCommand` 找到 `freerdp_ohos_rdpgfx_bridge_attach` 保存/替换回调的位置，再追 `ohos_rdpgfx_record_avc420_gpu_candidate` 的 consumed/fallback 分支；最后才打开 `h264_context_new`，确认它属于 original GDI 回退链。讲师用 `case-materials/gpu/09-源码调用链与任务拆解.md` 翻牌。
-
-### 通过条件
-
-- 调用链上的每个符号都能定位；
-- 文件名推断不能标成运行时事实；
-- 输出明确哪些事实仍为 `UNKNOWN`。
-
-### 素材
-
-- `evidence/gpu/01-codebase-map.md`
-- `case-materials/gpu/02-大代码库认知地图.md`
-- `case-materials/gpu/11-AI文档生成与审阅链.md`
-- `case-materials/gpu/09-源码调用链与任务拆解.md`
-- `harmony/third_party/FreeRDP/libfreerdp/codec/h264.c`
-- `harmony/third_party/FreeRDP/client/OHOS/README.md`
-
----
-
-## 第 30 页｜参考其他平台，不是照抄代码，而是找共同步骤
-
-<!--
-type: MAP
-section: CASE2_RESEARCH
-layout: comparison
-time: 3m
-progress: 设计
--->
-
-### 画面
-
-> 课堂主画面以 `case-materials/gpu/12-GPU讲课版简化叙事.md` 的第 30 页为准；正文用跨平台调研时序图解释“怎么参考、怎么落到 HarmonyOS”。
-
-顶部先放真实文件名：`03-跨平台实现调研.md`，再显示它的生成链：
-
-```text
-Input：codebase-map + FFmpeg/OpenH264/MF/MediaCodec/OH_AVCodec
-AI action：对齐生命周期、buffer 状态、失败传播和释放语义
-Human decision：复用契约，不复制 API、线程模型和 Surface ownership
-Why：调研必须减少 ADR 的未知，而不是堆资料
-Next：输出候选方案、风险、Deferred 与 Evidence Gate
-```
-
-| 已有实现 | 作用 | 能复用 | 不能照抄 |
-|---|---|---|---|
-| FFmpeg / OpenH264 | 通用软解 | 正确性 fallback、YUV 语义 | CPU 线程/内存模型 |
-| Windows Media Foundation | Windows 硬解 | create/configure/sample/flush/release | COM 和 Windows surface |
-| Android MediaCodec | 移动硬解 | input/output buffer、format change、有界等待 | Android buffer index/Surface 时序 |
-| HarmonyOS `OH_AVCodec` | 目标平台 | hardware capability、AVBuffer、native output | 仍需设计 RDPGFX owner/EndFrame/fallback |
-
-下半屏直接截取调研文档中的时序图：
-
-```mermaid
-sequenceDiagram
-    participant R as FreeRDP Contract
-    participant A as Platform Adapter
-    participant D as Hardware Decoder
-    R->>A: Init(codec, size)
-    A->>D: Query + Create + Configure + Start
-    R->>A: Decompress(sample, pts)
-    A->>D: Queue compressed input
-    D-->>A: Output / format changed
-    A->>A: Validate size/format/stride/planes
-    A-->>R: Output or explicit failure
-    R->>A: Reset / Uninit
-    A->>D: Flush / Stop / Destroy
-```
-
-页脚放分界结论：
-
-```text
-decoder 只解决 compressed → decoded output；
-远控 GPU 方案还必须解决 consumed、dirty rect、owner、EndFrame 和 fallback。
-```
-
-### 讲师备注
-
-这一步不是让 AI 上网找一篇“HarmonyOS 硬解教程”然后照抄。课堂直接打开 `03-跨平台实现调研.md`：先看源码对照表，再看 decoder 生命周期时序图，最后看 decoder 与 RDPGFX/GPU 显示边界图。文档的输出必须能直接输入下一页 ADR，否则调研只是资料堆积。
-
-AI 输出一张“同与不同”表：
-
-- **必须保持**：上层 H.264 调用契约、错误语义、AVC420/444 协议语义、fallback；
-- **必须适配**：能力查询、pixel format、异步 callback、stride/plane、NativeWindow 生命周期；
-- **不能照抄**：Android 的 buffer ID、Windows COM 生命周期、其他平台的 Surface 所有权假设。
-
-判断调研是否可信：每个“其他平台怎么做”都必须落到当前仓库的源文件或官方平台 API；二手文章只能提供关键词，不能直接成为 Architecture Decision。
-
-### 演示动作
-
-左右对照 `h264_mediacodec.c` 与 `h264_ohos_decoder.c`，只比较 Init/Decompress/Uninit 和 buffer 状态，不展开全部实现。
-
-### 通过条件
-
-学员能够说明：**我们复用其他平台的 decoder 生命周期经验，但最终接入点是 OHOS RDPGFX bridge；原生 H264 subsystem/GDI 保留为 fallback。**
-
-### 素材
-
-- `evidence/gpu/02-platform-research-and-spike.md`
-- `case-materials/gpu/03-跨平台实现调研.md`
-- `case-materials/gpu/11-AI文档生成与审阅链.md`
-- `h264_mediacodec.c` / `h264_mf.c` / `h264_ohos_decoder.c`
-
----
-
-## 第 31 页｜最终方案：保留旧路径，先让硬解跑通，再逐步替换
-
-<!--
-type: MAP
-section: CASE2_RESEARCH
-layout: architecture
-time: 2m
-progress: 设计
--->
-
-### 画面
-
-> 课堂主画面以 `case-materials/gpu/12-GPU讲课版简化叙事.md` 的第 31 页为准；技术契约保留在下方讲师材料中。
-
-先说明这不是 AI 突然给出的架构图，而是 `ADR-GPU-001` 对上页已审阅调研的决策记录：
-
-```text
-Input：平台调研 + 当前源码调用链 + 失败/回退约束
-AI action：给出候选方案、Alternatives、Deferred 与风险
-Human decision：选择 Bridge 受控接管 + App Compositor + original fallback
-Why：开发前冻结 owner、EndFrame、fallback 边界，防止实现中途漂移
-Next：只允许最小穿刺验证 Evidence Gate 中最大的未知
-```
-
-```mermaid
-flowchart TD
-    A["gfx->SurfaceCommand"] --> B["ohos_rdpgfx_surface_command"]
-    B --> C["record_avc420_gpu_candidate<br/>原生顺序校验 + consumed policy"]
-    C -->|ready| D["Ohos...SurfaceCommandCallback"]
-    D --> E["Avc420GpuCompositor::OnSurfaceCommand"]
-    E --> F["worker → ProcessCommand"]
-    F --> G["OH_AVCodec → OH_NativeBuffer"]
-    G --> H["CompositeFrame → pendingFrameId"]
-    H --> I["matched EndFrame"]
-    I --> J["PresentQueuedUpdate → EGL swap"]
-    C -->|not consumed / takeover 前失败| K["original SurfaceCommand"]
-    K --> L["gdi_SurfaceCommand → H264 subsystem / GDI"]
-```
-
-Architecture Decision：
-
-```text
-在 OHOS RDPGFX bridge 保存原回调并受控拦截；
-App compositor 直接管理 OH_AVCodec、native buffer、retained composite 与 EndFrame；
-takeover 前失败回到 original GDI/H264 subsystem；
-先用 AVC420 证明一帧 decode→pending→matched present→fallback；
-AVC444、队列与生命周期在边界证实后分任务推进。
-```
-
-### 讲师备注
-
-方案评审只回答四个问题：
-
-1. hook 是否先保存 original callback，再替换 SurfaceCommand/EndFrame？
-2. command 只有在校验、target/background、decode/composite 成功后才 consumed 吗？
-3. decode/composite 是否只生成 pending，并在匹配 EndFrame present？
-4. takeover 前与 takeover 后的失败策略是否区分，owner 是否唯一？
-
-AI 容易给出“OH_AVCodec → Surface 直接显示”的漂亮方案，但这可能绕开 dirty rect、AVC444 LC、EndFrame 和原生 fallback。只有调用链与失败语义完整，方案才进入穿刺。
-
-### 演示动作
-
-让两组学员互审 ADR：一组找“绕开原生契约”的风险，另一组找“无法验收”的风险。
-
-### 通过条件
-
-方案同时写明 Decision、Why、First slice、Deferred、Fallback 和 Evidence；不以架构图漂亮作为通过标准。
-
-### 素材
-
-- `evidence/gpu/02-platform-research-and-spike.md`
-- `client/OHOS/README.md`
-- `case-materials/gpu/04-ADR-GPU-001-HarmonyOS硬解方案.md`
-- `case-materials/gpu/11-AI文档生成与审阅链.md`
-
----
-
-## 第 32 页｜最小穿刺只回答：HarmonyOS 硬解能不能跑通一次
-
-<!--
-type: LAB
-section: CASE2_SPIKE
-layout: vertical-slice
-time: 3m
-progress: 代码
--->
-
-### 画面
-
-> 课堂主画面以 `case-materials/gpu/12-GPU讲课版简化叙事.md` 的第 32 页为准；不在主画面使用 `frameId / owner / EndFrame` 等术语。
-
-先亮出 `05-最小能力穿刺计划.md`，并解释它不是凭空拆出来的：
-
-```text
-Input：ADR Evidence Gate + 最大技术未知
-AI action：倒推 SP-01～SP-05，每步绑定一条证据和一个 Stop
-Human decision：只验证一帧 decode→pending→present→fallback
-Why：用最短真实路径证伪接口边界，不提前做完整性能优化
-Next：只有穿刺通过的边界，才允许进入任务拆分
-```
-
-```text
-SP-01 bridge 与 compositor 进入 arm64/HAP 产物
-  ↓
-SP-02 真机选择 hardware decoder
-  ↓
-SP-03 一个 AVC420 sample 产生可关联的 native output
-  ↓
-SP-04 同一 frame 完成 composite / pending / matched EndFrame present
-  ↓
-SP-05 注入失败时回到可解释 fallback
-```
-
-每个节点下固定显示一条证据：build symbol、decoder name、frameId + stride/planes、owner + EndFrame、fallback reason。
-
-### 讲师备注
-
-穿刺的价值是把五类风险分开：
-
-- 编译和动态链接能否成立；
-- 平台能力与 decoder 是否真实可用；
-- compressed sample 是否能产生正确 output；
-- output 是否能接回现有显示边界；
-- 失败是否仍有正确性兜底。
-
-“屏幕出现一帧”还不能证明连续视频性能，但已经能否定很多错误方向。反过来，只有 `OH_AVCodec_CreateByName` 成功也不够：如果输出格式、stride 或 owner 不明，穿刺仍是 `UNKNOWN`。
-
-#### 学员产出
-
-```markdown
-Spike verdict: PASS | FAIL | UNKNOWN
-Selected decoder:
-Input frame identity:
-Output format/stride/planes:
-Display owner/present boundary:
-Fallback injected/result:
-Missing evidence:
-```
-
-### 演示动作
-
-展示一组“API 返回成功但黑屏”的日志，让学员指出 SP-03 还是 SP-04 失败；随后播放 `gpu-failure-black-screen-13s.mp4`，禁止直接猜 shader。
-
-### 通过条件
-
-学员不把 build success、decoder create success 或单张截图当成整个 spike 的 PASS。
-
-### 素材
-
-- `gpu-failure-black-screen-13s.mp4`
-- `evidence/gpu/02-platform-research-and-spike.md`
-- `gpu-failure-black-screen-contact.jpg`
-- `case-materials/gpu/05-最小能力穿刺计划.md`
-- `case-materials/gpu/11-AI文档生成与审阅链.md`
-
----
-
-## 第 33 页｜穿刺结果先给截图：画面出现了，还要补两条证据
-
-<!--
-type: LAB
-section: CASE2_EXECUTION
-layout: task-board
-time: 3m
-progress: 任务
--->
-
-### 画面
-
-> 课堂主画面以 `case-materials/gpu/12-GPU讲课版简化叙事.md` 的第 33 页为准；本页先给现场截图，再明确截图能证明与不能证明的边界。
-
-页首先显示 `tasks/T-GPU-00..07.md` 的生成逻辑：
-
-```text
-Input：穿刺 PASS/FAIL/UNKNOWN + 源码边界 + 用户验收目标
-AI action：按“一个可观察结果”切 Task，补 Allowed/Forbidden/Verify/Stop
-Human decision：确认不能跨边界，验收标准必须先于实现
-Why：失败时能回到准确任务卡，不把整条 GPU 链一起重写
-Next：Ralph 每轮只领取一张 Task Card，并把证据写回 progress
-```
-
-先给一张从穿刺结果推导出来的任务图：
 
 ```mermaid
 flowchart LR
-    T00["T00<br/>before 与路径观测"] --> T01["T01<br/>bridge + hardware decoder"]
-    T01 --> T02["T02<br/>一帧合法 native output"]
-    T02 --> T03["T03<br/>owner + matched EndFrame"]
-    T03 --> T04["T04<br/>连续队列/背压"]
-    T04 --> T05["T05<br/>resize/后台/重连"]
-    T05 --> T06["T06<br/>AVC444 帧语义"]
-    T06 --> T07["T07<br/>A/B + 工程验收"]
+  A["远端视频卡顿"] --> B["同设备/同片段复现"] --> C["确认 CPU/software 路径"]
+  C --> D["最小硬解/GPU 替换"] --> E["失败回 original GDI"] --> F["路径+画面+性能+长稳验收"]
 ```
 
-右侧截取一张真实任务卡，不再把 8 行小字全塞上去：
+### 文档与证据
 
-```markdown
-# T-GPU-02｜AVC420 一帧合法输出
-Requirement: 一份压缩输入产生可关联 native output
-Allowed: decoder input/output + format/stride/plane diagnostics
-Forbidden: owner / EndFrame / AVC444 / queue refactor
-Verify: frameId + input/output PTS + size/format/stride/planes
-Stop: 输出不可关联或格式不支持时不进入 T03
-```
-
-页脚：`T00 → T01 → … → T07` 是进入门，不是项目时间表。
-
-### 讲师备注
-
-穿刺以前只能确定探索任务，不能假装完整实现计划已经可靠。穿刺以后，才能根据已证实边界拆任务：decoder 输出属于 T02；consumed、owner 与 EndFrame 属于 T03；队列积压属于 T04；target generation 属于 T05。这样出问题时才知道回到哪张卡。
-
-每张任务卡必须包含：Requirement、Current Evidence、Allowed、Forbidden、RED/Probe、Minimal Change、Verify、Stop。特别强调 `Forbidden` 写到对象和行为，例如：T02 不允许顺手重写 AVC444 compositor，也不允许为了“干净”删除原生 fallback。
-
-验收标准分三层：
-
-- Task 层：这一张卡的状态转换是否成立；
-- Path 层：协议→decoder→output→owner→present 是否连续；
-- Outcome 层：同一用户场景是否真实改善且回归可控。
-
-### 演示动作
-
-先给学员错误任务“完成 HarmonyOS FreeRDP 硬解优化”，要求他们只拆出前三张卡；再翻开 T01/T02/T03 原文，检查每张卡的 `Forbidden` 和 `Stop`。
-
-### 通过条件
-
-任何 Task 都只有一个可观察结果；验收点在开发前写出，不由实现结果反向定义。
-
-### 素材
-
-- `evidence/gpu/03-task-acceptance-and-debug.md`
-- `case-materials/gpu/09-源码调用链与任务拆解.md`
-- `case-materials/gpu/tasks/T-GPU-02.md`
-- `case-materials/gpu/11-AI文档生成与审阅链.md`
-- 附录 B7 Task Card / Progress Ledger
+- 真源：`case-materials/gpu/14-GPU案例第28-38页详细讲稿与文档证据.md`
+- 输入：`01-问题与基线.md`、`00-证据状态总表.md`
+- 场景图：`freerdp-stutter-scenario.jpeg`
+- 待补：`GPU-VIDEO-BEFORE`、`GPU-PATH-BEFORE`、`GPU-PERF-A-B`
 
 ---
 
-## 第 34 页｜穿刺之后，AI 根据真实结果重新生成开发计划
+## 第 29 页｜55.9 万行代码怎么读：先形成一张源码地图
 
-<!--
-type: LAB
-section: CASE2_EXECUTION
-layout: source-steps
-time: 3m
-progress: 代码
--->
+<!-- type: LAB; section: CASE2_LOCATE; time: 3m -->
 
-### 画面
+### 文档生成卡
 
-> 课堂主画面以 `case-materials/gpu/12-GPU讲课版简化叙事.md` 的第 34 页为准；原源码主链内容保留为讲师备注。
+| Document | Input | AI action | Human Review | Why / Next |
+|---|---|---|---|---|
+| `02-大代码库认知地图.md` | 问题、文件清单、`SurfaceCommand` 入口 | `rg` 找定义/赋值/调用；记录 path::symbol、输入、输出、owner、fallback、未知 | 锚点必须可跳转；代码存在不冒充运行事实 | 压缩上下文；限定下一页源码追踪 |
+
+```text
+上下文预算 = 1 个问题 + 1 条调用链 + 3–7 个符号 + 1 个假设 + 1 条下一步命令
+```
+
+```mermaid
+flowchart TD
+  Q["视频从哪里进入、在哪里显示？"] --> S["rg SurfaceCommand / bridge_attach"]
+  S --> E1["协议入口 gdi_SurfaceCommand"]
+  S --> E2["平台 Hook bridge_attach"]
+  S --> E3["App 输出 InstallRdpgfxDiagnosticsHooks"]
+  E1 --> M["codebase-map.md"]; E2 --> M; E3 --> M
+  M --> U["UNKNOWN：decoder / output / owner / present / fallback"]
+```
+
+截图：`harmonyos-sdd-workshop-media/gpu-docs/doc-29-codebase-map.png`。
+
+---
+
+## 第 30 页｜源码级定位：CPU 旧路径和 GPU 候选路径在哪里分叉
+
+<!-- type: MAP; section: CASE2_LOCATE; time: 3m -->
 
 ```mermaid
 sequenceDiagram
-    participant B as OHOS RDPGFX Bridge
-    participant C as App Compositor
-    participant D as OH_AVCodec
-    participant W as Render Owner / Window
-    B->>B: T01 save original callbacks + attach hook
-    B->>C: T01 create hardware decoder path
-    C->>D: T02 queue AVC420 input(frameId, pts)
-    D-->>C: T02 native output(format/stride/planes)
-    C->>C: T03 retained composite + pendingFrameId
-    B->>C: T03 matched EndFrame(frameId)
-    C->>W: T03 unique owner present
+  participant Server as RDP Server
+  participant GFX as FreeRDP GFX
+  participant Bridge as OHOS Bridge
+  participant Policy as GPU Candidate
+  participant Comp as App Compositor
+  participant HW as OH_AVCodec/EGL
+  participant GDI as Original GDI/Software H264
+  Server->>GFX: SurfaceCommand(codec, stream, rects)
+  GFX->>Bridge: gfx->SurfaceCommand(command)
+  Bridge->>Policy: record_avc420_gpu_candidate(command)
+  alt 可安全接管
+    Policy->>Comp: OnSurfaceCommand(frameId, stream, rects)
+    Comp->>HW: input → native output → composite
+    HW-->>Comp: pendingFrameId
+    Server->>Bridge: EndFrame(frameId)
+    Bridge->>Comp: PresentEndFrame(matched=true)
+    Comp->>HW: PresentComposite
+  else 接管前失败
+    Policy-->>Bridge: not consumed + reason
+    Bridge->>GDI: original SurfaceCommand
+  end
 ```
 
-右侧放三张“开发—证据—停止”卡：
+| 边界 | REPO FACT | RUN FACT 待补 |
+|---|---|---|
+| Hook | original callback 先保存再替换 | 目标 HAP 确实包含 bridge |
+| Candidate | ready/consumed 才接管 | 当前 command 的真实分支 |
+| Decoder | 存在 hardware category 调用 | decoder name/configure/start |
+| Present | pending 后等 matched EndFrame | 同 frameId output→present |
+| Fallback | takeover 前可回 original GDI | 故障注入日志与画面 |
 
-| 任务 | 实际修改 | 本轮必须看到 | 没看到怎么办 |
-|---|---|---|---|
-| T01 Hook + decoder | `bridge_attach`、build flags、capability/init | HAP 库身份、attach、hardware decoder name/start | 停在构建/平台能力，不写 buffer |
-| T02 一帧输出 | input/output buffer adapter | 同 frameId/PTS 的 size/format/stride/planes/native buffer | 保留原始 output description，不写 owner |
-| T03 显示边界 | candidate policy、retained composite、EndFrame | callbackReady、owner、pendingFrameId、matched present、无双写 | 回到第一异常，不开始队列优化 |
-
-页脚：`T01 证明路径进了产物 → T02 证明有合法输出 → T03 证明输出在正确边界显示`。
-
-### 讲师备注
-
-这页不再讲抽象 Planner/Explorer/Reviewer 角色，而是让学员看到 AI 实际修了哪个源码边界、为什么不能跳步、每一步用什么证据决定继续或停止。
-
-T01 解决“新路径真的进了产物和设备吗”；T02 解决“压缩输入真的产生可用 native output 吗”；T03 解决“这份输出由唯一 owner 在正确 EndFrame 显示了吗”。前一张卡未过门，后一张卡的代码就没有可信输入。
-
-### 演示动作
-
-打开 T01/T02/T03 三张任务卡，沿上图当场问三次：“本轮修哪个符号？什么证据算过门？没过时停在哪里？”
-
-### 通过条件
-
-学员能按 T01→T02→T03 说出真实开发顺序，并说明为什么“build 绿”、“decoder create 成功”和“屏幕有一帧”都只是局部证据。
-
-### 素材
-
-- `case-materials/gpu/tasks/T-GPU-01.md`
-- `case-materials/gpu/tasks/T-GPU-02.md`
-- `case-materials/gpu/tasks/T-GPU-03.md`
-- `case-materials/gpu/09-源码调用链与任务拆解.md` 第 2–4 节
+真源：`09-源码调用链与任务拆解.md` 第 1–4 节。定位到的是“分叉与所有权”，不是一个 decoder 文件名。
 
 ---
 
-## 第 35 页｜把新计划拆成 6 个任务，每个任务只交付一个结果
+## 第 31 页｜跨平台调研：只迁移生命周期契约，不迁移平台假设
 
-<!--
-type: LAB
-section: CASE2_EXECUTION
-layout: progress-ledger
-time: 3m
-progress: 代码
--->
+<!-- type: MAP; section: CASE2_RESEARCH; time: 3m -->
 
-### 画面
+| Document | Input | AI action | Human Review | Output |
+|---|---|---|---|---|
+| `03-跨平台实现调研.md` | codebase-map + FFmpeg/OpenH264/MF/MediaCodec/OH_AVCodec | 对齐 Init、input/output、flush、release、失败传播 | 事实回到源码/官方 API；推断标 INFERENCE | Alternatives、Risk、Deferred、Evidence Gate |
 
-> 课堂主画面以 `case-materials/gpu/12-GPU讲课版简化叙事.md` 的第 35 页为准；原循环细节保留为讲师备查。
-
-拆分实操以 `case-materials/gpu/13-GPU-Ralph-Story拆分与伪代码验收.md` 为真源。页面只展示 Story 地图和一张 Worker Packet，文档中必须完整列出 `S0–S7` 的 Source Scope、伪代码、AC、证据、Stop 与 Exit Gate。
-
-```text
-READ 上轮 progress + 当前 Task Card
-  → PLAN 只选一个未知和一个 oracle
-  → IMPLEMENT 只改 Allowed 边界
-  → VERIFY 目标测试 + 路径证据 + 回归
-  → RECORD 结论/证据/剩余未知/下一轮
-  → STOP / CONTINUE / REPLAN
+```mermaid
+sequenceDiagram
+  participant R as FreeRDP Contract
+  participant A as Platform Adapter
+  participant D as Platform Decoder
+  R->>A: Init(codec,size)
+  A->>D: Query→Create→Configure→Start
+  R->>A: Decompress(sample,pts)
+  A->>D: Queue input
+  D-->>A: Output / format changed / failure
+  A->>A: Validate format/stride/planes
+  A-->>R: output or explicit failure
+  R->>A: Reset/Uninit
+  A->>D: Flush/Stop/Destroy
 ```
 
-下方直接放一张运行账：
-
-| 轮次 | 本轮唯一未知 | 必须留下的证据 | 决策 |
-|---|---|---|---|
-| R1 | bridge 是否进入目标 HAP | symbol、library hash、attach log | PASS 才进 R2 |
-| R2 | 真机是否选中硬件 decoder | capability、decoder name、configure/start | 不支持则 STOP/UNSUPPORTED |
-| R3 | 一帧输入输出是否可关联 | frameId、PTS、format、stride/planes | 输出合法才进 R4 |
-| R4 | owner/EndFrame 是否正确 | pendingFrameId、matched present、无双写 | 异常则进第 36 页 |
-| R5 | 连续播放是否积压 | queue depth/age、decodeUs、present gap、CPU/FPS | 推导 T04 背压任务 |
-
-页脚：**一轮的产物不是“AI 回复完成”，而是一条可让下一 Session 继续的 progress 记录。**
-
-### 讲师备注
-
-这页把“开发”和“循环”连起来。第 34 页说源码怎么一段一段接，本页说为什么不能一次把 decoder、renderer、queue、AVC444 全改完。每轮只关一个未知，是为了让 PASS/FAIL 都能转化成下一步决策。
-
-AI 必须把原始命令、返回码、日志路径和未知写回 progress。如果连续三轮在同一边界没有新证据，不继续重试，进入 `REPLAN/ESCALATE`。
-
-### 演示动作
-
-给出 R1 的 progress 空表，让学员根据“HAP 可以安装，但无 bridge symbol/attach log”选择 PASS、FAIL 还是 UNKNOWN，并写下一轮唯一动作。
-
-### 通过条件
-
-学员能把“让 AI 继续开发”改写为“下一轮只验证哪个未知、用什么 oracle、什么情况停止”。
-
-### 素材
-
-- `case-materials/gpu/07-开发排障复盘.md`
-- `evidence/gpu/03-task-acceptance-and-debug.md`
-- 附录 B7 Progress Ledger
+复用契约，不照抄 Windows COM、Android buffer index/Surface ownership 或软件解码线程模型。截图：`gpu-docs/doc-30-platform-research.png`。
 
 ---
 
-## 第 36 页｜先写验收点，再让 AI 开发
+## 第 32 页｜制定并冻结方案：ADR 先定义接管、显示和回退
 
-<!--
-type: DEBUG
-section: CASE2_DEBUG
-layout: issue-triage
-time: 3m
-progress: 调试
--->
+<!-- type: MAP; section: CASE2_DECISION; time: 3m -->
 
-### 画面
+| Document | AI 产出 | Human 决策 | 为什么 |
+|---|---|---|---|
+| `04-ADR-GPU-001-HarmonyOS硬解方案.md` | Alternatives / Preferred / Deferred / Risk / Evidence Gate | Bridge 受控接管 + App Compositor + original GDI fallback | 冻结 owner、EndFrame、fallback，阻止架构漂移 |
 
-> 课堂主画面以 `case-materials/gpu/12-GPU讲课版简化叙事.md` 的第 36 页为准；本页明确证明的是“每项开发如何验收”。
+```mermaid
+flowchart LR
+  B["Bridge 保存 original callback<br/>validate + consumed"] --> C["Compositor<br/>OH_AVCodec + retained composite"]
+  C --> E["matched EndFrame<br/>pendingFrameId 后 present"]
+  B -. takeover 前失败 .-> F["original GDI / software H264"]
+  C -. 不可安全接管 .-> F
+```
 
-验收点不是开发完成后的补充表格。先在 Story 中用伪代码冻结输入、分支、成功提交与失败不提交，再让 Ralph Session 映射真实类和函数；每条 AC 必须写清场景、通过标准、证据和失败结论。
+四条不变量：先保存原回调；未准备好不得 suppress GDI；同帧只有一个 owner；decode/composite 与 present 分离。截图：`gpu-docs/doc-31-adr.png`。
 
-顶部固定排障协议：
+---
+
+## 第 33 页｜最小能力穿刺：只证明一帧主链和一次可解释回退
+
+<!-- type: LAB; section: CASE2_SPIKE; time: 3m -->
+
+```mermaid
+flowchart LR
+  S1["SP-01 bridge 进入 HAP"] --> S2["SP-02 hardware decoder"] --> S3["SP-03 合法 native output"]
+  S3 --> S4["SP-04 matched EndFrame 显示"] --> S5["SP-05 失败回 original GDI"]
+```
+
+| Spike | 必须证据 | Stop |
+|---|---|---|
+| SP-01 | symbol/library hash/attach log | 先修构建 |
+| SP-02 | capability/decoder name/start | unsupported 则停止或改 ADR |
+| SP-03 | frameId/PTS/format/stride/planes | output 不可关联则不进显示 |
+| SP-04 | owner/pending/matched present | 黑屏停在 import/present |
+| SP-05 | fallback reason/original path/video | 回退失败则不拆 Story |
+
+生成链：ADR Evidence Gate → AI 倒推 SP-01～05 → Human 冻结“一帧 + fallback” → verdict 决定 CONTINUE/REPLAN/STOP。当前播放素材未绑定同 run decoder/trace/fallback，完整 Spike 仍为 `PENDING`。
+
+---
+
+## 第 34 页｜穿刺后重新计划：只把已证实边界变成开发输入
+
+<!-- type: LAB; section: CASE2_PLAN; time: 2m -->
+
+```mermaid
+sequenceDiagram
+  participant H as Human Reviewer
+  participant S as Spike Evidence
+  participant P as Plan
+  participant W as Worker Packet
+  H->>S: 核对 SP-01～05
+  S-->>H: PASS / FAIL / UNKNOWN
+  H->>P: 冻结事实，保留风险
+  P->>P: P0观测→P1一帧→P2连续性→P3韧性→P4验收
+  P->>W: 生成 S0～S7
+```
+
+```yaml
+spike_verdict: PASS | FAIL | UNKNOWN
+commit:
+run_id:
+selected_decoder:
+input_output_identity:
+display_owner_and_boundary:
+fallback_result:
+missing_evidence:
+decision: CONTINUE | REPLAN | STOP
+```
+
+计划来自穿刺 verdict，不是穿刺前凭空生成。只有已证实边界可以变成下一阶段输入。
+
+---
+
+## 第 35 页｜把计划拆成 S0～S7 Ralph Story
+
+<!-- type: LAB; section: CASE2_STORY; time: 3m -->
+
+```mermaid
+flowchart LR
+  S0["S0 基线"] --> S1["S1 硬件 decoder"] --> S2["S2 合法 output"] --> S3["S3 显示与回退"]
+  S3 --> S4["S4 连续播放"] --> S5["S5 生命周期"] --> S6["S6 AVC444"] --> S7["S7 工程验收"]
+```
+
+| Story | 唯一可观察结果 |
+|---|---|
+| S0 | before 与路径事实可复查 |
+| S1 | 真机选择硬件 decoder |
+| S2 | 一份输入得到合法 output |
+| S3 | 唯一 owner 正确显示并可回退 |
+| S4 | 连续播放 queue/age 有界 |
+| S5 | resize/后台/重连拒绝 stale target |
+| S6 | AVC444 LC/retained 语义正确 |
+| S7 | A/B、故障、长稳与 Reviewer 验收 |
+
+详细真源：`13-GPU-Ralph-Story拆分与伪代码验收.md`。每张 Story 都含伪代码、AC、Stop 与 Exit Gate，不按文件切任务。
+
+---
+
+## 第 36 页｜Worker Packet：文档、伪代码和 AC 先于代码
+
+<!-- type: LAB; section: CASE2_WORKER_PACKET; time: 3m -->
+
+```mermaid
+sequenceDiagram
+  participant H as Human/Planner
+  participant D as Design Doc
+  participant W as Worker Packet
+  participant A as AI Session
+  participant T as Test/Device Oracle
+  participant G as Git/Ledger
+  H->>D: 冻结目标、状态语义、fallback
+  D->>W: RED/Allowed/Forbidden/AC/Stop
+  H->>W: 审阅伪代码与 AC
+  W->>G: docs commit
+  W->>A: 只交付当前 Packet
+  A->>T: RED→最小修改→Verify
+  T-->>A: PASS/FAIL/UNKNOWN
+  A->>G: code commit + evidence
+  G->>D: 回写 verdict
+```
+
+```yaml
+story_id: S3
+goal: 唯一 owner 在 matched EndFrame 显示；接管前失败回原路径
+red: output 已有但 owner/present 不闭合，或 GPU/GDI 双写
+allowed_paths: candidate policy / compositor / owner / EndFrame + tests
+forbidden: queue 优化 / AVC444 重写 / 删除 original fallback
+acceptance: 场景 + 标准 + 同帧证据 + 失败结论
+stop: owner 不唯一、提前 present、fallback 不可达
+```
+
+沿用 MDM 协议：`docs commit → code commit → evidence ledger`。缺一列 AC，Story 不进入 Ralph。
+
+---
+
+## 第 37 页｜Ralph 循环：AI 不对时，沿第一异常处理
+
+<!-- type: DEBUG; section: CASE2_DEBUG; time: 3m -->
+
+```mermaid
+sequenceDiagram
+  participant H as Human Reviewer
+  participant A as Ralph Session
+  participant R as Runtime/Device
+  participant L as Progress Ledger
+  H->>A: Story + commit + runId + Allowed/Forbidden
+  A->>R: 运行并保存原始证据
+  R-->>A: 现象 + ordered trace
+  A->>A: Locate first expected != actual
+  A->>R: 一条可证伪观测
+  R-->>A: 支持或推翻假设
+  A->>R: 最小修复 + Replay 目标/回退/回归
+  R-->>A: PASS / FAIL / UNKNOWN
+  A->>L: 命令、退出码、证据、剩余未知、Next
+```
 
 ```text
 Stop → Preserve → Locate → Falsify → Repair → Replay
 ```
 
-中间放三个实际问题，每个问题只给第一组观测：
-
-| 现象 | 先固定哪条证据链 | 第一个可证伪假设 | 不要先做 |
-|---|---|---|---|
-| decoder 有 output，但画面黑 | native buffer → composite → pendingFrameId → matched EndFrame → target generation | 输出已有，第一异常在 GPU import/present 边界 | 继续改 decoder 参数或直接猜 shader |
-| 粉/绿色块、花屏或局部错位 | output format/stride/planes + dirty rect + retained background | 格式/plane math 与实际 output description 不一致 | 盲换色彩矩阵 |
-| 刚开始流畅，随后越来越卡 | queue depth/age p95 + decodeUs + present gap + target state | worker 消费跟不上，旧任务持续积压 | 直接加线程或无限队列 |
-
-底部保留一行真实 Trace 占位：
-
-| runId | frameId | decoder | output | owner | EndFrame/present | first abnormal | verdict |
-|---|---:|---|---|---|---|---|---|
-| `PLACEHOLDER` |  |  |  |  |  |  | `PENDING` |
-
-### 讲师备注
-
-这页不要先讲 Trace Eval 与 Outcome Eval 的概念，而是直接用三个现象教学员怎么办。统一步骤是：停止扩大修改，保存 commit/设备/runId/原日志，按同一 frame 找第一处 `expected != actual`，只加一条能区分两个分支的观测，修复后重放目标场景和 fallback。
-
-如果单帧 Trace 已经 PASS 但仍卡顿，才进入队列、时延、帧节奏和长时行为；不要回头重写已经有证据的 decoder 主链。
-
-### 演示动作
-
-播放 `gpu-failure-black-screen-13s.mp4`，先告诉学员“decoder 有 output”，让他们从表中选下一个观测边界。当前视频未绑定 frame trace，只用于练排障方法，不预设真实根因。
-
-### 通过条件
-
-学员能根据现象选出第一组观测，并让修正建议与第一异常处于同一边界，不借机重写整条渲染链。
-
-### 素材
-
-- `gpu-failure-black-screen-13s.mp4`
-- `gpu-failure-black-screen-contact.jpg`
-- `case-materials/gpu/07-开发排障复盘.md`
-- `case-materials/gpu/09-源码调用链与任务拆解.md` 第 8 节
-
----
-
-## 第 37 页｜最后只看这张表：哪些已证明，哪些还不能下结论
-
-<!--
-type: CHECKPOINT
-section: CASE2_HARDENING
-layout: matrix
-time: 2m
-progress: 证据
--->
-
-### 画面
-
-> 课堂主画面以 `case-materials/gpu/12-GPU讲课版简化叙事.md` 的第 37 页为准；本页不宣称全部成功，只汇总 READY / PENDING / UNKNOWN。
-
-| 后续任务 | 交付能力 | 验收点 | 失败时的结论 |
-|---|---|---|---|
-| T04 连续队列/背压 | 输入、输出、present 队列有界 | depth/age p95、drop reason、frame order、CPU/FPS | 延迟持续增长则 FAIL，不用一帧 PASS 遮盖 |
-| T05 生命周期 | resize/后台/重连不使用旧 target | generation、stale task rejection、release/recreate、恢复 | 旧 target 可写则 FAIL |
-| T06 AVC444 | LC、单 decoder、retained state、EndFrame 闭合 | stream/LC/readiness/owner/present 同帧 trace | 直接复用 AVC420 假设则 NEEDS_REPLAN |
-| T07 最终验收 | 性能、正确性、交互、长稳、fallback、scope 同时收口 | before/after + path + frame trace + fault + soak + reviewer | 任一强结论缺主证据则 PENDING/UNKNOWN |
-
-右侧放最终交付包，让学员看到不是只交代码：
-
-```text
-delivery/<runId>/
-├─ requirements + codebase-map + platform-research + ADR
-├─ task-cards + progress-ledger + final diff
-├─ build.log + runtime-path.log + frame-trace.log
-├─ cpu-fps-before/after.csv + video-before/after.mp4
-├─ fault-injection.md + regression/soak-matrix.md
-└─ reviewer-verdict.md
-```
-
-### 讲师备注
-
-“接通 `OH_AVCodec`”只是能力穿刺，不是交付。第 34 页的 T01–T03 证明一帧主链；本页的 T04–T07 才把连续性、生命周期、AVC444、回退和独立验收补齐。
-
-最终交付包要让另一个人不依赖当前聊天，也能重放需求、找到方案依据、核对修改边界、重跑验收并得出同样的 verdict。
-
-### 演示动作
-
-给出一个“代码和一帧 trace 都 PASS”的中间状态，让学员从 T04–T07 中选出下一张必须执行的卡，并说明不能直接发布的原因。
-
-### 通过条件
-
-学员能区分“一帧主链穿刺 PASS”与“完整工程交付”，并能列出交付包中代码以外的必需证据。
-
-### 素材
-
-- `freerdp-render-queue.jpeg`
-- `freerdp-compositor-scale.jpeg`
-- `case-materials/gpu/06-工程验收计划.md`
-- `case-materials/gpu/tasks/T-GPU-04.md`–`T-GPU-07.md`
-
----
-
-## 第 38 页｜结果验收：视频、路径、性能和工程矩阵必须同时对上
-
-<!--
-type: CHECKPOINT
-section: CASE2_OUTCOME
-layout: before-after-evidence
-time: 2m
-progress: 证据
--->
-
-### 画面
-
-左：before 证据（案例已知 CPU/软件路径；原始素材待补）
-
-```text
-video-before.mp4: PLACEHOLDER
-software/cpu path log: PLACEHOLDER
-cpu/fps/frame-time/queue-age baseline: PLACEHOLDER
-```
-
-中：after 硬解/GPU 路径待填证据链
-
-```text
-commit:
-runId:
-candidate path:
-decoder identity:
-frameId / output:
-owner / matched EndFrame:
-present:
-video-after:
-cpu/fps/frame-time/queue-age:
-```
-
-右：现有可见媒体与验收矩阵
-
-| 结论 | 当前证据 | 判定 |
+| 现象 | 第一证据链 | 不要先做 |
 |---|---|---|
-| 原始实现走 CPU/软件路径，未走 GPU | 用户冻结的案例背景；原始日志截图待入库 | `CASE FACT / EVIDENCE PLACEHOLDER` |
-| 源码存在 bridge→compositor→EndFrame 路径 | 源码锚点与调用链 | `REPO FACT` |
-| 当前 arm64/HAP 构建通过 |  | `PENDING` |
-| 真机实际选择 OHOS hardware decoder |  | `PENDING` |
-| 某次运行可见播放与部分交互 | `gpu-validation-video-playback-16s.mp4` | `MEDIA FACT / UNBOUND` |
-| 某次运行出现黑屏 | `gpu-failure-black-screen-13s.mp4` | `MEDIA FACT / UNBOUND` |
-| CPU/FPS 与卡顿改善幅度 |  | `PENDING` |
-| resize/后台/重连长稳 |  | `UNKNOWN` |
+| output 有但黑屏 | native output→import→pending→EndFrame→target | 猜 decoder 参数/shader |
+| 色块/错位 | format/stride/planes→dirty rect→retained | 盲换色彩矩阵 |
+| 开始流畅随后卡顿 | queue depth/age→decodeUs→present gap | 加线程/无限队列 |
 
-<!-- VIDEO SLOT: harmonyos-sdd-workshop-media/gpu-hwdecode-after.mp4 -->
-
-![现有可见播放与交互关键帧](harmonyos-sdd-workshop-media/gpu-validation-video-playback-contact.jpg)
-
-### 讲师备注
-
-可以播放 `gpu-validation-video-playback-16s.mp4`，但当前不称它为“硬解 after 验收”。它只能证明某次运行可见播放和部分交互；由于缺少 commit、runId、decoder path 和性能 CSV，不能替代 CPU/FPS A/B、路径日志和长稳。这些空格就是课堂上的真实验收占位。
-
-案例二最终收获不是一个 `OH_AVCodec` API 清单，而是五种可迁移能力：
-
-1. **大库认知**：用问题、分层地图和 evidence index 控制上下文；
-2. **平台迁移**：先理解成熟实现的契约，再映射目标平台差异；
-3. **最小穿刺**：先证明最短真实路径，再拆完整工程任务；
-4. **正确性判断**：方案、实现、路径、用户结果四层分别取证；
-5. **失败处理**：不让 AI 连续猜测，用最早异常、最小反证和 checkpoint 收口。
-
-最终证据包必须包含 codebase map、平台调研、ADR、任务卡、build、runtime path、frame trace、before/after 性能、视频、故障注入、回归矩阵和 Reviewer verdict。缺一项就标记对应维度 `UNKNOWN`，而不是把已有视频包装成完整成功。
-
-### 演示动作
-
-播放现有可见视频，让学员把它放进右侧表格，并判断还缺 before、path、performance、frame trace、fallback 还是 soak。最后要求每组回答：“什么证据到了才能说交付？哪一项没到必须保留占位？”
-
-### 通过条件
-
-学员的结论包含证据边界；能够把“可见播放”“硬解路径”“性能改善”“工程可交付”区分为四个独立判定。
-
-### 素材
-
-- `gpu-validation-video-playback-16s.mp4`
-- `gpu-validation-video-playback-contact.jpg`
-- `gpu-e2e-interaction-public.jpg`
-- `evidence/gpu/03-task-acceptance-and-debug.md`
-- `harmonyos-sdd-workshop-media/VIDEO_TODO.md`
-- `case-materials/gpu/00-证据状态总表.md`
+黑屏视频可用于练方法，但未绑定同 run frame trace，不能宣称根因已经确认。
 
 ---
+
+## 第 38 页｜工程验收：路径、画面、性能、回退和长稳同时闭合
+
+<!-- type: CHECKPOINT; section: CASE2_ACCEPTANCE; time: 3m -->
+
+| 验收层 | 必须证据 | 当前状态 |
+|---|---|---|
+| Build | build log / symbol / library hash | `PENDING` |
+| Path | decoder identity + candidate/owner log | `PENDING` |
+| Frame | ordered output→pending→matched present | `PENDING` |
+| Outcome | 同场景 video + CPU/FPS/frame/queue A/B | `PENDING` |
+| Fallback | fault reason + original callback + video | `PENDING` |
+| Lifecycle | generation/owner matrix + video | `UNKNOWN` |
+| Stability | soak report，无积压/泄漏/漂移 | `UNKNOWN` |
+| Regression | 输入、窗口、AVC420/444、旧路径矩阵 | `PENDING` |
+
+```text
+commit + package hash + runId + device + codec + scene
+  ├─ video-before/after.mp4
+  ├─ runtime-path.log
+  ├─ frame-trace.log
+  ├─ cpu-fps-queue.csv
+  ├─ fault-injection.md
+  ├─ lifecycle-soak-matrix.md
+  └─ reviewer-verdict.md
+```
+
+源码、方案、Story 是 `REPO FACT`；播放/黑屏录屏是 `MEDIA FACT / UNBOUND`。硬解、同帧、fallback、A/B 与长稳未齐时，最终只能是 `NOT YET`。
+
+---
+
 ## 第 39 页｜把方法带回项目，只保留七个问题
 
 <!--
