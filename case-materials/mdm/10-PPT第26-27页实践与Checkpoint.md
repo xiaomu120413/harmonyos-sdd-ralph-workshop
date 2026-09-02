@@ -52,7 +52,7 @@ result: PENDING
 ### 文档 / 截图
 
 - 文档：`case-materials/mdm/06-测试验收报告.md#5-真机验收-runbook`
-- **【视频占位】**：默认 deny 插入 U 盘，UI/系统回读/实物行为同屏。
+- **【需用户补充 U02｜视频占位】**：默认 deny 插入 U 盘，UI/系统回读/实物行为同屏。
 
 ---
 
@@ -78,8 +78,8 @@ result: PENDING
 | 架构、规则、代码映射 | PASS |
 | 关键分支 UT | PASS / 有覆盖缺口 |
 | 页面 E2E | PASS（保留一份旧 FAIL） |
-| 系统回读 | PENDING |
-| 实物 USB 矩阵 | PENDING |
+| 系统回读 | **[需用户补充 U01–U08] PENDING** |
+| 实物 USB 矩阵 | **[需用户补充 U01–U08] PENDING** |
 
 学员应能回答：
 
@@ -104,6 +104,6 @@ result: PENDING
 
 - 文档：`case-materials/mdm/00-外设管理证据状态总表.md`
 - 文档：`case-materials/mdm/09-MDM案例整体审阅与落版规则.md`
-- **【补充素材】**：六阶段文档目录、关键代码、E2E FAIL→PASS 和待补视频位组成证据墙。
+- **【可本地生成 L01/L02/L04】**：六阶段文档目录、关键代码、E2E FAIL→PASS 组成证据墙；U01–U08 视频位按 `16-用户补充素材清单.md` 保持明显占位。
 
 ---

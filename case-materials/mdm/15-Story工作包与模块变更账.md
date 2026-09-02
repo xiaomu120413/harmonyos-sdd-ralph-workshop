@@ -11,7 +11,7 @@
 | S1 | `device-policy/identity-state` | `UsbDeviceIdentityResolver.resolve()` | 同一设备 attach/detach 得到不同 fingerprint | `usb-device-identity-resolver.test.ets` | `63dda4b4` | D2/D3 PASS；启动在线对账 PENDING |
 | S2 | `device-policy/default-policy` | `PeripheralDevicePolicyRepository.setUsbDefaultPolicy()` | 切默认值误改已有设备 | `device-policy-repository.test.ets` | `8e252bf0`、`a2f0128b` | D2/D3 PASS；专用 UI Case PENDING |
 | S3 | `connection-record/first-connect` | `UsbDevicePolicyStateService.handleConnect()` | 默认 allow 设备未进入管理状态 | `usb-device-policy-state-service.test.ets` | `63dda4b4`、`f95c5109` | D2/D3 PASS；D6/D7 PENDING |
-| S4 | `device-policy/dynamic-rule` | `UsbDevicePolicyStateService.setPolicy()` | MDM 失败但 UI/RDB 已提交 | `PeripheralPolicyViewModel.test.ets` | `63dda4b4`、`f95c5109` | D2/D3 PASS；同 baseClass 实物矩阵 PENDING |
+| S4 | `device-policy/dynamic-rule` | `UsbDevicePolicyStateService.setPolicy()` | MDM 失败但 UI/RDB 已提交 | `PeripheralPolicyViewModel.test.ets` | `63dda4b4`、`f95c5109` | D2/D3 PASS；**[需用户补充 U05]** 同 baseClass 实物矩阵 PENDING |
 | S5 | `interface-control/global-usb` | `UsbGlobalPolicyService.setDisabled()` | suspend 或全局下发失败后未补偿 | `usb-global-policy-service.test.ets` | `6e7702cd`、`0d26c92e` | D2/D3/D5 PASS；D6/D7 PENDING |
 | S6 | `interface-control/storage-conflict` | `PeripheralService.setUsbStoragePolicyWithCleanupResult()` | `9200010` 与 `9200007` 被归为同一失败 | 两个 ViewModel 测试 | `f95c5109` | 冲突日志已有；部分生效闭环 PARTIAL |
 | S7 | `device-policy/restore` | `UsbDevicePolicyStateService.clearAllPolicies()` | 只改本地 allow，EDM 残留未清 | State Service + Policy VM 测试 | `23c4a046` | D2/D3/D5 PASS；系统清理回读 PENDING |
@@ -333,8 +333,8 @@ sequenceDiagram
 - [x] 文档明确区分业务 fingerprint 与系统 baseClass 执行粒度。
 - [x] 文档明确区分 PASS / FAIL / PARTIAL / UNKNOWN / PENDING。
 - [x] 文档提交、实现提交、测试提交的顺序和命名已冻结。
-- [ ] D6 系统回读矩阵仍需真机补齐。
-- [ ] D7 实物 USB 矩阵和视频仍需真机补齐。
-- [ ] 启动在线态对账与 Trace 通知失败分支仍是开放实现项，不能写成已闭环。
+- [ ] **[需用户补充 U01–U08]** D6 系统回读矩阵、D7 实物 USB 矩阵和视频；详细要求见 `16-用户补充素材清单.md`。
+- [ ] **[工程开放项 E01]** Trace 通知失败分支仍未闭环，不能要求用户用视频替代工程修复。
+- [ ] **[工程开放项 E02]** 启动在线态对账仍未实现，不能写成已闭环。
 
 因此，当前文档包已足够支持课堂讲解、代码穿刺和分组实操；尚未完整的是设备证据，而不是方法、任务边界或实现索引。课堂上应把这三项开放事实直接展示出来。
