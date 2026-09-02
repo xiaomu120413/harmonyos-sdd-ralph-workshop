@@ -1578,7 +1578,7 @@ flowchart LR
 - 真源：`case-materials/gpu/14-GPU案例第28-38页详细讲稿与文档证据.md`
 - 输入：`01-问题与基线.md`、`00-证据状态总表.md`
 - 场景图：`freerdp-stutter-scenario.jpeg`
-- **需要讲师补充 U-GPU-01**：`gpu-u01-before.mp4`、`gpu-u01-software-path.log`、`gpu-u01-before-metrics.csv` 与同 run identity；精确采集条件见 `case-materials/gpu/15-用户补充素材清单.md`。
+- **可选补充**：如果能找到原始 CPU/软件路径卡顿 before，放 20～30 秒增强开场；没有时按已冻结的 `CASE FACT` 讲，不影响本案例的方法论主线。
 
 ---
 
@@ -1719,7 +1719,7 @@ flowchart LR
 
 生成链：ADR Evidence Gate → AI 倒推 SP-01～05 → Human 冻结“一帧 + fallback” → verdict 决定 CONTINUE/REPLAN/STOP。当前播放素材未绑定同 run decoder/trace/fallback，完整 Spike 仍为 `PENDING`。
 
-**需要讲师补充 U-GPU-02/03**：同 run 的 hardware decoder 路径、单帧 output→owner→matched EndFrame trace，以及故障注入后 original GDI 回退视频/日志。缺任一项都不宣布穿刺 PASS。
+**已有历史证据可复用**：Session `019e867d-*` 中有 `active=yes`、`source=native-buffer-oes`、decoded/presented 与零 mismatch/failure；仓库已有 16 秒播放和 13 秒黑屏。它们足够讲穿刺和证据分层，但因为不是同 run，最终工程 verdict 仍为 `PARTIAL`。
 
 ---
 
@@ -1851,7 +1851,7 @@ Stop → Preserve → Locate → Falsify → Repair → Replay
 
 黑屏视频可用于练方法，但未绑定同 run frame trace，不能宣称根因已经确认。
 
-**需要讲师补充 U-GPU-06**：选一条真实问题，保留 last-good、first-abnormal、唯一 probe、最小修复与 replay，并提交 ordered trace 和 Progress Ledger。
+**已有真实 Ralph 闭环**：历史 Session 中“立即 present”修复完成构建安装后仍黑，日志推翻假设，随后回退修改、重新构建并覆盖安装；不需要再人为制造一条问题。
 
 ---
 
@@ -1883,7 +1883,7 @@ commit + package hash + runId + device + codec + scene
 
 源码、方案、Story 是 `REPO FACT`；播放/黑屏录屏是 `MEDIA FACT / UNBOUND`。硬解、同帧、fallback、A/B 与长稳未齐时，最终只能是 `NOT YET`。
 
-**需要讲师补充 U-GPU-01～05**：before、after、硬解同帧 trace、故障回退、性能 A/B、生命周期与 soak。文件名、采集条件和对应验收点统一见 `case-materials/gpu/15-用户补充素材清单.md`。
+课堂结论：现有媒体和历史 Session 已够讲；只建议可选补一段原始卡顿 before。严格 same-run identity、fault injection、A/B 与 soak 下沉到工程附录，只有要宣布当前版本正式 PASS 时才补。证据摘要见 `case-materials/gpu/16-历史Session可复用证据.md`。
 
 ---
 
