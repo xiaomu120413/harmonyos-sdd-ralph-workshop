@@ -2113,6 +2113,8 @@ progress: 代码
 
 > 课堂主画面以 `case-materials/gpu/12-GPU讲课版简化叙事.md` 的第 35 页为准；原循环细节保留为讲师备查。
 
+拆分实操以 `case-materials/gpu/13-GPU-Ralph-Story拆分与伪代码验收.md` 为真源。页面只展示 Story 地图和一张 Worker Packet，文档中必须完整列出 `S0–S7` 的 Source Scope、伪代码、AC、证据、Stop 与 Exit Gate。
+
 ```text
 READ 上轮 progress + 当前 Task Card
   → PLAN 只选一个未知和一个 oracle
@@ -2169,6 +2171,8 @@ progress: 调试
 ### 画面
 
 > 课堂主画面以 `case-materials/gpu/12-GPU讲课版简化叙事.md` 的第 36 页为准；本页明确证明的是“每项开发如何验收”。
+
+验收点不是开发完成后的补充表格。先在 Story 中用伪代码冻结输入、分支、成功提交与失败不提交，再让 Ralph Session 映射真实类和函数；每条 AC 必须写清场景、通过标准、证据和失败结论。
 
 顶部固定排障协议：
 
