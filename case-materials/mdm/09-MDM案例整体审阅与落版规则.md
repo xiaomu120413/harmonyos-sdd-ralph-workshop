@@ -88,6 +88,7 @@
 - 2026-09-01 coverage report：证明测试执行面，同时暴露 Dispatch 低覆盖。
 - `evidence/mdm/peripheral-code-test-evidence.md`：代码、测试、提交与证据边界的自包含摘要。
 - `13-本地Session真实问题证据卡.md`：`9200010/9200007`、Trace 通知、在线态等真实反例和素材占位。
+- `15-Story工作包与模块变更账.md`：S1–S8 的 RED、真实类、允许/禁止路径、测试、历史提交和当前 verdict；用于检查 PPT 标注是否与细化文档一致。
 
 ## 6. 必须留空的素材
 
