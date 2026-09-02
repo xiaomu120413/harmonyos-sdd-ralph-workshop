@@ -134,7 +134,140 @@ S2 默认策略 ──────┘                          └→ S6 冲突 
 - E2E 报告保留旧 FAIL 与新 PASS。
 - 至少加入一次“页面显示允许但系统仍有 baseClass deny”的反例，证明验收不是收集绿色截图。
 
-### 4.9 真实问题如何拆回 Story，而不是塞进一个 Bug
+### 4.9 Story 级伪代码｜先冻结行为，再让 AI 映射到真实类
+
+伪代码不替代 ArkTS 实现，它用于冻结输入、分支、提交顺序和失败语义。Worker Session 可以调整私有函数，但不能改变这里已经评审过的不变量。
+
+#### S1｜身份与状态真源
+
+```text
+resolveIdentity(payload):
+  if payload is USB_HUB: return SKIP
+  fingerprint = serial exists
+    ? "USB-SN:" + serial
+    : weakFingerprint(vendorId, productId, description, baseClass)
+  return { fingerprint, baseClass, fingerprintType }
+
+onDetach(fingerprint):
+  state = policyStateRepo.find(fingerprint)
+  if state exists: policyStateRepo.save(state with present=false)
+  // 保留 desiredPolicy；不因拔出删除长期意图
+```
+
+#### S2｜默认策略
+
+```text
+setDefaultPolicy(next):
+  require usbGloballyDisabled == false
+  normalized = next in [allow, deny] ? next : allow
+  preferences.save("usb_default_policy", normalized)
+  // 禁止枚举当前设备；禁止批量改写已有 desiredPolicy
+```
+
+#### S3｜首次连接
+
+```text
+handleConnect(identity, defaultPolicy):
+  existing = policyStateRepo.find(identity.fingerprint)
+  if existing:
+    return markPresentAndApplyExisting(existing)
+
+  desired = normalize(defaultPolicy)
+  if desired == allow:
+    save { desired=allow, active=none, present=true }
+    return SUCCESS
+
+  if identity is USB_STORAGE and storagePolicy == DISABLED:
+    save diagnostic only
+    return CONFLICT
+
+  result = dispatch(deny, identity.baseClass)
+  if result failed: return result without fake deny record
+  save { desired=deny, active=deny, present=true }
+```
+
+#### S4｜在线设备动态黑白名单
+
+```text
+setDevicePolicy(fingerprint, target):
+  state = policyStateRepo.find(fingerprint)
+  require state exists and state.present == true
+  require no storage/global conflict
+
+  result = dispatch(target, state.baseClass)
+  if result failed:
+    return reasonCode; keep old state and controlled UI value
+
+  save state with desired=target,
+    active=(target == deny ? deny : none)
+  append policy snapshot; notify observers
+  return SUCCESS
+```
+
+#### S5｜全局 USB 事务
+
+```text
+setGlobalUsbDisabled(disallow):
+  if disallow:
+    snapshot = states where present && active==deny
+    suspended = suspend(snapshot)
+    if suspended failed: compensate(suspended); return FAIL
+    result = restrictions.set("usb", disabled)
+    if result failed: compensate(suspended); return FAIL
+    commit active=none; keep desired unchanged
+    return SUCCESS
+
+  result = restrictions.set("usb", enabled)
+  if result failed: return FAIL
+  online = boundedReEnumerate(500ms, then 1000ms if empty)
+  replay deny for online where desired==deny
+  return SUCCESS or PARTIAL
+```
+
+#### S6｜存储策略冲突与部分生效
+
+```text
+setStoragePolicy(target):
+  if target conflicts with remaining device-type deny:
+    return CONFLICT_9200010 with restore action
+
+  apiResult = usbManager.setStoragePolicy(target)
+  readback = usbManager.getStoragePolicy()
+  if apiResult success and readback == target: return SUCCESS
+  if apiResult failed and readback == target:
+    return PARTIAL_APPLIED; ask user to remount/replug
+  return FAIL; keep previous confirmed UI state
+```
+
+#### S7｜还原与系统残留清理
+
+```text
+clearAllPolicies():
+  require usbGloballyDisabled == false
+  systemResult = dispatch.clearAllUsbDeviceTypePolicies()
+  if systemResult failed: return FAIL without changing local records
+
+  for each policy state:
+    save desired=allow, active=none; keep asset card
+  notify policy observers
+  return SUCCESS
+```
+
+#### S8｜证据闭环
+
+```text
+accept(case):
+  evidence = collect(D1_doc, D2_code, D3_UT, D4_build,
+                     D5_UI, D6_systemReadback, D7_physical)
+  if required oracle unavailable: return UNKNOWN or PENDING
+  if any required oracle failed: return FAIL
+  if system applied but runtime not converged: return PARTIAL_APPLIED
+  return PASS
+```
+
+伪代码评审通过的标准：每个失败分支都写清“什么不提交”，每次成功都写清“提交到哪个真源”，每个系统能力都能指向独立 oracle。
+
+### 4.10 真实问题如何拆回 Story，而不是塞进一个 Bug
 
 | 真实问题 | 不能怎么修 | 正确归属 | 为什么 |
 |---|---|---|---|
