@@ -39,7 +39,7 @@ stop: 需要重新设计、缺权限或缺系统观察能力时停止
 ### Goal 与阅读顺序
 
 - Goal：稳定识别 USB 资产，并把长期意图、在线态、执行态分开保存。
-- Read first：RFC §5.3、§6.2、§9；Story S1 与 §4.9；`13-本地Session真实问题证据卡.md` 的 B、G。
+- Read first：RFC §5.3、§6.2、§9；Story 实施规格 §4；`13-本地Session真实问题证据卡.md` 的 B、G。
 - Code slice：`UsbDeviceIdentityResolver.ets`、`UsbDevicePolicyStateRepository.ets`、`PeripheralConnectionRecordUsbConsumer.ets`。
 
 ### RED、修改边界与验收
@@ -69,7 +69,7 @@ verdict: PARTIAL
 ### Goal 与阅读顺序
 
 - Goal：默认策略只决定“尚未配置的新设备”首次接入行为，不批量重写现有资产。
-- Read first：RFC §6.3；Story S2 与 §4.9；计划 `docs/superpowers/plans/2026-05-14-peripheral-usb-default-policy.md`。
+- Read first：RFC §6.3；Story 实施规格 §5；计划 `docs/superpowers/plans/2026-05-14-peripheral-usb-default-policy.md`。
 - Code slice：`PeripheralDevicePolicyRepository.ets`、`PeripheralPolicyViewModel.setUsbDefaultPolicy()`。
 
 ### RED、修改边界与验收
@@ -99,7 +99,7 @@ verdict: PARTIAL
 ### Goal 与阅读顺序
 
 - Goal：把 USB 事件转成可信资产状态；默认 deny 只有系统下发成功后才形成 active deny。
-- Read first：RFC §9；Story S3 与 §4.9；证据卡 B、C。
+- Read first：RFC §9；Story 实施规格 §6；证据卡 B、C。
 - Code slice：`PeripheralConnectionRecordUsbConsumer.ets` → `UsbDevicePolicyStateService.handleConnect()` → State Repository / Dispatch。
 
 ### RED、修改边界与验收
@@ -129,7 +129,7 @@ verdict: PARTIAL
 ### Goal 与阅读顺序
 
 - Goal：在线设备规则修改保持“用户意图、系统执行、本地提交”顺序一致，失败不出现假成功。
-- Read first：RFC §6.4、§6.5；Story S4 与 §4.9；证据卡 C。
+- Read first：RFC §6.4、§6.5；Story 实施规格 §7；证据卡 C。
 - Code slice：`PolicyList.ets` → `PeripheralPolicyViewModel.setDevicePolicy()` → `UsbDevicePolicyStateService.setPolicy()` → `PeripheralDevicePolicyDispatchService.dispatch()`。
 
 ### RED、修改边界与验收
@@ -159,7 +159,7 @@ verdict: PARTIAL
 ### Goal 与阅读顺序
 
 - Goal：全局闸门切换时暂停/恢复显式 deny，保留长期意图，并对每个失败点补偿。
-- Read first：RFC §7、§8；Story S5、§4.9 和原 Worker Packet；计划 `2026-07-11-peripheral-usb-global-control-story.md`。
+- Read first：RFC §7、§8；Story 实施规格 §8 和原 Worker Packet；计划 `2026-07-11-peripheral-usb-global-control-story.md`。
 - Code slice：`InterfaceControlViewModel.toggleInterface()` → `UsbGlobalPolicyService.setDisabled()` → State Service / `PeripheralService`。
 
 ### RED、修改边界与验收
@@ -189,7 +189,7 @@ verdict: PARTIAL
 ### Goal 与阅读顺序
 
 - Goal：区分规则冲突、API 失败、系统已写入但运行态未收敛，不把不同状态压成一个错误 Toast。
-- Read first：RFC §6.5、§12；Story S6 与 §4.9；证据卡 D、E。
+- Read first：RFC §6.5、§12；Story 实施规格 §9；证据卡 D、E。
 - Code slice：`InterfaceControlViewModel.setUsbStoragePolicy()` → `PeripheralService.setUsbStoragePolicyWithCleanupResult()`；设备 deny 分支经过 Dispatch 的存储策略读取。
 
 ### RED、修改边界与验收
@@ -219,7 +219,7 @@ verdict: PARTIAL
 ### Goal 与阅读顺序
 
 - Goal：先清理 EDM 类型规则，再恢复本地 allow；任何系统清理失败都不伪造本地成功。
-- Read first：RFC §11；Story S7 与 §4.9；证据卡 D、H。
+- Read first：RFC §11；Story 实施规格 §10；证据卡 D、H。
 - Code slice：`PeripheralPolicyViewModel.clearAllPolicies()` → `UsbDevicePolicyStateService.clearAllPolicies()` → `PeripheralDevicePolicyDispatchService.clearAllUsbDeviceTypePolicies()`。
 
 ### RED、修改边界与验收

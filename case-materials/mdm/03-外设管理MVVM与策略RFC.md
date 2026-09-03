@@ -1,4 +1,4 @@
-# 阶段 3｜外设管理 MVVM 与策略 RFC（课堂摘录版）
+# 阶段 3｜外设管理 MVVM 与策略 RFC
 
 ## 1. RFC 目标
 
@@ -17,7 +17,7 @@
 9. 还原策略先清系统残留，后改本地记录；记录恢复为 allow，不删除资产卡片。
 10. UI/E2E 结果不能代替 MDM 回读和实物接入 oracle。
 
-课堂冻结公式：
+冻结规则：
 
 ```text
 接口管控 global gate
@@ -67,7 +67,7 @@
 MVVM 解决“页面如何持有和提交状态”，但完整外设框架还包括两条后台链和两个系统事实源：
 
 ```mermaid
-flowchart TB
+graph TB
   subgraph FG[前台交互链]
     View --> ParentVM --> ChildVM --> DomainService
   end
@@ -254,7 +254,7 @@ const desiredPolicy = existing?.desiredPolicy ??
 1. 产品交互允许管理员对某个设备卡片设置显式规则。
 2. 在当前系统 API 粒度下，不能宣传成已证明的 SN 级物理隔离。
 
-课堂演示应准备两台同类型设备：A 设 deny 后插入 B，观察 B 是否也受影响。这是验证执行粒度的唯一有效反例，单台设备视频无法证明。
+验收必须准备两台同类型设备：A 设 deny 后插入 B，观察 B 是否也受影响。这是验证执行粒度的必要反例，单台设备结果无法证明隔离粒度。
 
 ## 7. 全局 USB 禁用事务
 
@@ -306,20 +306,20 @@ if (!result.success && disallow) {
 ```mermaid
 sequenceDiagram
   participant U as 管理员
-  participant G as Global Service
-  participant R as restrictions usb
-  participant S as State Service
-  participant M as usbManager type rule
+  participant G as 全局USB服务
+  participant R as USB全局限制
+  participant S as 设备状态服务
+  participant M as USB类型策略
   participant D as 设备
 
   U->>G: setDisabled(false)
   G->>R: 解除全局 USB 禁用
   R-->>G: success
-  G->>S: restore present explicit deny
-  S->>M: addDisallowedUsbDevices(baseClass)
-  M-->>S: success / partial failure
+  G->>S: 恢复在线设备的显式deny
+  S->>M: 按baseClass恢复禁止策略
+  M-->>S: 成功或部分失败
   M-->>D: 同类型设备可能继续被拒绝
-  G-->>U: 全局启用成功 + 设备规则重放结果
+  G-->>U: 返回全局启用和设备规则重放结果
 ```
 
 全局启用和设备可用是两层结论。页面必须分别表达“全局闸门已打开”和“该设备仍命中显式 deny/存储策略”，不能用一个“USB 已启用”Toast 代替最终设备状态。
@@ -343,30 +343,30 @@ USB attach
 
 ```mermaid
 sequenceDiagram
-  participant OS as USB CommonEvent
-  participant C as UsbConsumer
-  participant I as IdentityResolver
-  participant S as StateService
-  participant P as Preferences/RDB
-  participant M as MDM Dispatch
-  participant T as Trace
+  participant OS as USB系统事件
+  participant C as USB事件消费者
+  participant I as 设备身份解析器
+  participant S as 设备状态服务
+  participant P as 配置和策略库
+  participant M as MDM策略下发
+  participant T as 连接记录
 
   OS->>C: ATTACHED(raw payload)
-  C->>I: resolve SN / weak fingerprint
-  I-->>C: identity + baseClass
+  C->>I: 解析SN或弱指纹
+  I-->>C: 返回身份和baseClass
   C->>S: handleConnect(identity)
   S->>P: get existing state
   alt 已有显式规则
-    P-->>S: desired allow/deny
+    P-->>S: 返回显式allow或deny
   else 首次出现
     S->>P: read usbDefaultPolicy
   end
   alt desired allow
-    S->>P: save allow/none/present
+    S->>P: 保存allow、none和present
   else desired deny
     S->>M: dispatch type deny
     alt success
-      S->>P: save deny/deny/present
+      S->>P: 保存deny、deny和present
     else failure
       S-->>C: failure, active 不伪造为 deny
     end
@@ -405,7 +405,7 @@ View 点击“还原策略”
 
 若第 2 步失败，第 3 步不得执行。若第 4 步失败，则系统已恢复但本地未完成，返回失败并要求重新同步/人工核对，而不是显示成功。
 
-还原是一个高风险顺序：当前实现若“系统清理成功、本地 `upsertAll` 失败”，会形成系统已允许、本地仍显示 deny 的反向不一致。课程中必须把它列为需要补偿或可重试中间态的风险，不能因为 happy-path UT 通过就写成完全闭环。
+还原是一个高风险顺序：当前实现若“系统清理成功、本地 `upsertAll` 失败”，会形成系统已允许、本地仍显示 deny 的反向不一致。该情况必须列为需要补偿或可重试的中间态，不能因为 happy-path UT 通过就判定完全闭环。
 
 ## 12. UI 失败回退
 
@@ -435,9 +435,9 @@ View 不维护重复业务状态。`AsyncSelectRow` 接收父级 `selectedIndex`
 | 策略 RDB | `UsbDevicePolicyStateRepository` |
 | 规则→页面模型 | `PeripheralPolicyService.buildPolicyRecords` |
 
-## 14. 课堂截图卡｜一屏看懂 MVVM 和提交边界
+## 14. MVVM 与提交边界摘要
 
-> **截图结论（CURRENT）：** View 只发事件，VM 只管可见状态与协调，Service 负责规则/事务，Repository/System 才是真源；只有系统成功后才提交执行态。
+> **架构结论（CURRENT）：** View 只发事件，VM 只管可见状态与协调，Service 负责规则/事务，Repository/System 才是真源；只有系统成功后才提交执行态。
 
 ```text
 PolicyList (View)
@@ -456,7 +456,7 @@ PolicyList (View)
 | Service | 状态机、事务、补偿、系统调用 | 维护页面控件状态 |
 | Repository/System | 持久化与系统事实 | 反向决定 UI 交互 |
 
-**这张图怎么用：** 课堂上从 `PolicyList` 顺箭头追到 `DispatchService`，然后让学员找 `upsert` 是否位于 PASS 分支，用源码判断“不会假成功”。
+**评审方法：** 从 `PolicyList` 顺调用链追到 `DispatchService`，再确认 `upsert` 是否只位于 PASS 分支，用源码判断是否存在“假成功”。
 
 ## 15. 测试边界
 
