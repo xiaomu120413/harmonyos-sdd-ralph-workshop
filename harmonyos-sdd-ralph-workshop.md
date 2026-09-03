@@ -1547,7 +1547,7 @@ result: PENDING
 ### 文档 / 截图
 
 - 文档：`case-materials/mdm/00-外设管理证据状态总表.md`
-- 文档：`case-materials/mdm/09-MDM案例整体审阅与落版规则.md`
+- 文档：`case-materials/mdm/04-Feature与Story拆解.md`
 - **【补充素材】**：六阶段文档目录、关键代码、E2E FAIL→PASS 和待补视频位组成证据墙。
 
 ---

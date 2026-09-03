@@ -52,7 +52,7 @@ InterfaceControlViewModel
 默认黑白名单 = Preferences，只兜底新设备
 ```
 
-### 课堂素材
+### 可复用证据
 
 - 左：旧代码/旧计划中 `usb_default_policy`。
 - 右：当前 `UsbGlobalPolicyService → restrictions usb`。
@@ -266,7 +266,7 @@ sequenceDiagram
 | Ralph 循环 | B/D/E/F | 展示假设如何被证据推翻并固化为不变量 |
 | 验收 | C/D/E/G | 生成双设备、错误码、重插和启动对账 Case |
 
-## 11. PPT 素材占位
+## 11. 待归档证据与示意图
 
 | 编号 | 建议素材 | 当前 |
 |---|---|---|
@@ -280,4 +280,4 @@ sequenceDiagram
 | S-H | 全局恢复后显式 deny 重放 | **[需用户补充 U01/U06]** 时序图可本地生成，真机视频需用户提供 |
 | S-I | UT 名称、覆盖范围与历史提交 | **[可本地生成 L03]** 从测试目录、coverage 和 Git 历史提取 |
 | S-J | E2E 旧 FAIL→新 PASS 对照 | **[可本地生成 L04]** 使用现有 JSON 和摘要，不需要补拍 |
-| S-K | MCP/E2E 架构、证据阶梯与 Ledger 图 | **[可本地生成 L05]** 从 Markdown/PPT 重绘，不需要用户素材 |
+| S-K | MCP/E2E 架构、证据阶梯与 Ledger 图 | **[可本地生成 L05]** 从现有工程文档生成，不需要外部素材 |

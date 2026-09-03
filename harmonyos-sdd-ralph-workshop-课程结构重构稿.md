@@ -328,7 +328,7 @@ Harness：规格 + 工具 + 证据 + 停止条件，约束 Agent Loop
 
 ## 第 9 页｜案例一的复杂性来自业务、权限、状态和设备共同作用
 
-> **MDM 第 9–25 页详细版以 `case-materials/mdm/07-PPT第9-25页内容与备注.md` 为准。** 详细版已经按“资产同步 → 方案推导 → RFC → Story → Ralph → 测试验收”重排，并引用同目录真实课堂文档；函数级调用链、系统 API、失败分支、UT oracle 与 E2E 路由以 `case-materials/mdm/08-代码级调用链与课堂穿刺.md` 为准。本文件以下内容保留为课程摘要，制作 PPT 时应使用详细版替换。
+> **MDM 工程事实以 `case-materials/mdm/README.md` 的六阶段交付链为准。** Story、函数级调用链、系统 API、失败分支、UT oracle 与 E2E 路由分别以 `case-materials/mdm/04-Feature与Story拆解.md` 和 `case-materials/mdm/08-代码级调用链与验证穿刺.md` 为准；本文件只保留结构摘要，不覆盖工程文档结论。
 
 ### PPT 内容
 
