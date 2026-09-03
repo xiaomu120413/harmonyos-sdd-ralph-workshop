@@ -68,9 +68,9 @@
 | `evidence/mdm/t01-red-green.md` | LEGACY | 历史旧案例证据，不进入当前外设主线 |
 | `evidence/mdm/account-cross-process-log.md` | LEGACY | 历史旧案例证据，不进入当前外设主线 |
 | `evidence/mdm/firewall-runtime-readback.md` | LEGACY | 历史旧案例证据，不进入当前外设主线 |
-| `evidence/gpu/01-codebase-map.md` | 28–29 | READY | 记录 55.9 万行级源码规模、分层地图、入口和按需上下文策略 |
-| `evidence/gpu/02-platform-research-and-spike.md` | 30–32 | READY / device evidence GAP | 对照软件、Windows、Android 与 HarmonyOS H.264 后端，并定义最小穿刺证据 |
-| `evidence/gpu/03-task-acceptance-and-debug.md` | 33–38 | READY / performance video GAP | 任务树、验收矩阵、AI 正误判定、故障处理与最终证据包 |
+| `case-materials/gpu/02-大代码库认知地图.md` | 28–29 | READY | 记录 55.9 万行级源码规模、分层地图、入口和按需上下文策略 |
+| `case-materials/gpu/03-跨平台实现调研.md`、`05-最小能力穿刺计划.md` | 30–32 | READY / device evidence GAP | 对照软件、Windows、Android 与 HarmonyOS H.264 后端，并定义最小穿刺证据 |
+| `case-materials/gpu/13-GPU-Ralph-Story拆分与伪代码验收.md`、`06-工程验收计划.md` | 33–38 | READY / runtime evidence GAP | 可执行 Story、验收矩阵、故障处理与最终证据包 |
 
 版权归原作者 / Anthropic 所有。当前仓库仅按内部教学参考保存；公开发布、再分发或商业课件使用前，应重新确认授权、品牌与版权要求。详细记录见 `THIRD_PARTY_ASSETS.md`。
 
@@ -111,6 +111,6 @@ PASS / FAIL / UNKNOWN scope
 | `gpu-docs/doc-29-codebase-map.png` | `case-materials/gpu/02-大代码库认知地图.md` | 29 | 完整认知地图文档截面 |
 | `gpu-docs/doc-29-codebase-map-strip.png` | 同上 | 29 | 在现有小图框中展示 Input / AI / Human / Why / Next |
 | `gpu-docs/doc-30-platform-research.png` | `case-materials/gpu/03-跨平台实现调研.md` | 30 | 平台生命周期、失败与释放语义对照 |
-| `gpu-docs/doc-31-adr.png` | `case-materials/gpu/04-ADR-GPU-001-HarmonyOS硬解方案.md` | 31 / 备课 | ADR Alternatives、Preferred 与 Evidence Gate |
+| `gpu-docs/doc-31-adr.png` | `case-materials/gpu/04-ADR-GPU-001-HarmonyOS硬解方案.md` | 31 | ADR Alternatives、Preferred 与 Evidence Gate |
 | `gpu-docs/doc-32-spike-plan.png` | `case-materials/gpu/05-最小能力穿刺计划.md` | 32 | 穿刺步骤、证据和 Stop 条件 |
-| `gpu-docs/doc-33-task-card.png` | `case-materials/gpu/tasks/T-GPU-02.md` | 33 / 备课 | 单结果任务卡、AC、Forbidden 与 Stop |
+| `gpu-docs/doc-33-task-card.png` | `case-materials/gpu/13-GPU-Ralph-Story拆分与伪代码验收.md` 的 S2 | 33 | 单结果 Story、伪代码、AC、Forbidden 与 Stop |

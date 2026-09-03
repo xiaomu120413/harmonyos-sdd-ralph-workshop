@@ -79,11 +79,71 @@ Ralph 循环固定为：
 
 ---
 
-## 5. Story 明细
+## 5. 共用执行基线
+
+所有命令从 `demo` 仓库根目录执行。当前文档基线是 commit `aa31146`；行号变化时以文件路径和符号为准。
+
+### 5.1 开工前检查
+
+```powershell
+git rev-parse --short HEAD
+git status --short
+rg -n "gdi_SurfaceCommand|freerdp_ohos_rdpgfx_bridge_attach|ohos_rdpgfx_surface_command|ohos_rdpgfx_record_avc420_gpu_candidate" harmony/third_party/FreeRDP
+rg -n "InstallRdpgfxDiagnosticsHooks|OnSurfaceCommand|ProcessCommand|PresentEndFrame|OH_AVBuffer_GetNativeBuffer" harmony/app/common/src/main/cpp
+```
+
+若工作区已有修改，不得覆盖或回滚不属于当前 Story 的内容。若基线 commit 或符号不一致，先更新 `02`、`09` 和本文件，再提交 docs checkpoint。
+
+### 5.2 构建、安装与启动
+
+修改 FreeRDP/OHOS adapter 后先交叉构建并同步 runtime：
+
+```powershell
+wsl.exe bash -lc "cd /mnt/c/Users/mu/Desktop/code/demo && export OHOS_NDK_HOME=/opt/ohos/sdk-6.1.0.830/command-line-tools/sdk/default/openharmony/native && ./harmony/scripts/wsl/build-freerdp-ohos.sh"
+powershell -NoProfile -ExecutionPolicy Bypass -File .\harmony\scripts\windows\sync-freerdp-runtime.ps1
+```
+
+构建并安装 2in1 产物：
+
+```powershell
+.\harmony\app\build_hap.bat 2in1
+$GpuDevice = "<hdc-serial>"
+hdc -t $GpuDevice install -r .\harmony\app\common\build\default\outputs\default\common-default-signed.hsp
+hdc -t $GpuDevice install -r .\harmony\app\entry\build\default\outputs\default\entry-default-signed.hap
+hdc -t $GpuDevice shell aa start -a EntryAbility -b com.muhub.desktop
+```
+
+`<hdc-serial>` 必须来自 `hdc list targets`，不得把个人设备序列号提交到仓库。tablet 使用 `build_hap.bat tablet`、`entry_tablet-default-signed.hap` 和 `TabletEntryAbility`。
+
+### 5.3 运行证据目录
+
+```powershell
+$GpuRunId = "gpu-<yyyyMMdd-HHmmss>"
+New-Item -ItemType Directory -Path ".\evidence\gpu\runs\$GpuRunId" -Force
+git rev-parse HEAD | Tee-Object -FilePath ".\evidence\gpu\runs\$GpuRunId\commit.txt"
+Get-FileHash -Algorithm SHA256 ".\harmony\app\entry\build\default\outputs\default\entry-default-signed.hap" | Format-List | Out-File -Encoding utf8 ".\evidence\gpu\runs\$GpuRunId\package-hash.txt"
+hdc -t $GpuDevice hilog -r
+```
+
+执行目标场景后保存原始日志：
+
+```powershell
+hdc -t $GpuDevice hilog -x | Tee-Object -FilePath ".\evidence\gpu\runs\$GpuRunId\hilog.txt"
+```
+
+日志、媒体和指标必须使用同一 `$GpuRunId`；任何一项来自别次运行时标记 `UNBOUND`。
+
+---
+
+## 6. Story 明细
 
 ## S0｜保存 CPU 路径与卡顿基线
 
 **As a** Reviewer，**I want** 在不修改生产路径的前提下保存 before，**so that** 后续硬解结果有可比较的事实基线。
+
+**Read first：** `00-证据状态总表.md`、`01-问题与基线.md`、`15-用户补充素材清单.md`，以及源码仓库 `docs/freerdp-ohos-feature-matrix.md` 中 `CPU-RECORD-001`。
+
+**Output：** `evidence/gpu/runs/<run_id>/U-GPU-01-before/`，至少包含 identity、视频、path log、metrics CSV 和 verdict。
 
 ### Ralph 边界
 
@@ -123,11 +183,17 @@ captureBefore(scene):
 
 **Stop：** 无法证明当前 decoder/path 时，不允许开始改硬解；先生成观测性子任务。
 
+**Verify：** 使用源码中的 CPU-only 编译开关生成独立 before 包；运行固定片段 30 秒后，从原始日志检查不得出现 AVC420/AVC444 GPU compositor 或 GLES renderer 初始化，并把编译开关值、HAP hash、路径日志和性能 CSV 写入同一 evidence index。CPU-only 开关字段若与 `docs/freerdp-ohos-feature-matrix.md` 不一致，停止并先更新 S0，不猜测字段名。
+
 ---
 
 ## S1｜真机选择 HarmonyOS 硬件 Decoder
 
 **As a** 远控视频管线，**I want** 在目标设备选择硬件 H.264 decoder，**so that** 后续输出确实来自新路径，同时不破坏旧路径回退。
+
+**Read first：** `04-ADR-GPU-001-HarmonyOS硬解方案.md`、`05-最小能力穿刺计划.md`，以及 `harmony/app/common/src/main/cpp/channels/rdpgfx_pipeline.cpp::InstallRdpgfxDiagnosticsHooks`、`harmony/third_party/FreeRDP/client/OHOS/ohos_rdpgfx_bridge.c::freerdp_ohos_rdpgfx_bridge_attach`、`harmony/app/common/src/main/cpp/surface/avc420_gpu_compositor_internal.cpp` 的 decoder init 区域。
+
+**Output：** 当前 run 的 build log、symbol scan、decoder identity、各初始化阶段返回码、fallback reason 和 S1 verdict。
 
 ### Ralph 边界
 
@@ -171,11 +237,17 @@ selectDecoder(stream, device):
 
 **Stop：** 设备不提供目标硬件能力时返回 `UNSUPPORTED`，不能用“调用了硬解 API”冒充 PASS。
 
+**Verify：** 先执行 5.2 的 FreeRDP 构建、runtime 同步、2in1 构建、安装和启动；再执行 `rg -n "AVC420 GPU decoder (create failed|invalid|prepare failed|start failed|ready)" harmony/app/common/src/main/cpp/surface/avc420_gpu_compositor_internal.cpp` 固化期望日志。真机日志必须给出 `ready` 与 decoder identity；不支持或任一步失败时必须出现 reason，并观察 original 路径仍可用。
+
 ---
 
 ## S2｜一个短片段产生合法解码结果
 
 **As a** compositor，**I want** 把一份压缩输入关联到一份可解释的解码输出，**so that** codec 问题和显示问题可以分开验收。
+
+**Read first：** S1 verdict、`avc420_gpu_compositor_internal.cpp` 中 `MakeDecoderPts`、input queue、output query、`OH_AVBuffer_GetNativeBuffer` 和 output description 相关代码。
+
+**Output：** `input-output-frame.log`、`output-description.json`、native buffer identity 和 S2 verdict；不得只保存过滤后的单行日志。
 
 ### Ralph 边界
 
@@ -218,11 +290,17 @@ decodeOneSample(sample, storyFrameId):
 
 **Stop：** 只看到 output callback 不算 PASS；输出格式未知时保留原始描述并停止扩大显示改动。
 
+**Verify：** 执行 `rg -n "MakeDecoderPts|QueryInputBuffer|PushInputBuffer|QueryOutputBuffer|GetOutputDescription|OH_AVBuffer_GetNativeBuffer" harmony/app/common/src/main/cpp/surface/avc420_gpu_compositor_internal.cpp`；运行已知短片段并从完整 hilog 提取同一 frameId 的 input PTS、output PTS、format、stride/planes 和 native buffer。任一字段无法关联时 S2 保持 `UNKNOWN/FAIL`，不得进入显示改动。
+
 ---
 
 ## S3｜在正确边界显示，并能失败回退
 
 **As a** 用户，**I want** 硬解画面在正确时机显示且失败时仍可使用旧方案，**so that** 新路径不会带来黑屏、撕裂或不可恢复。
+
+**Read first：** S2 verdict、`09-源码调用链与任务拆解.md` 第 2～4 节、`ohos_rdpgfx_avc444_policy.c::ohos_rdpgfx_record_avc420_gpu_candidate`、`Avc420GpuCompositor::OnSurfaceCommand`、`ProcessCommand`、`PresentQueuedUpdate`、`PresentEndFrame`。
+
+**Output：** 同一 frameId 的 ordered trace、可见结果、接管前故障注入记录、original GDI 恢复记录和 S3 verdict。
 
 ### Ralph 边界
 
@@ -271,11 +349,17 @@ onEndFrame(frame):
 
 **Stop：** GDI/GPU 双写、提前 present 或回退不可达时立即停止；不得用“屏幕亮了”替代完整穿刺证据。
 
+**Verify：** 执行 `rg -n "pendingFrameId|PresentQueuedUpdate|PresentEndFrame|fallback before takeover|consumed" harmony/app/common/src/main/cpp/surface/avc420_gpu_compositor_internal.cpp harmony/third_party/FreeRDP/client/OHOS`；正常运行时证明 `decode→owner→pending→matched EndFrame→present` 有序且同帧。再使用可恢复的 decoder 不支持或 output 非法注入点重跑，证明 `consumed=false/original callback`；测试结束必须清除注入并重放正常路径。
+
 ---
 
 ## S4｜连续播放时队列与延迟保持有界
 
 **As a** 用户，**I want** 视频连续播放不会越播越慢，**so that** 硬解接入不会把一帧成功变成持续积压。
+
+**Read first：** S3 verdict、`Avc420GpuCompositor::EnqueueSurfaceCommand`、worker loop、compaction/backpressure、`QueueStats` 或等价诊断字段。
+
+**Output：** 固定时长的 queue timeline、command age、drop/compaction reason、frame order、CPU/FPS 和 S4 verdict。
 
 ### Ralph 边界
 
@@ -317,11 +401,17 @@ workerLoop():
 
 **Stop：** backlog 持续增长或顺序被破坏时，回到第一处异常；不能先增加线程数。
 
+**Verify：** 执行 `rg -n "queueDepth|commandBacklog|presentBacklog|queueOverLimit|compaction|drop" harmony/app/common/src/main/cpp/surface/avc420_gpu_compositor.cpp` 固化指标来源；按 S0 的同一场景运行目标时长，绘制 queue depth/age 时间序列。验收阈值未在项目文档冻结时只能输出实测分布与 `TARGET TBD`，不得自行判 PASS。
+
 ---
 
 ## S5｜生命周期变化后拒绝旧目标并恢复
 
 **As a** 用户，**I want** resize、切后台、Surface 重建和重连后继续看到正确画面，**so that** 旧任务不会写入已经失效的目标。
+
+**Read first：** S4 verdict、`rdpgfx_pipeline.cpp` 的 output owner reset、`avc420_gpu_compositor.cpp` 的 target/pause/queue 清理、`avc420_gpu_compositor_internal.cpp` 的 target change/present 检查。
+
+**Output：** resize、后台恢复、Surface 重建、重连四个子场景的 generation/owner/stale trace、视频和 S5 verdict。
 
 ### Ralph 边界
 
@@ -361,11 +451,17 @@ process(task):
 
 **Stop：** 旧 target 仍能 present 即判 FAIL，即使肉眼看到恢复后的新画面。
 
+**Verify：** 执行 `rg -n "generation|TargetPaused|target changed|stale|owner reset|release-owner" harmony/app/common/src/main/cpp/channels/rdpgfx_pipeline.cpp harmony/app/common/src/main/cpp/surface/avc420_gpu_compositor.cpp harmony/app/common/src/main/cpp/surface/avc420_gpu_compositor_internal.cpp`；四个子场景逐个清空日志后独立运行，证明旧 generation 被拒绝、owner 释放/重取且新画面恢复。四类证据不得合并成一句“生命周期正常”。
+
 ---
 
 ## S6｜AVC444 按 LC 与 retained state 闭合
 
 **As a** AVC444 视频管线，**I want** 正确处理 LC、双 bitstream 与 retained state，**so that** AVC444 不会被当成两段普通 AVC420 视频错误合成。
+
+**Read first：** S5 verdict、FreeRDP `gdi_SurfaceCommand_AVC444`、`ohos_rdpgfx_record_avc444_gpu_candidate`、`avc444_gpu_compositor.cpp` 与 `avc444_gpu_compositor_internal.cpp` 的 LC、retained、EndFrame 逻辑。
+
+**Output：** LC/stream/single-decoder/retained readiness/consumed/EndFrame trace、AVC420 回归和 S6 verdict。
 
 ### Ralph 边界
 
@@ -406,11 +502,17 @@ onMatchingEndFrame(frame):
 
 **Stop：** 任一 retained 前提未知时，不允许 suppress 原生 GDI，也不允许用 AVC420 结果替代 AVC444 验收。
 
+**Verify：** 执行 `rg -n "LC|luma|chroma|retained|PresentEndFrame|record_avc444_gpu_candidate" harmony/third_party/FreeRDP/libfreerdp/gdi/gfx.c harmony/third_party/FreeRDP/client/OHOS harmony/app/common/src/main/cpp/surface/avc444_gpu_compositor.cpp harmony/app/common/src/main/cpp/surface/avc444_gpu_compositor_internal.cpp`；用 AVC444 场景保存两个 bitstream 的处理顺序、单 decoder identity、readiness 和 matched EndFrame，再完整重跑 AVC420 S3 门。
+
 ---
 
 ## S7｜A/B 与工程交付证据闭环
 
 **As a** Reviewer，**I want** 独立复查正确性、性能、稳定、交互和回退，**so that** “代码完成”不会被误报成“工程交付”。
+
+**Read first：** S0～S6 全部 verdict、`00-证据状态总表.md`、`06-工程验收计划.md`、`15-用户补充素材清单.md` 和所有原始 evidence index。
+
+**Output：** `delivery/gpu/<run_id>/` 完整证据包、逐 AC verdict、未通过项和新缺陷 Story；验收阶段不得修改生产代码。
 
 ### Ralph 边界
 
@@ -453,9 +555,11 @@ acceptRelease(commit, scene):
 
 **Stop：** 任一证据不能关联同一 commit/runId 时标记 `UNKNOWN`；发现实现缺陷时生成新 Story，不在验收脚本中修代码。
 
+**Verify：** 先设置 `$GpuAcceptedCommit = "<accepted-code-commit>"`，再执行 `git diff --name-only "$GpuAcceptedCommit..HEAD"` 确认生产代码冻结；随后按 `06` 的 BUILD/PATH/420/444/PERF/STABLE/INPUT/FALLBACK/SCOPE 逐项核对原始文件。before/after identity 不一致、阈值未冻结或缺 fault injection/soak 时，整体 verdict 必须为 `NOT READY`。
+
 ---
 
-## 6. Story 评审门
+## 7. Story 评审门
 
 一张 Story 只有同时满足以下条件，才能进入 Ralph：
 
@@ -472,6 +576,14 @@ acceptRelease(commit, scene):
 
 **不能过门的例子：** “完成 GPU 优化”同时包含 decoder、buffer、显示、队列、生命周期和性能；任何失败都无法定位，也无法决定 Ralph 下一轮应修改什么。
 
-## 7. 课堂怎么展示
+## 8. 提交门
 
-第 35 页先展示 Story 地图和一张真实 Worker Packet，说明“不是按文件拆，而是按可验收结果拆”。第 36 页截取一个 Story 的伪代码和 AC 表，强调验收点必须在开发前写好。源码级 `frameId / owner / EndFrame` 仅在 Story 的伪代码、证据字段和讲师备注中出现，不回到主线标题。
+每个 Story 至少形成两个 checkpoint：先提交文档和 RED，再提交实现与验证证据。提交前执行：
+
+```powershell
+git diff --check
+git status --short
+git diff --name-only
+```
+
+Reviewer 必须确认：当前 Story 文档先于代码、Source Scope 没有越界、AC 未被放宽、原始证据路径存在、状态表和 progress 已回写。缺任一项时不得进入下一 Story。

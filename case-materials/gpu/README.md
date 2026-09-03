@@ -1,76 +1,68 @@
-# GPU 案例独立工程交付包
+# GPU 远控案例工程工作包
 
-> 用途：作为培训第 28–38 页的真实过程材料，完整展示 AI 如何在 55 万行级 FreeRDP 代码库中完成调研、方案、穿刺、拆分、开发、排障和验收。
+本目录只保存能约束开发、运行或验收的工程文档。重复稿和非工程控制材料已移除；唯一任务真源是 `13-GPU-Ralph-Story拆分与伪代码验收.md`。
 
-## 当前课堂主线
+## 1. 执行顺序
 
-优先阅读 [`17-复杂三方项目GPU适配源码分析与探针方案.md`](./17-复杂三方项目GPU适配源码分析与探针方案.md)。它基于本地 `demo@aa31146` 源码重新整理了本案例：FreeRDP/xrdp 产品背景 → Linux 一帧探针 → 回调适配缝隙 → XComponent/AVCodec 探针 → 最终方案 → 十步适配 → 迭代验证 → 沿同一链路排障。
+| 顺序 | 必须回答的问题 | 文档 | 进入下一步的门 |
+|---:|---|---|---|
+| 0 | 哪些是事实，哪些仍缺证据 | `00-证据状态总表.md` | 所有关键断言都有 `REPO/RUN/SESSION/UNKNOWN` 状态 |
+| 1 | 问题如何稳定复现 | `01-问题与基线.md` | 场景身份与 before 采集契约冻结 |
+| 2 | 在大仓库中只读哪些入口 | `02-大代码库认知地图.md` | 能定位一条 command 到 present 的调用链 |
+| 3 | 真实调用和所有权边界是什么 | `09-源码调用链与任务拆解.md` | hook、consumed、fallback、owner、EndFrame 均有源码锚点 |
+| 4 | 哪些跨平台契约可复用 | `03-跨平台实现调研.md` | 通用契约、平台差异和未知项分离 |
+| 5 | 最终选择哪条方案 | `04-ADR-GPU-001-HarmonyOS硬解方案.md` | Decision、Alternatives、Deferred、Evidence Gate 冻结 |
+| 6 | 最大未知能否用最短链证伪 | `05-最小能力穿刺计划.md` | SP-01～05 各自有 `PASS/FAIL/UNKNOWN` 与原始证据 |
+| 7 | 如何按可观察结果实施 | `13-GPU-Ralph-Story拆分与伪代码验收.md` | 每个 Story 的 Read/Scope/RED/伪代码/Verify/AC/Stop 完整 |
+| 8 | 失败后从哪里重新收敛 | `07-开发排障复盘.md` | first-abnormal、被证伪假设、最小修正与重放结果入账 |
+| 9 | 什么状态才允许交付 | `06-工程验收计划.md` | 必选 AC 可追溯且独立 Reviewer 给出 verdict |
 
-进入实操后切换到 [`18-GPU适配实施任务包与验收点.md`](./18-GPU适配实施任务包与验收点.md)。它把上述方案拆成 G0–G8 Ralph Story，每张任务都给出 Read First、允许修改范围、伪代码、逐条 AC、失败注入、证据产物和 Stop 条件，可直接交给新的 AI Session 执行。
+辅助文档：
 
-第 28–38 页课堂正文以 [`14-GPU案例第28-38页详细讲稿与文档证据.md`](./14-GPU案例第28-38页详细讲稿与文档证据.md) 为准。旧的证据分级、Story 和工程验收文档继续作为附录，不再抢占课堂主叙事。
+- `11-AI文档生成与审阅链.md`：定义文档先行、审阅和变更顺序。
+- `15-用户补充素材清单.md`：定义缺失运行证据的采集格式，不代表已经通过。
+- `16-历史Session可复用证据.md`：保存历史运行事实和反例，只能证明对应历史快照。
+- `17-复杂三方项目GPU适配源码分析与探针方案.md`：补充 FreeRDP/xrdp 背景、Linux 一帧探针与 HarmonyOS 最小探针。
+- `18-GPU适配实施任务包与验收点.md`：提供 G0～G8 的另一种实施视图；若与 `13` 冲突，以 `13` 为唯一任务真源并回写差异。
 
-## 连续文档链
+## 2. 源码基线
 
-| 阶段 | 核心问题 | 独立产物 | PPT |
-|---|---|---|---:|
-| 0. 证据状态 | 当前哪些能讲成事实，哪些必须留空 | `00-证据状态总表.md` | 全段约束 |
-| 1. 问题与基线 | 用户到底遇到了什么，当前能证明什么 | `01-问题与基线.md` | 28 |
-| 2. 代码认知 | AI 如何快速熟悉大库又不爆上下文 | `02-大代码库认知地图.md` | 29 |
-| 3. 源码定位 | CPU 旧路径和 GPU 候选路径在哪里分叉 | `09-源码调用链与任务拆解.md` | 30 |
-| 4. 平台调研 | 哪些 decoder 生命周期契约可迁移 | `03-跨平台实现调研.md` | 31 |
-| 5. 方案决策 | 接管、owner、EndFrame 与 fallback 如何冻结 | `04-ADR-GPU-001-HarmonyOS硬解方案.md` | 32 |
-| 6. 最小穿刺 | 哪条最短真实路径先证明 | `05-最小能力穿刺计划.md` | 33 |
-| 7. 重新计划 | Spike verdict 怎样变成 P0～P4 | `05-最小能力穿刺计划.md`、`14` | 34 |
-| 8. Story 拆分 | 如何从已证实方案拆成 S0～S7 | `13-GPU-Ralph-Story拆分与伪代码验收.md` | 35 |
-| 9. Worker Packet | 新 Session 怎样在文档边界内执行 | `13`、MDM `14/15` | 36 |
-| 10. Ralph 排障 | AI 错了怎么停、取证、证伪和修正 | `07-开发排障复盘.md` | 37 |
-| 11. 工程验收 | 什么证据到了才能说交付 | `00-证据状态总表.md`、`06-工程验收计划.md` | 38 |
-| 生成与审阅说明 | 这些文档从哪里来、谁确认、为什么进入下一阶段 | `11-AI文档生成与审阅链.md` | 29–33 贯穿 |
-| 用户补证 | 需要讲师补哪些视频、日志、CSV 和真机 trace | `15-用户补充素材清单.md` | 28/33/37/38 |
-| 历史 Session 证据 | 复用真实 GPU 日志、FPS 抖动、错误修改与回退 | `16-历史Session可复用证据.md` | 33/37/38 |
-| 源码探针与最终方案 | 从 Linux 参考实现找到 Hook，再验证 XComponent 硬解上屏 | `17-复杂三方项目GPU适配源码分析与探针方案.md` | 28–38 主线 |
-| Ralph 实施与验收 | 把已验证方案拆成 G0–G8，可逐轮执行、失败即停的 Worker Packet | `18-GPU适配实施任务包与验收点.md` | 35–37 实操 |
+文档中的源码锚点以本地 `demo` 仓库快照 `aa31146` 为基线，命令默认从该仓库根目录执行：
 
-开始讲解或修改 PPT 前，先查看 [`00-证据状态总表.md`](./00-证据状态总表.md)。该表是结果陈述的唯一状态源：没有资料的数值保持空白，性能、路径和长稳不得从源码或单段视频外推。
+```text
+harmony/third_party/FreeRDP
+harmony/app/common/src/main/cpp
+```
 
-后续 PPT 的截图、视频槽位和取景规则统一见 [`10-文档截图与视频占位清单.md`](./10-文档截图与视频占位清单.md)。第 29–36 页依次贴 codebase-map、源码时序、跨平台调研、ADR、Spike、Story 与 Worker Packet；第 37 页显示第一异常排障表，第 38 页保留 before/after 与验收证据槽。
+开始任务前必须先执行：
 
-先看 [`16-历史Session可复用证据.md`](./16-历史Session可复用证据.md)：现有资料已经够讲 GPU path、FPS pacing、黑屏诊断和 AI 错误修改回退。[`15-用户补充素材清单.md`](./15-用户补充素材清单.md) 已降级为工程附录；课堂只推荐可选补一段原始卡顿 before。
+```powershell
+git rev-parse --short HEAD
+git status --short
+rg -n "gdi_SurfaceCommand|freerdp_ohos_rdpgfx_bridge_attach|ohos_rdpgfx_surface_command" harmony/third_party/FreeRDP
+rg -n "InstallRdpgfxDiagnosticsHooks|OnSurfaceCommand|ProcessCommand|PresentEndFrame" harmony/app/common/src/main/cpp
+```
 
-如果听众不知道文档怎样生成、为什么要生成，先讲 [`11-AI文档生成与审阅链.md`](./11-AI文档生成与审阅链.md)。每份文档统一用 `Input → AI action → Human decision → Evidence → Output → Why` 六个字段解释，避免把阶段文档讲成突然出现的 AI 答案。
+如果 commit、目录或符号不一致，先更新 `02`、`09` 和对应 Story 的源码锚点，不允许直接沿用旧行号实施。
 
-第 28–38 页不再按“证据状态—ADR—Story—工程验收”堆叠材料，而是围绕两个真实探针逐步回答：三方库的一帧怎么走、适配点在哪里、HarmonyOS 能否承接、方案如何推导、怎样增量实现和验证。`12-GPU讲课版简化叙事.md` 仅保留为旧版参考。
+## 3. 事实状态
 
-任务拆分的课堂与实操真源见 [`13-GPU-Ralph-Story拆分与伪代码验收.md`](./13-GPU-Ralph-Story拆分与伪代码验收.md)。它参考 MDM 的 Feature / Story 结构，把 `S0–S7` 全部写成 Ralph Worker Packet：源码边界、伪代码、逐条 AC、证据、Stop 和 Exit Gate 均可直接交给新的 Session 执行。
+- `REPO FACT`：当前源码能直接定位的结构和保护条件。
+- `RUN FACT`：当前 commit、设备和场景产生的运行证据。
+- `MEDIA FACT`：媒体中可观察到的画面；不能单独证明 decoder、性能或回退路径。
+- `CASE FACT`：已经冻结的问题背景，但仍需当前运行证据量化。
+- `SESSION FACT`：历史 Session 中发生过的判断、失败或纠偏；不能替代当前版本验收。
+- `TARGET`：期望达到但尚未证明的状态。
+- `PENDING/UNKNOWN`：证据缺失或无法判定；不得改写成成功。
 
-## 源码级主线
+## 4. 不可跳过的约束
 
-优先阅读 [`09-源码调用链与任务拆解.md`](./09-源码调用链与任务拆解.md)。它补齐了原文档中最薄弱的一层：
+1. 先修改 ADR、Story、AC 或运行账，再修改代码；提交时文档和实现必须同 commit 或互相引用。
+2. 每轮只领取一个 Story，只处理一个 first-abnormal；禁止跨 Story 顺手重构。
+3. build success 只证明可构建，画面可见只证明媒体结果，API success 只证明一次调用；三者都不能单独证明工程交付。
+4. 接管前失败必须保留 original GDI；同一帧只能有一个 render owner；没有匹配 EndFrame 不得 present。
+5. before/after 必须共享设备、网络、分辨率、片段和采样口径，并以同一 evidence index 关联。
 
-- hook 如何保存并替换 FreeRDP 原回调；
-- AVC420 command 在什么条件下被 GPU 路径消费，什么时候回到原生 GDI；
-- OH_AVCodec、native buffer、retained composite 与 worker queue 的真实边界；
-- 为什么只在匹配的 EndFrame present；
-- 如何从源码边界推导 SP-01～05，再推导 T-GPU-00～07；
-- 如何用同一 frame trace 判断 AI 是否正确，以及错误时沿调用链定位第一处异常。
+## 5. 当前状态
 
-后续 PPT 应以该文档的源码图和任务推导为底稿，不再用只有抽象层级、无法落到符号的流程图。
-
-## 事实标记
-
-- `REPO FACT`：当前本地 FreeRDP / HarmonyOS 工程可直接定位。
-- `RUN FACT`：本次设备、构建或性能运行产生的证据。
-- `MEDIA FACT`：本地图片/视频中可以直接观察到的内容；没有 identity 时不能外推源码路径。
-- `CASE FACT`：讲师/用户已冻结的案例背景，用于推导需求与方案；若当前仓库缺少原始日志或录屏，仍必须标注证据占位。
-- `USER REPORT`：用户描述的问题背景，尚未由本次采集独立复现。
-- `SESSION FACT`：历史 AI Session 中真实出现的判断、纠偏或失败。
-- `TARGET`：本次课堂希望实现或补齐的能力。
-- `UNKNOWN`：当前没有足够证据，不能用解释补齐。
-- `PLACEHOLDER`：等待录制 CPU 卡顿 before / hardware decode after 视频。
-
-## 使用规则
-
-文档不是 AI 结论的包装。每一阶段开始前要检查上游证据是否满足进入条件；不满足则停在 `FAIL / UNKNOWN`，不能为了讲出完整故事伪造成功。
-
-本案例的讲述前提已由用户冻结：**原始实现的视频处理走 CPU/软件路径，没有走 HarmonyOS 硬件解码与 GPU 合成，用户感知为卡顿。** 这一点可作为需求背景和方案输入；但 before 录屏、CPU/FPS 数值和路径日志尚未入库，相应证据位仍保持 `PLACEHOLDER/PENDING`。
+源码调用链、方案、Story 和历史 Session 证据已整理；当前版本的 hardware decoder identity、同帧 trace、故障注入、严格 A/B 和长稳仍为 `PENDING/UNKNOWN`。准确状态只从 `00-证据状态总表.md` 读取。

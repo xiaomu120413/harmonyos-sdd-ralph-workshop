@@ -32,6 +32,61 @@ RDPGFX SurfaceCommand
    → gdi_SurfaceCommand → H264_CONTEXT_SUBSYSTEM / GDI
 ```
 
+## 责任边界
+
+| 组件 | 输入 | 持有状态 | 输出/提交点 | 失败语义 |
+|---|---|---|---|---|
+| FreeRDP GDI | 未接管的 SurfaceCommand | 原生 surface/H.264 context | original SurfaceCommand | 保持既有路径 |
+| OHOS RDPGFX bridge | StartFrame、SurfaceCommand、EndFrame | original callbacks、frame/candidate/consumed | 调 App callback 或回 original | 接管前失败返回 original，不静默吞 command |
+| App pipeline | bridge callback、NativeWindow/lifecycle | callback wiring、output policy | AVC420/444 compositor | callback 未 ready 时不允许接管 |
+| AVC420 compositor | command、target、EndFrame | decoder、worker、retained surface、pendingFrameId | 唯一 owner 的 present | output/target 不合法时不提交 pending |
+| RenderOutputOwner | GDI/AVC420/AVC444 ownership 请求 | 当前 owner 与 transition reason | 允许唯一显示路径 | 拒绝双写或无原因切换 |
+| ArkTS/UI | XComponent Surface 和生命周期 | 页面/Surface 生命周期 | target bind/detach | 不拥有 codec 或帧状态机 |
+
+## 接管状态机
+
+```mermaid
+graph TD
+    A[Original GDI active] --> B{Bridge attached and callback ready}
+    B -->|No| A
+    B -->|Yes| C{Command valid and decoder ready}
+    C -->|No before takeover| A
+    C -->|Yes| D[Decode and validate native output]
+    D -->|Failure before commit| A
+    D -->|Success| E[Composite retained state]
+    E --> F[Claim unique owner]
+    F --> G[Set pending frame]
+    G --> H{Matching EndFrame}
+    H -->|No| G
+    H -->|Yes| I[Present and clear pending]
+    I --> B
+```
+
+状态提交点是 `pendingFrameId` 建立并返回 consumed。该点之前允许走 original GDI；该点之后不得让 original path 写同一帧，后续失败必须走显式 owner/recovery 策略，不能同时回放两个 renderer。
+
+## 不变量
+
+```text
+I1: original callbacks 在 attach 时保存，bridge detach/recovery 前始终可定位。
+I2: callback/decoder/output/target 任一未 ready 时 consumed=false。
+I3: output format、size、stride、planes、native buffer 未验证时不 claim owner。
+I4: 同一 frameId 只有一个 render owner。
+I5: pendingFrameId 与 EndFrame 不匹配时不 present。
+I6: target generation 变化后，旧 worker task 不得写入新 Surface。
+I7: 运行证据不能关联 commit/runId 时，状态只能是 UNKNOWN。
+```
+
+## 失败决策表
+
+| 失败点 | 是否已接管 | 动作 | 必须记录 |
+|---|---:|---|---|
+| bridge/callback 未 ready | 否 | 调 original callback | reason、frameId、callback state |
+| 无硬件 decoder / init 失败 | 否 | 调 original callback；设备标 `UNSUPPORTED/FAIL` | decoder name/category、stage、return code |
+| input/output/format/native buffer 失败 | 否 | 不提交 pending，调 original callback | input/output PTS、format、reason |
+| composite 或 owner claim 失败 | 否 | 保留 original path，不产生双写 | target generation、owner transition、reason |
+| pending 后 target 丢失 | 是 | 暂停/丢弃旧 generation，按 lifecycle 策略恢复 | pending frame、old/new generation、recovery verdict |
+| EndFrame mismatch | 是 | 不 present，清理或保留由状态机决定 | active/pending/end frameId |
+
 ## Alternatives
 
 | 方案 | 结论 | 原因 |

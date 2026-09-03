@@ -10,12 +10,10 @@
 - [T01 真实 RED/GREEN 证据](evidence/mdm/t01-red-green.md)
 - [账号变化跨进程日志证据](evidence/mdm/account-cross-process-log.md)
 - [Firewall 运行时回读证据边界](evidence/mdm/firewall-runtime-readback.md)
-- [案例二：大代码库快速认知地图](evidence/gpu/01-codebase-map.md)
-- [案例二：跨平台调研与最小穿刺](evidence/gpu/02-platform-research-and-spike.md)
-- [案例二：任务、验收与排障证据链](evidence/gpu/03-task-acceptance-and-debug.md)
 - [案例二独立工程交付包](case-materials/gpu/README.md)
 - [案例二：证据状态总表（空白项与媒体边界）](case-materials/gpu/00-证据状态总表.md)
 - [案例二：源码调用链与任务拆解主文档](case-materials/gpu/09-源码调用链与任务拆解.md)
+- [案例二：可执行 Story 工作包](case-materials/gpu/13-GPU-Ralph-Story拆分与伪代码验收.md)
 
 ## 课程主线
 
@@ -64,7 +62,7 @@
 - 对照 FFmpeg / OpenH264、Windows Media Foundation、Android MediaCodec 与 HarmonyOS `OH_AVCodec`，提炼输入输出、生命周期、线程、资源 owner 和 fallback 契约；
 - 用 `ADR-GPU-001` 固化调用链、Decision、Deferred 与 Fallback；
 - 用 `SP-01..05` 定义最小能力穿刺；当前运行数据未入库的步骤保留 `PENDING`；
-- 将实现拆成 `T-GPU-00..07` 八张任务卡，每张卡都有前置条件、修改范围、产物、验收步骤和失败回滚；
+- 将实现拆成 `S0..S7` 八个 Story，统一保存在一份 Worker Packet 真源中，每个 Story 都有 Read First、修改范围、伪代码、命令、产物、验收点和停止条件；
 - 展示 Planner / Explorer / Implementer / Tool / Reviewer 的交付物式协同；
 - 用黑屏失败视频说明 `Stop → Preserve → Locate → Falsify → Repair` 排障循环；
 - 用同一 `frameId` 的 Trace Eval + Outcome Eval 证伪“调用成功即结果正确”；
@@ -84,10 +82,6 @@
 │   ├── t01-red-green.md
 │   ├── account-cross-process-log.md
 │   └── firewall-runtime-readback.md
-├── evidence/gpu/
-│   ├── 01-codebase-map.md
-│   ├── 02-platform-research-and-spike.md
-│   └── 03-task-acceptance-and-debug.md
 ├── case-materials/gpu/
 │   ├── 00-证据状态总表.md
 │   ├── 01-问题与基线.md
@@ -97,9 +91,11 @@
 │   ├── 05-最小能力穿刺计划.md
 │   ├── 06-工程验收计划.md
 │   ├── 07-开发排障复盘.md
-│   ├── 08-PPT第28-38页内容映射.md
 │   ├── 09-源码调用链与任务拆解.md
-│   └── tasks/T-GPU-00..07.md
+│   ├── 11-AI文档生成与审阅链.md
+│   ├── 13-GPU-Ralph-Story拆分与伪代码验收.md
+│   ├── 15-用户补充素材清单.md
+│   └── 16-历史Session可复用证据.md
 └── harmonyos-sdd-workshop-media/
     ├── anthropic/*.png
     ├── methodology/*.png / *.svg

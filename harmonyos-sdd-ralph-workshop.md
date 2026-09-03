@@ -1572,9 +1572,11 @@ flowchart LR
 
 ### 文档与证据
 
-- 真源：`case-materials/gpu/17-复杂三方项目GPU适配源码分析与探针方案.md`
-- 讲师强调：xrdp 是完整产品背景；接下来追踪和改造的是 FreeRDP 客户端视频链。
-- 如果能找到原始 CPU/软件路径卡顿 before，可放 20～30 秒增强开场；没有不影响方法主线。
+- 工程真源：`case-materials/gpu/README.md`、`09-源码调用链与任务拆解.md`、`13-GPU-Ralph-Story拆分与伪代码验收.md`
+- 补充源码探针：`17-复杂三方项目GPU适配源码分析与探针方案.md`
+- 输入：`01-问题与基线.md`、`00-证据状态总表.md`
+- 场景图：`freerdp-stutter-scenario.jpeg`
+- **可选补充**：如果能找到原始 CPU/软件路径卡顿 before，放 20～30 秒增强开场；没有时按已冻结的 `CASE FACT` 讲，不影响本案例的方法论主线。
 
 ---
 
